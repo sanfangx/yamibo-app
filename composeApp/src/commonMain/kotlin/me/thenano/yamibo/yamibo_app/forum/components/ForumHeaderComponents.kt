@@ -73,7 +73,7 @@ private fun StatChip(label: String, value: String) {
 
 /** Sub forum horizontal row */
 @Composable
-fun SubForumRow(subForums: List<ForumSummary>, onClick: (ForumId) -> Unit) {
+fun SubForumRow(subForums: List<ForumSummary>, onClick: (ForumId, String) -> Unit) {
     val colors = YamiboTheme.colors
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)) {
         Text(
@@ -89,7 +89,7 @@ fun SubForumRow(subForums: List<ForumSummary>, onClick: (ForumId) -> Unit) {
         ) {
             items(subForums, key = { it.fid.value }) { sub ->
                 Surface(
-                    onClick = { onClick(sub.fid) },
+                    onClick = { onClick(sub.fid, sub.name) },
                     shape = RoundedCornerShape(14.dp),
                     color = colors.creamSurface,
                     shadowElevation = 2.dp

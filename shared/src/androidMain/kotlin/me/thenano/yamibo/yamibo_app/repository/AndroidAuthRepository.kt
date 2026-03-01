@@ -23,9 +23,7 @@ class AndroidAuthRepository(
         if (!isLoggedIn()) return YamiboResult.Failure("查無登入資料，請重新登入")
 
         yamiboClient.setCookie(cookieStore.load() ?: "")
-        val profileResult = yamiboClient.fetchProfileInfo()
-
-        when (profileResult) {
+        when (val profileResult = yamiboClient.fetchProfileInfo()) {
             is YamiboResult.Success -> {
                 userStore.save(profileResult.value)
                 return YamiboResult.Success(true)

@@ -1,0 +1,253 @@
+package me.thenano.yamibo.yamibo_app.forum.components
+
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import io.github.littlesurvival.core.YamiboResult
+import io.github.littlesurvival.dto.model.ThreadSummary
+import io.github.littlesurvival.dto.page.SearchPage
+import io.github.littlesurvival.dto.value.ForumId
+import kotlinx.coroutines.launch
+import me.thenano.yamibo.yamibo_app.LocalAuthRepository
+import me.thenano.yamibo.yamibo_app.LocalForumRepository
+import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import org.jetbrains.compose.resources.painterResource
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.ic_search
+
+/** Search result state */
+private sealed interface SearchState {
+    data object Idle : SearchState
+    data object Loading : SearchState
+    data class Success(val page: SearchPage) : SearchState
+    data class Error(val message: String) : SearchState
+}
+
+/** Full-screen search modal */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SearchModal(fid: ForumId?, onDismiss: () -> Unit, onThreadClick: (ThreadSummary) -> Unit) {
+    val colors = YamiboTheme.colors
+    val forumRepository = LocalForumRepository.current
+    val authRepository = LocalAuthRepository.current
+    val scope = rememberCoroutineScope()
+
+    var query by remember { mutableStateOf("") }
+    var state by remember { mutableStateOf<SearchState>(SearchState.Idle) }
+    val focusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+
+    fun doSearch() {
+        val trimmed = query.trim()
+        if (trimmed.isEmpty()) return
+
+        val formHash = authRepository.currentUser()?.formHash ?: return
+        state = SearchState.Loading
+        scope.launch {
+            val result = forumRepository.fetchSearch(trimmed, fid, formHash)
+            state =
+                when (result) {
+                    is YamiboResult.Success -> {
+                        if (result.value.threads.isEmpty()) {
+                            SearchState.Error("沒有找到相關主題")
+                        } else {
+                            SearchState.Success(result.value)
+                        }
+                    }
+
+                    is YamiboResult.Failure -> SearchState.Error(result.reason)
+                    is YamiboResult.Maintenance -> SearchState.Error("伺服器維護中")
+                    is YamiboResult.NotLoggedIn -> SearchState.Error("未登入，請先登入後再搜尋")
+                }
+        }
+    }
+
+    Column(
+        modifier = Modifier.fillMaxSize().background(colors.creamBackground).systemBarsPadding()
+    ) {
+        /** Search top bar */
+        Surface(color = colors.brownDeep, shadowElevation = 4.dp) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onDismiss) { Text("◀", color = Color.White, fontSize = 20.sp) }
+
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    modifier = Modifier.weight(1f).focusRequester(focusRequester),
+                    placeholder = {
+                        Text(
+                            text = "搜尋主題...",
+                            color = Color.White.copy(alpha = 0.5f),
+                            fontSize = 15.sp
+                        )
+                    },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(onSearch = { doSearch() }),
+                    colors =
+                        OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            cursorColor = colors.orangeAccent,
+                            focusedBorderColor = colors.orangeAccent,
+                            unfocusedBorderColor = Color.White.copy(alpha = 0.3f),
+                            focusedContainerColor = Color.White.copy(alpha = 0.08f),
+                            unfocusedContainerColor = Color.White.copy(alpha = 0.05f)
+                        ),
+                    shape = RoundedCornerShape(12.dp),
+                    textStyle = LocalTextStyle.current.copy(fontSize = 15.sp)
+                )
+
+                Spacer(Modifier.width(6.dp))
+
+                Surface(
+                    onClick = { doSearch() },
+                    shape = RoundedCornerShape(12.dp),
+                    color = colors.orangeAccent
+                ) {
+                    Text(
+                        text = "搜尋",
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                        color = Color.White,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+
+        /** Search body */
+        AnimatedContent(
+            targetState = state,
+            transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(150)) },
+            label = "search_content"
+        ) { currentState ->
+            when (currentState) {
+                is SearchState.Idle -> SearchIdleContent()
+                is SearchState.Loading -> SearchLoadingContent()
+                is SearchState.Error -> SearchErrorContent(currentState.message)
+                is SearchState.Success ->
+                    SearchResultContent(
+                        searchPage = currentState.page,
+                        onThreadClick = onThreadClick
+                    )
+            }
+        }
+    }
+}
+
+/** Idle: prompt text */
+@Composable
+private fun SearchIdleContent() {
+    val colors = YamiboTheme.colors
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(
+                painter = painterResource(Res.drawable.ic_search),
+                contentDescription = null,
+                tint = colors.brownPrimary.copy(alpha = 0.4f),
+                modifier = Modifier.size(48.dp)
+            )
+            Spacer(Modifier.height(12.dp))
+            Text(
+                text = "輸入關鍵字搜尋主題",
+                color = colors.brownPrimary.copy(alpha = 0.6f),
+                fontSize = 15.sp
+            )
+        }
+    }
+}
+
+/** Loading: spinner */
+@Composable
+private fun SearchLoadingContent() {
+    val colors = YamiboTheme.colors
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            CircularProgressIndicator(
+                color = colors.brownDeep,
+                strokeWidth = 3.dp,
+                modifier = Modifier.size(36.dp)
+            )
+            Spacer(Modifier.height(12.dp))
+            Text(text = "搜尋中...", color = colors.brownPrimary.copy(alpha = 0.7f), fontSize = 14.sp)
+        }
+    }
+}
+
+/** Error */
+@Composable
+private fun SearchErrorContent(message: String) {
+    val colors = YamiboTheme.colors
+    Box(modifier = Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
+        Card(
+            shape = RoundedCornerShape(20.dp),
+            elevation = CardDefaults.cardElevation(4.dp),
+            colors = CardDefaults.cardColors(containerColor = colors.creamSurface)
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "!",
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = colors.brownDeep.copy(alpha = 0.6f)
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(text = message, color = colors.brownDeep, fontSize = 14.sp, lineHeight = 20.sp)
+            }
+        }
+    }
+}
+
+/** Results: thread list */
+@Composable
+private fun SearchResultContent(searchPage: SearchPage, onThreadClick: (ThreadSummary) -> Unit) {
+    val colors = YamiboTheme.colors
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(top = 8.dp, bottom = 24.dp)
+    ) {
+        /** result count header */
+        item {
+            Text(
+                text = "找到 ${searchPage.totalCount} 個相關內容",
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                color = colors.brownPrimary.copy(alpha = 0.7f),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+
+        /** thread cards */
+        items(searchPage.threads, key = { it.tid.value }) { thread ->
+            ThreadCard(thread = thread, onClick = { onThreadClick(thread) })
+        }
+    }
+}

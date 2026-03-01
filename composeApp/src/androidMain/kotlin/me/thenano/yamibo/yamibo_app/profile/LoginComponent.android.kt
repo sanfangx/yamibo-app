@@ -19,6 +19,8 @@ import me.thenano.yamibo.yamibo_app.UserAgent
 import me.thenano.yamibo.yamibo_app.__error_tag
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 
+private const val MobileUserAgent = "Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 actual fun LoginWebView(onLoadingChanged: (Boolean) -> Unit) {
@@ -63,7 +65,7 @@ actual fun LoginWebView(onLoadingChanged: (Boolean) -> Unit) {
                         settings.domStorageEnabled = true
 
                         cacheMode = WebSettings.LOAD_DEFAULT
-                        userAgentString = UserAgent.MOBILE
+                        userAgentString = MobileUserAgent
                     }
                     val cookieManager = CookieManager.getInstance()
                     cookieManager.setAcceptCookie(true)

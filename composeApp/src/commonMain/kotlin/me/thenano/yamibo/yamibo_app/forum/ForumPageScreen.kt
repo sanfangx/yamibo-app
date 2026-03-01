@@ -28,10 +28,14 @@ import me.thenano.yamibo.yamibo_app.LocalForumRepository
 import me.thenano.yamibo.yamibo_app.forum.components.ForumStatsBar
 import me.thenano.yamibo.yamibo_app.forum.components.PageNavigation
 import me.thenano.yamibo.yamibo_app.forum.components.PinnedSection
+import me.thenano.yamibo.yamibo_app.forum.components.SearchModal
 import me.thenano.yamibo.yamibo_app.forum.components.SubForumRow
 import me.thenano.yamibo.yamibo_app.forum.components.ThreadCard
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import org.jetbrains.compose.resources.painterResource
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.ic_search
 
 /** Forum page state */
 private sealed interface ForumState {
@@ -43,7 +47,7 @@ private sealed interface ForumState {
 /** Main Forum Screen Entry */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ForumPageScreen(fid: ForumId) {
+fun ForumPageScreen(fid: ForumId, name: String) {
     val colors = YamiboTheme.colors
     val forumRepository = LocalForumRepository.current
     val navigator = LocalNavigator.current
@@ -53,6 +57,7 @@ fun ForumPageScreen(fid: ForumId) {
     var state by remember { mutableStateOf<ForumState>(ForumState.Loading) }
     var currentPage by remember { mutableIntStateOf(1) }
     var isRefreshing by remember { mutableStateOf(false) }
+    var showSearch by remember { mutableStateOf(false) }
 
     suspend fun loadPage(page: Int) {
         val result = forumRepository.fetchForum(fid, page)
@@ -100,9 +105,13 @@ fun ForumPageScreen(fid: ForumId) {
             val forumName =
                 when (val s = state) {
                     is ForumState.Success -> s.page.forum.name
-                    else -> ""
+                    else -> name
                 }
-            ForumTopBar(title = forumName, onBack = { navigator.pop() })
+            ForumTopBar(
+                title = forumName,
+                onBack = { navigator.pop() },
+                onSearch = { showSearch = true }
+            )
         }
     ) { paddingValues ->
         Box(
@@ -158,8 +167,8 @@ fun ForumPageScreen(fid: ForumId) {
                                 state = ForumState.Loading
                                 scope.launch { loadPage(page) }
                             },
-                            onSubForumClick = { subFid ->
-                                navigator.navigate(IForumScreen(subFid))
+                            onSubForumClick = { subFid, subName ->
+                                navigator.navigate(IForumScreen(subFid, subName))
                             },
                             onThreadClick = { /* TODO: navigate to thread */ }
                         )
@@ -167,12 +176,21 @@ fun ForumPageScreen(fid: ForumId) {
             }
         }
     }
+
+    /** Search modal overlay */
+    if (showSearch) {
+        SearchModal(
+            fid = fid,
+            onDismiss = { showSearch = false },
+            onThreadClick = { /* TODO: navigate to thread */ }
+        )
+    }
 }
 
 /** Sticky Top Bar */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ForumTopBar(title: String, onBack: () -> Unit) {
+private fun ForumTopBar(title: String, onBack: () -> Unit, onSearch: () -> Unit) {
     val colors = YamiboTheme.colors
     TopAppBar(
         title = {
@@ -187,6 +205,16 @@ private fun ForumTopBar(title: String, onBack: () -> Unit) {
         navigationIcon = {
             IconButton(onClick = onBack) { Text("◀", color = Color.White, fontSize = 20.sp) }
         },
+        actions = {
+            IconButton(onClick = onSearch) {
+                Icon(
+                    painter = painterResource(Res.drawable.ic_search),
+                    contentDescription = "搜尋",
+                    tint = Color.White,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+        },
         colors =
             TopAppBarDefaults.topAppBarColors(
                 containerColor = colors.brownDeep,
@@ -200,7 +228,7 @@ private fun ForumTopBar(title: String, onBack: () -> Unit) {
 private fun ForumContent(
     forumPage: ForumPage,
     onPageChange: (Int) -> Unit,
-    onSubForumClick: (ForumId) -> Unit,
+    onSubForumClick: (ForumId, String) -> Unit,
     onThreadClick: (ThreadSummary) -> Unit
 ) {
     LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {

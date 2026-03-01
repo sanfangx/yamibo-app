@@ -8,8 +8,10 @@ import androidx.activity.addCallback
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.view.WindowInsetsControllerCompat
 import io.github.littlesurvival.YamiboClient
 import me.thenano.yamibo.yamibo_app.navigation.ComposableNavigator
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
@@ -64,7 +66,21 @@ class MainActivity : ComponentActivity() {
                 LocalAuthRepository provides authRepository,
                 LocalForumRepository provides forumRepository,
                 LocalThemeRepository provides themeRepository,
-            ) { App() }
+            ) {
+                /** Color system bars to match active theme */
+                val scheme = LocalThemeRepository.current.getColorScheme()
+                SideEffect {
+                    @Suppress("DEPRECATION")
+                    window.statusBarColor = scheme.brownDeep.toInt()
+                    @Suppress("DEPRECATION")
+                    window.navigationBarColor = scheme.brownDeep.toInt()
+                    WindowInsetsControllerCompat(window, window.decorView).apply {
+                        isAppearanceLightStatusBars = false
+                        isAppearanceLightNavigationBars = false
+                    }
+                }
+                App()
+            }
         }
     }
 }

@@ -210,7 +210,7 @@ private fun UserInfoContent(
                 Row {
                     InfoChip(user.userGroup)
                     Spacer(Modifier.width(8.dp))
-                    InfoChip("總積分 ${user.totalPoints} (${user.partner}/3+${user.points})")
+                    InfoChip("總積分 ${user.totalPoints}")
                 }
             }
         }

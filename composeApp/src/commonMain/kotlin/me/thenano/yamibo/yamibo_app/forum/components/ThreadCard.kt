@@ -18,7 +18,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.littlesurvival.dto.model.ThreadSummary
@@ -79,8 +78,6 @@ fun ThreadCard(thread: ThreadSummary, onClick: () -> Unit) {
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = colors.textDark,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
                 lineHeight = 22.sp
             )
 
@@ -91,8 +88,6 @@ fun ThreadCard(thread: ThreadSummary, onClick: () -> Unit) {
                     text = thread.description!!,
                     fontSize = 13.sp,
                     color = colors.brownPrimary.copy(alpha = 0.65f),
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
                     lineHeight = 18.sp
                 )
             }

@@ -4,6 +4,8 @@ import io.github.littlesurvival.YamiboClient
 import io.github.littlesurvival.core.YamiboResult
 import io.github.littlesurvival.dto.page.ForumPage
 import io.github.littlesurvival.dto.page.HomePage
+import io.github.littlesurvival.dto.page.SearchPage
+import io.github.littlesurvival.dto.value.FormHash
 import io.github.littlesurvival.dto.value.ForumId
 import me.thenano.yamibo.yamibo_app.store.auth.CookieStore
 
@@ -36,6 +38,15 @@ class AndroidForumRepository(
             cachedForumPages[fid.value] = result.value
         }
         return result
+    }
+
+    override suspend fun fetchSearch(
+            query: String,
+            forumId: ForumId?,
+            formHash: FormHash
+    ): YamiboResult<SearchPage> {
+        yamiboClient.setCookie(cookieStore.load() ?: "")
+        return yamiboClient.fetchSearch(query, forumId, formHash)
     }
 
     override fun getCachedHomePage(): HomePage? = cachedHomePage
