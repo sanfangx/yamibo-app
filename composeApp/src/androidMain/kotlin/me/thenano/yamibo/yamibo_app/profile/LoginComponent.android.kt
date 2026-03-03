@@ -19,7 +19,8 @@ import me.thenano.yamibo.yamibo_app.UserAgent
 import me.thenano.yamibo.yamibo_app.__error_tag
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 
-private const val MobileUserAgent = "Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+private const val MobileUserAgent =
+    "Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
 
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
@@ -29,66 +30,69 @@ actual fun LoginWebView(onLoadingChanged: (Boolean) -> Unit) {
     val context = LocalContext.current
 
     AndroidView(
-            modifier = Modifier.fillMaxSize().systemBarsPadding(),
-            factory = { context ->
-                WebView(context).apply {
-                    webViewClient =
-                            object : WebViewClient() {
-                                override fun onPageStarted(
-                                        view: WebView?,
-                                        url: String?,
-                                        favicon: Bitmap?
-                                ) {
-                                    onLoadingChanged(true)
-                                }
-                                override fun onReceivedError(
-                                        view: WebView?,
-                                        request: WebResourceRequest?,
-                                        error: WebResourceError?
-                                ) {
-                                    Log.e(
-                                            __error_tag("LoginWebView"),
-                                            error?.description.toString()
-                                    )
-                                }
+        modifier = Modifier
+            .fillMaxSize()
+            .systemBarsPadding(),
+        factory = { context ->
+            WebView(context).apply {
+                webViewClient =
+                    object : WebViewClient() {
+                        override fun onPageStarted(
+                            view: WebView?,
+                            url: String?,
+                            favicon: Bitmap?
+                        ) {
+                            onLoadingChanged(true)
+                        }
 
-                                override fun onPageFinished(view: WebView?, url: String?) {
-                                    super.onPageFinished(view, url)
-                                    onLoadingChanged(false)
-                                    authRepo.syncCookieFromWebView()
-                                }
-                            }
-                    webChromeClient = WebChromeClient()
+                        override fun onReceivedError(
+                            view: WebView?,
+                            request: WebResourceRequest?,
+                            error: WebResourceError?
+                        ) {
+                            Log.e(
+                                __error_tag("LoginWebView"),
+                                error?.description.toString()
+                            )
+                        }
 
-                    settings.apply {
-                        settings.javaScriptEnabled = true
-                        settings.domStorageEnabled = true
-
-                        cacheMode = WebSettings.LOAD_DEFAULT
-                        userAgentString = MobileUserAgent
+                        override fun onPageFinished(view: WebView?, url: String?) {
+                            super.onPageFinished(view, url)
+                            onLoadingChanged(false)
+                            authRepo.syncCookieFromWebView()
+                        }
                     }
-                    val cookieManager = CookieManager.getInstance()
-                    cookieManager.setAcceptCookie(true)
-                    cookieManager.setAcceptThirdPartyCookies(this, true)
+                webChromeClient = WebChromeClient()
 
-                    loadUrl(YamiboRoute.Login.build())
+                settings.apply {
+                    settings.javaScriptEnabled = true
+                    settings.domStorageEnabled = true
+
+                    cacheMode = WebSettings.LOAD_DEFAULT
+                    userAgentString = MobileUserAgent
                 }
-            },
-            update = {}
+                val cookieManager = CookieManager.getInstance()
+                cookieManager.setAcceptCookie(true)
+                cookieManager.setAcceptThirdPartyCookies(this, true)
+
+                loadUrl(YamiboRoute.Login.build())
+            }
+        },
+        update = {}
     )
     LaunchedEffect(Unit) {
         authRepo.startLoginDetect(
-                onSuccess = {
-                    val status = authRepo.fetchStatus()
-                    if (status !is YamiboResult.Success) {
-                        Toast.makeText(context, status.message(), Toast.LENGTH_LONG).show()
-                    }
-                    navigator.pop()
-                },
-                onTimeOut = {
-                    Toast.makeText(context, "登入超時", Toast.LENGTH_LONG).show()
-                    navigator.pop()
+            onSuccess = {
+                val status = authRepo.fetchStatus()
+                if (status !is YamiboResult.Success) {
+                    Toast.makeText(context, status.message(), Toast.LENGTH_LONG).show()
                 }
+                navigator.pop()
+            },
+            onTimeOut = {
+                Toast.makeText(context, "登入超時", Toast.LENGTH_LONG).show()
+                navigator.pop()
+            }
         )
     }
 }

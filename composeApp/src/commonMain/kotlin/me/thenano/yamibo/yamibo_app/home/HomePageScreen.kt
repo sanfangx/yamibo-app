@@ -1,5 +1,6 @@
 package me.thenano.yamibo.yamibo_app.home
 
+import YamiboIcons
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
@@ -35,6 +36,7 @@ import io.github.littlesurvival.dto.page.HomePage
 import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.LocalForumRepository
 import me.thenano.yamibo.yamibo_app.forum.IForumScreen
+import me.thenano.yamibo.yamibo_app.forum.components.SearchModal
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import org.jetbrains.compose.resources.painterResource
@@ -59,6 +61,7 @@ fun HomePageScreen() {
 
     var state by remember { mutableStateOf<HomeState>(HomeState.Loading) }
     var isRefreshing by remember { mutableStateOf(false) }
+    var showSearch by remember { mutableStateOf(false) }
 
     suspend fun mapFetchResultState() {
         val result = forumRepository.fetchHomePage()
@@ -128,7 +131,18 @@ fun HomePageScreen() {
                         }
                     },
                     modifier = Modifier.fillMaxSize()
-                ) { HomeContent(homePage = currentState.page) }
+                ) {
+                    HomeContent(homePage = currentState.page, onSearch = { showSearch = true })
+                }
+        }
+
+        /** Search modal overlay */
+        if (showSearch) {
+            SearchModal(
+                fid = null,
+                onDismiss = { showSearch = false },
+                onThreadClick = { /* TODO: navigate to thread */ }
+            )
         }
 
         /** Snackbar overlay */
@@ -149,10 +163,10 @@ fun HomePageScreen() {
 
 /** Success Content */
 @Composable
-private fun HomeContent(homePage: HomePage) {
+private fun HomeContent(homePage: HomePage, onSearch: () -> Unit) {
     LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
         /** header banner */
-        item { HomeHeader() }
+        item { HomeHeader(onSearch = onSearch) }
 
         /** categories */
         homePage.categories.forEachIndexed { index, category ->
@@ -165,9 +179,9 @@ private fun HomeContent(homePage: HomePage) {
 
 /** Header Banner */
 @Composable
-private fun HomeHeader() {
+private fun HomeHeader(onSearch: () -> Unit) {
     val colors = YamiboTheme.colors
-    Box(
+    Row(
         modifier =
             Modifier.fillMaxWidth()
                 .background(
@@ -180,15 +194,24 @@ private fun HomeHeader() {
                             )
                     )
                 )
-                .padding(horizontal = 20.dp, vertical = 24.dp),
-        contentAlignment = Alignment.CenterStart
+                .padding(horizontal = 16.dp, vertical = 20.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Image(
             painter = painterResource(Res.drawable.logo_homepage),
             contentDescription = "logo_homepage",
             contentScale = ContentScale.FillHeight,
-            modifier = Modifier.height(40.dp)
+            modifier = Modifier.height(36.dp).offset(y = 2.dp)
         )
+        IconButton(onClick = onSearch, modifier = Modifier.offset(y = 11.dp)) {
+            Icon(
+                imageVector = YamiboIcons.Search,
+                contentDescription = "搜尋",
+                tint = Color.White,
+                modifier = Modifier.size(34.dp)
+            )
+        }
     }
 }
 
