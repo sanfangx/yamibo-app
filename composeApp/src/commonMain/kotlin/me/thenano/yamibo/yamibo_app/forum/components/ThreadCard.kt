@@ -18,7 +18,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -133,7 +132,7 @@ fun ThreadCard(thread: ThreadSummary, onClick: () -> Unit) {
 @Composable
 private fun StatBadge(icon: ImageVector, value: String) {
     val colors = YamiboTheme.colors
-    Surface(shape = RoundedCornerShape(12.dp), color = colors.brownDeep) {
+    Surface(shape = RoundedCornerShape(12.dp), color = colors.orangeAccent.copy(alpha = 0.15f)) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
@@ -141,14 +140,14 @@ private fun StatBadge(icon: ImageVector, value: String) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(12.dp)
+                tint = colors.brownDeep,
+                modifier = Modifier.size(14.dp)
             )
             Spacer(Modifier.width(4.dp))
             Text(
                 text = value,
                 fontSize = 11.sp,
-                color = Color.White,
+                color = colors.brownDeep,
                 fontWeight = FontWeight.Medium
             )
         }

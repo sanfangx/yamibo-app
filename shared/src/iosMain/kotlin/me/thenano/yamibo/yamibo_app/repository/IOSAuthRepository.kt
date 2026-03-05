@@ -61,7 +61,7 @@ class IOSAuthRepository(
     override fun syncCookieFromWebView() {
         val url = NSURL.URLWithString(YamiboRoute.Domain.build()) ?: return
         val cookies = NSHTTPCookieStorage.sharedHTTPCookieStorage.cookiesForURL(url)
-        if (cookies != null && cookies.isNotEmpty()) {
+        if (!cookies.isNullOrEmpty()) {
             val cookieStrings = mutableListOf<String>()
             for (cookie in cookies) {
                 if (cookie is NSHTTPCookie) {

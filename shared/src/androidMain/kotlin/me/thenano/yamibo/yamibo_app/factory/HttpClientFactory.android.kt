@@ -9,6 +9,7 @@ import io.ktor.http.headersOf
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
 
+@Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 actual object HttpClientFactory {
 
     actual fun create(

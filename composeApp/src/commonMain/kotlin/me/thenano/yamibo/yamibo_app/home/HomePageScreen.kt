@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -381,51 +382,55 @@ private fun ForumCard(forum: ForumSummary) {
 private fun LoadingSkeleton() {
     val colors = YamiboTheme.colors
     val shimmerColor = colors.brownLight
-    val shimmerAnim = rememberInfiniteTransition(label = "shimmer")
-    val shimmerX by
-    shimmerAnim.animateFloat(
-        initialValue = -300f,
-        targetValue = 600f,
-        animationSpec = infiniteRepeatable(tween(1200, easing = LinearEasing)),
-        label = "shimmer_x"
-    )
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize().background(colors.creamBackground),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        /** header placeholder */
-        item {
-            Box(
-                modifier =
-                    Modifier.fillMaxWidth()
-                        .height(72.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .shimmer(shimmerX, shimmerColor)
-            )
-        }
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val widthPx = with(LocalDensity.current) { maxWidth.toPx() }
+        val shimmerAnim = rememberInfiniteTransition(label = "shimmer")
+        val shimmerX by
+        shimmerAnim.animateFloat(
+            initialValue = -widthPx,
+            targetValue = widthPx * 2f,
+            animationSpec = infiniteRepeatable(tween(1200, easing = LinearEasing)),
+            label = "shimmer_x"
+        )
 
-        /** category skeletons */
-        items(4) {
-            Column {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().background(colors.creamBackground),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            /** header placeholder */
+            item {
                 Box(
                     modifier =
                         Modifier.fillMaxWidth()
-                            .height(44.dp)
+                            .height(72.dp)
                             .clip(RoundedCornerShape(14.dp))
                             .shimmer(shimmerX, shimmerColor)
                 )
-                Spacer(Modifier.height(8.dp))
-                repeat(3) {
+            }
+
+            /** category skeletons */
+            items(4) {
+                Column {
                     Box(
                         modifier =
                             Modifier.fillMaxWidth()
-                                .height(60.dp)
-                                .padding(vertical = 3.dp)
-                                .clip(RoundedCornerShape(16.dp))
+                                .height(44.dp)
+                                .clip(RoundedCornerShape(14.dp))
                                 .shimmer(shimmerX, shimmerColor)
                     )
+                    Spacer(Modifier.height(8.dp))
+                    repeat(3) {
+                        Box(
+                            modifier =
+                                Modifier.fillMaxWidth()
+                                    .height(60.dp)
+                                    .padding(vertical = 3.dp)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .shimmer(shimmerX, shimmerColor)
+                        )
+                    }
                 }
             }
         }
@@ -444,7 +449,7 @@ private fun Modifier.shimmer(translateX: Float, baseColor: Color): Modifier =
                         baseColor.copy(alpha = 0.25f),
                     ),
                 start = Offset(translateX, 0f),
-                end = Offset(translateX + 300f, size.height)
+                end = Offset(translateX + size.width, size.height)
             )
         drawRect(brush)
     }

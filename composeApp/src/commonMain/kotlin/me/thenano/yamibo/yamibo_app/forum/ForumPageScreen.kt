@@ -16,6 +16,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -28,6 +29,7 @@ import me.thenano.yamibo.yamibo_app.LocalForumRepository
 import me.thenano.yamibo.yamibo_app.forum.components.*
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.thread.novel.INovelThreadDetailScreen
 
 /** Forum page state */
 private sealed interface ForumState {
@@ -162,7 +164,15 @@ fun ForumPageScreen(fid: ForumId, name: String) {
                             onSubForumClick = { subFid, subName ->
                                 navigator.navigate(IForumScreen(subFid, subName))
                             },
-                            onThreadClick = { /* TODO: navigate to thread */ }
+                            onThreadClick = { thread ->
+                                navigator.navigate(
+                                    INovelThreadDetailScreen(
+                                        thread.tid,
+                                        thread.title,
+                                        thread.author?.uid
+                                    )
+                                )
+                            }
                         )
                     }
             }
@@ -175,10 +185,13 @@ fun ForumPageScreen(fid: ForumId, name: String) {
             fid = fid,
             onDismiss = {
                 /** Just for making ide ignore this issue, the code works well */
-                @Suppress("AssignedValueIsNeverRead")
-                showSearch = false
+                @Suppress("AssignedValueIsNeverRead") showSearch = false
             },
-            onThreadClick = { /* TODO: navigate to thread */ }
+            onThreadClick = { thread ->
+                navigator.navigate(
+                    INovelThreadDetailScreen(thread.tid, thread.title, thread.author?.uid)
+                )
+            }
         )
     }
 }
@@ -258,37 +271,41 @@ private fun ForumContent(
 private fun ForumLoadingSkeleton() {
     val colors = YamiboTheme.colors
     val shimmerColor = colors.brownLight
-    val shimmerAnim = rememberInfiniteTransition(label = "forum_shimmer")
-    val shimmerX by
-    shimmerAnim.animateFloat(
-        initialValue = -300f,
-        targetValue = 600f,
-        animationSpec = infiniteRepeatable(tween(1200, easing = LinearEasing)),
-        label = "forum_shimmer_x"
-    )
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize().background(colors.creamBackground),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        item {
-            Box(
-                modifier =
-                    Modifier.fillMaxWidth()
-                        .height(70.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .shimmer(shimmerX, shimmerColor)
-            )
-        }
-        items(6) {
-            Box(
-                modifier =
-                    Modifier.fillMaxWidth()
-                        .height(100.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .shimmer(shimmerX, shimmerColor)
-            )
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val widthPx = with(LocalDensity.current) { maxWidth.toPx() }
+        val shimmerAnim = rememberInfiniteTransition(label = "forum_shimmer")
+        val shimmerX by
+        shimmerAnim.animateFloat(
+            initialValue = -widthPx,
+            targetValue = widthPx * 2f,
+            animationSpec = infiniteRepeatable(tween(1200, easing = LinearEasing)),
+            label = "forum_shimmer_x"
+        )
+
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().background(colors.creamBackground),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            item {
+                Box(
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .height(70.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .shimmer(shimmerX, shimmerColor)
+                )
+            }
+            items(6) {
+                Box(
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .height(100.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .shimmer(shimmerX, shimmerColor)
+                )
+            }
         }
     }
 }
@@ -305,7 +322,7 @@ private fun Modifier.shimmer(translateX: Float, baseColor: Color): Modifier =
                         baseColor.copy(alpha = 0.25f),
                     ),
                 start = Offset(translateX, 0f),
-                end = Offset(translateX + 300f, size.height)
+                end = Offset(translateX + size.width, size.height)
             )
         drawRect(brush)
     }

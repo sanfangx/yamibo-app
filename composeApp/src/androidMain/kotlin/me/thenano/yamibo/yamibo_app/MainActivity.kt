@@ -18,6 +18,7 @@ import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.AndroidAuthRepository
 import me.thenano.yamibo.yamibo_app.repository.AndroidForumRepository
 import me.thenano.yamibo.yamibo_app.repository.AndroidThemeRepository
+import me.thenano.yamibo.yamibo_app.repository.AndroidThreadRepository
 import me.thenano.yamibo.yamibo_app.store.AndroidCookieStore
 import me.thenano.yamibo.yamibo_app.store.AndroidUserStore
 
@@ -58,6 +59,7 @@ class MainActivity : ComponentActivity() {
                 AndroidAuthRepository(cookieStore, userStore, yamiboClient)
             }
             val forumRepository = remember { AndroidForumRepository(cookieStore, yamiboClient) }
+            val threadRepository = remember { AndroidThreadRepository(cookieStore, yamiboClient) }
             val themeRepository = remember { AndroidThemeRepository() }
 
             /** Provide Repositories */
@@ -65,15 +67,14 @@ class MainActivity : ComponentActivity() {
                 LocalNavigator provides navigator,
                 LocalAuthRepository provides authRepository,
                 LocalForumRepository provides forumRepository,
+                LocalThreadRepository provides threadRepository,
                 LocalThemeRepository provides themeRepository,
             ) {
                 /** Color system bars to match active theme */
                 val scheme = LocalThemeRepository.current.getColorScheme()
                 SideEffect {
-                    @Suppress("DEPRECATION")
-                    window.statusBarColor = scheme.brownDeep.toInt()
-                    @Suppress("DEPRECATION")
-                    window.navigationBarColor = scheme.brownDeep.toInt()
+                    @Suppress("DEPRECATION") window.statusBarColor = scheme.brownDeep.toInt()
+                    @Suppress("DEPRECATION") window.navigationBarColor = scheme.brownDeep.toInt()
                     WindowInsetsControllerCompat(window, window.decorView).apply {
                         isAppearanceLightStatusBars = false
                         isAppearanceLightNavigationBars = false
