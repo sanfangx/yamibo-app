@@ -5,7 +5,6 @@ import io.github.littlesurvival.dto.page.ThreadPage
 import io.github.littlesurvival.dto.value.FormHash
 import io.github.littlesurvival.dto.value.ThreadId
 import io.github.littlesurvival.dto.value.UserId
-import kotlin.Int
 
 interface ThreadRepository {
     data class ThreadCacheKey(val tid: Int, val page: Int)
@@ -18,5 +17,6 @@ interface ThreadRepository {
 
     suspend fun addFavorite(tid: ThreadId, formHash: FormHash): YamiboResult<String>
     fun getCachedThread(tid: ThreadId, page: Int = 1): ThreadPage?
+    fun setCachedThread(tid: ThreadId, page: Int, threadPage: ThreadPage)
     fun clearCachedThread(tid: ThreadId)
 }

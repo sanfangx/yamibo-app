@@ -8,6 +8,7 @@ expect fun PlatformWebView(url: String)
 
 class IPlatformWebView(val link: String = "https://bbs.yamibo.com/") : Navigatable {
     override val id: Any = Any()
+
     @Composable
     override fun Content() {
         PlatformWebView(link)

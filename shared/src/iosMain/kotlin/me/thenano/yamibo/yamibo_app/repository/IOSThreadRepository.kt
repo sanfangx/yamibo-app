@@ -9,16 +9,16 @@ import io.github.littlesurvival.dto.value.UserId
 import me.thenano.yamibo.yamibo_app.store.auth.CookieStore
 
 class IOSThreadRepository(
-        private val cookieStore: CookieStore,
-        private val yamiboClient: YamiboClient
+    private val cookieStore: CookieStore,
+    private val yamiboClient: YamiboClient
 ) : ThreadRepository {
     /** Thread pages cache — keyed by ThreadCacheKey */
     private val cachedThreadPages = mutableMapOf<ThreadRepository.ThreadCacheKey, ThreadPage>()
 
     override suspend fun fetchThread(
-            tid: ThreadId,
-            authorId: UserId?,
-            page: Int
+        tid: ThreadId,
+        authorId: UserId?,
+        page: Int
     ): YamiboResult<ThreadPage> {
         yamiboClient.setCookie(cookieStore.load() ?: "")
         val result = yamiboClient.fetchThreadById(tid, authorId, page)
@@ -35,7 +35,11 @@ class IOSThreadRepository(
     }
 
     override fun getCachedThread(tid: ThreadId, page: Int): ThreadPage? =
-            cachedThreadPages[ThreadRepository.ThreadCacheKey(tid.value, page)]
+        cachedThreadPages[ThreadRepository.ThreadCacheKey(tid.value, page)]
+
+    override fun setCachedThread(tid: ThreadId, page: Int, threadPage: ThreadPage) {
+        cachedThreadPages[ThreadRepository.ThreadCacheKey(tid.value, page)] = threadPage
+    }
 
     override fun clearCachedThread(tid: ThreadId) {
         cachedThreadPages.keys.removeAll { it.tid == tid.value }

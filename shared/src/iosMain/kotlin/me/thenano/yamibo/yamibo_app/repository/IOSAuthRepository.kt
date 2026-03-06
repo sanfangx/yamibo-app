@@ -13,9 +13,9 @@ import platform.Foundation.NSHTTPCookieStorage
 import platform.Foundation.NSURL
 
 class IOSAuthRepository(
-        override val cookieStore: CookieStore,
-        override val userStore: UserStore,
-        override val yamiboClient: YamiboClient
+    override val cookieStore: CookieStore,
+    override val userStore: UserStore,
+    override val yamiboClient: YamiboClient
 ) : AuthRepository {
     override suspend fun isLoggedIn(): Boolean {
         return parseCookieStringToMap(cookieStore.load()).containsKey(authCookieKey)
@@ -30,13 +30,16 @@ class IOSAuthRepository(
                 userStore.save(profileResult.value)
                 return YamiboResult.Success(true)
             }
+
             is YamiboResult.NotLoggedIn -> {
                 logOut()
                 return YamiboResult.Failure("登入資訊過期，請重新登入")
             }
+
             is YamiboResult.Maintenance -> {
                 return YamiboResult.Failure("伺服器正在維護中")
             }
+
             is YamiboResult.Failure -> {
                 return YamiboResult.Failure("獲取用戶資料失敗: ${profileResult.reason}")
             }

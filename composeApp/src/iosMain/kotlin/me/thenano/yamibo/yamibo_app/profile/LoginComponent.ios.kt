@@ -29,6 +29,7 @@ class YamiboLoginNavigationDelegate(
     override fun webView(webView: WKWebView, didStartProvisionalNavigation: WKNavigation?) {
         onLoadingChanged(true)
     }
+
     @ObjCSignatureOverride
     override fun webView(webView: WKWebView, didFinishNavigation: WKNavigation?) {
         onLoadingChanged(false)

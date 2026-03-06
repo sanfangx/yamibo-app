@@ -15,7 +15,6 @@ import androidx.compose.ui.viewinterop.AndroidView
 import io.github.littlesurvival.YamiboRoute
 import io.github.littlesurvival.core.YamiboResult
 import me.thenano.yamibo.yamibo_app.LocalAuthRepository
-import me.thenano.yamibo.yamibo_app.UserAgent
 import me.thenano.yamibo.yamibo_app.__error_tag
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 

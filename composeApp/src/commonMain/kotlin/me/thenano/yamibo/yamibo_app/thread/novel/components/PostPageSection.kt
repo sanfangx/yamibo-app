@@ -72,21 +72,31 @@ internal fun PostPageSection(
         }
 
         /** Expanded post list */
-        if (isExpanded) {
-            if (posts == null) {
-                /** Loading indicator */
-                Box(
-                    modifier = Modifier.fillMaxWidth().height(60.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        color = colors.brownDeep,
-                        strokeWidth = 2.dp
-                    )
+        androidx.compose.animation.AnimatedVisibility(
+            visible = isExpanded,
+            enter =
+                androidx.compose.animation.expandVertically(animationSpec = tween(300)) +
+                    androidx.compose.animation.fadeIn(animationSpec = tween(300)),
+            exit =
+                androidx.compose.animation.shrinkVertically(animationSpec = tween(300)) +
+                    androidx.compose.animation.fadeOut(animationSpec = tween(300))
+        ) {
+            Column {
+                if (posts == null) {
+                    /** Loading indicator */
+                    Box(
+                        modifier = Modifier.fillMaxWidth().height(60.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = colors.brownDeep,
+                            strokeWidth = 2.dp
+                        )
+                    }
+                } else {
+                    posts.forEach { post -> PostTitleRow(post = post) }
                 }
-            } else {
-                posts.forEach { post -> PostTitleRow(post = post) }
             }
         }
     }

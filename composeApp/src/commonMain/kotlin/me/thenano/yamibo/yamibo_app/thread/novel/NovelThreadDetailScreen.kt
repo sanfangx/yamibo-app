@@ -22,12 +22,7 @@ import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.LocalThreadRepository
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
-import me.thenano.yamibo.yamibo_app.thread.novel.components.FirstFloorPreview
-import me.thenano.yamibo.yamibo_app.thread.novel.components.PostPageSection
-import me.thenano.yamibo.yamibo_app.thread.novel.components.ThreadErrorContent
-import me.thenano.yamibo.yamibo_app.thread.novel.components.ThreadHeader
-import me.thenano.yamibo.yamibo_app.thread.novel.components.ThreadLoadingSkeleton
-import me.thenano.yamibo.yamibo_app.thread.novel.components.ThreadTopBar
+import me.thenano.yamibo.yamibo_app.thread.novel.components.*
 
 /** Thread detail state */
 internal sealed interface ThreadState {
@@ -52,6 +47,13 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
     var expandedPages by remember { mutableStateOf(setOf(1)) }
 
     suspend fun loadThread(page: Int = 1) {
+        val cached = threadRepository.getCachedThread(tid, page)
+        if (cached != null) {
+            pagePostsCache[page] = cached.posts
+            state = ThreadState.Success(cached)
+            return
+        }
+
         val result = threadRepository.fetchThread(tid, authorId, page)
         state =
             when (result) {
@@ -126,14 +128,20 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
                         isRefreshing = isRefreshing,
                         onRefresh = {
                             isRefreshing = true
-                            threadRepository.clearCachedThread(tid)
-                            pagePostsCache.clear() // Clear local cache as well
                             scope.launch {
                                 when (val result =
                                     threadRepository.fetchThread(tid, authorId)
                                 ) {
                                     is YamiboResult.Success -> {
+                                        threadRepository.clearCachedThread(tid)
+                                        threadRepository.setCachedThread(
+                                            tid,
+                                            1,
+                                            result.value
+                                        )
+                                        pagePostsCache.clear() // Clear local cache as well
                                         pagePostsCache[1] = result.value.posts
+                                        expandedPages = setOf(1)
                                         state = ThreadState.Success(result.value)
                                     }
 
@@ -169,19 +177,24 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
                             },
                             onLoadPage = { page ->
                                 scope.launch {
-                                    val result =
-                                        threadRepository.fetchThread(
-                                            tid,
-                                            authorId,
-                                            page
-                                        )
-                                    if (result is YamiboResult.Success) {
-                                        pagePostsCache[page] = result.value.posts
+                                    val cached = threadRepository.getCachedThread(tid, page)
+                                    if (cached != null) {
+                                        pagePostsCache[page] = cached.posts
                                     } else {
-                                        snackbarHostState.showSnackbar(
-                                            message = "載入第 $page 頁失敗",
-                                            duration = SnackbarDuration.Short
-                                        )
+                                        val result =
+                                            threadRepository.fetchThread(
+                                                tid,
+                                                authorId,
+                                                page
+                                            )
+                                        if (result is YamiboResult.Success) {
+                                            pagePostsCache[page] = result.value.posts
+                                        } else {
+                                            snackbarHostState.showSnackbar(
+                                                message = "載入第 $page 頁失敗",
+                                                duration = SnackbarDuration.Short
+                                            )
+                                        }
                                     }
                                 }
                             },

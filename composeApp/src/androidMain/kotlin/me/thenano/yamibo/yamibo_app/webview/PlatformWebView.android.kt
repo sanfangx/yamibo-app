@@ -2,13 +2,7 @@ package me.thenano.yamibo.yamibo_app.webview
 
 import android.annotation.SuppressLint
 import android.util.Log
-import android.webkit.CookieManager
-import android.webkit.WebChromeClient
-import android.webkit.WebResourceError
-import android.webkit.WebResourceRequest
-import android.webkit.WebSettings
-import android.webkit.WebView
-import android.webkit.WebViewClient
+import android.webkit.*
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable

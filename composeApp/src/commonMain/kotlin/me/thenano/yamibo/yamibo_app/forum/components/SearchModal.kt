@@ -1,5 +1,6 @@
 package me.thenano.yamibo.yamibo_app.forum.components
 
+import YamiboIcons
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -23,6 +24,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import io.github.littlesurvival.core.YamiboResult
 import io.github.littlesurvival.dto.model.ThreadSummary
 import io.github.littlesurvival.dto.page.SearchPage
@@ -93,79 +96,92 @@ fun SearchModal(fid: ForumId?, onDismiss: () -> Unit, onThreadClick: (ThreadSumm
         }
     }
 
-    Column(
-        modifier = Modifier.fillMaxSize().background(colors.creamBackground).systemBarsPadding()
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties =
+            DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = true)
     ) {
-        /** Search top bar */
-        Surface(color = colors.brownDeep, shadowElevation = 4.dp) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = onDismiss) { Text("◀", color = Color.White, fontSize = 20.sp) }
-
-                OutlinedTextField(
-                    value = query,
-                    onValueChange = { query = it },
-                    modifier = Modifier.weight(1f).focusRequester(focusRequester),
-                    placeholder = {
-                        Text(
-                            text = "搜尋主題...",
-                            color = Color.White.copy(alpha = 0.5f),
-                            fontSize = 15.sp
-                        )
-                    },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                    keyboardActions = KeyboardActions(onSearch = { doSearch(1) }),
-                    colors =
-                        OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White,
-                            cursorColor = colors.orangeAccent,
-                            focusedBorderColor = colors.orangeAccent,
-                            unfocusedBorderColor = Color.White.copy(alpha = 0.3f),
-                            focusedContainerColor = Color.White.copy(alpha = 0.08f),
-                            unfocusedContainerColor = Color.White.copy(alpha = 0.05f)
-                        ),
-                    shape = RoundedCornerShape(12.dp),
-                    textStyle = LocalTextStyle.current.copy(fontSize = 15.sp)
-                )
-
-                Spacer(Modifier.width(6.dp))
-
-                Surface(
-                    onClick = { doSearch(1) },
-                    shape = RoundedCornerShape(12.dp),
-                    color = colors.orangeAccent
+        Column(
+            modifier =
+                Modifier.fillMaxSize()
+                    .background(colors.creamBackground)
+                    .systemBarsPadding()
+        ) {
+            /** Search top bar */
+            Surface(color = colors.brownDeep, shadowElevation = 4.dp) {
+                Row(
+                    modifier =
+                        Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "搜尋",
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                        color = Color.White,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold
+                    IconButton(onClick = onDismiss) {
+                        Text("◀", color = Color.White, fontSize = 20.sp)
+                    }
+
+                    OutlinedTextField(
+                        value = query,
+                        onValueChange = { query = it },
+                        modifier = Modifier.weight(1f).focusRequester(focusRequester),
+                        placeholder = {
+                            Text(
+                                text = "搜尋主題...",
+                                color = Color.White.copy(alpha = 0.5f),
+                                fontSize = 15.sp
+                            )
+                        },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                        keyboardActions = KeyboardActions(onSearch = { doSearch(1) }),
+                        colors =
+                            OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White,
+                                cursorColor = colors.orangeAccent,
+                                focusedBorderColor = colors.orangeAccent,
+                                unfocusedBorderColor = Color.White.copy(alpha = 0.3f),
+                                focusedContainerColor = Color.White.copy(alpha = 0.08f),
+                                unfocusedContainerColor =
+                                    Color.White.copy(alpha = 0.05f)
+                            ),
+                        shape = RoundedCornerShape(12.dp),
+                        textStyle = LocalTextStyle.current.copy(fontSize = 15.sp)
                     )
+
+                    Spacer(Modifier.width(6.dp))
+
+                    Surface(
+                        onClick = { doSearch(1) },
+                        shape = RoundedCornerShape(12.dp),
+                        color = colors.orangeAccent
+                    ) {
+                        Text(
+                            text = "搜尋",
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                            color = Color.White,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
-        }
 
-        /** Search body */
-        AnimatedContent(
-            targetState = state,
-            transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(150)) },
-            label = "search_content"
-        ) { currentState ->
-            when (currentState) {
-                is SearchState.Idle -> SearchIdleContent()
-                is SearchState.Loading -> SearchLoadingContent()
-                is SearchState.Error -> SearchErrorContent(currentState.message)
-                is SearchState.Success ->
-                    SearchResultContent(
-                        searchPage = currentState.page,
-                        onThreadClick = onThreadClick,
-                        onPageChange = { doSearch(it) }
-                    )
+            /** Search body */
+            AnimatedContent(
+                targetState = state,
+                transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(150)) },
+                label = "search_content"
+            ) { currentState ->
+                when (currentState) {
+                    is SearchState.Idle -> SearchIdleContent()
+                    is SearchState.Loading -> SearchLoadingContent()
+                    is SearchState.Error -> SearchErrorContent(currentState.message)
+                    is SearchState.Success ->
+                        SearchResultContent(
+                            searchPage = currentState.page,
+                            onThreadClick = onThreadClick,
+                            onPageChange = { doSearch(it) }
+                        )
+                }
             }
         }
     }

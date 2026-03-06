@@ -11,8 +11,8 @@ import io.github.littlesurvival.dto.value.SearchId
 import me.thenano.yamibo.yamibo_app.store.auth.CookieStore
 
 class IOSForumRepository(
-        private val cookieStore: CookieStore,
-        private val yamiboClient: YamiboClient
+    private val cookieStore: CookieStore,
+    private val yamiboClient: YamiboClient
 ) : ForumRepository {
 
     /** in-memory cache */
@@ -42,18 +42,18 @@ class IOSForumRepository(
     }
 
     override suspend fun fetchSearch(
-            query: String,
-            forumId: ForumId?,
-            formHash: FormHash
+        query: String,
+        forumId: ForumId?,
+        formHash: FormHash
     ): YamiboResult<SearchPage> {
         yamiboClient.setCookie(cookieStore.load() ?: "")
         return yamiboClient.fetchSearch(query, forumId, formHash)
     }
 
     override suspend fun fetchSearchById(
-            query: String,
-            searchId: SearchId,
-            page: Int
+        query: String,
+        searchId: SearchId,
+        page: Int
     ): YamiboResult<SearchPage> {
         yamiboClient.setCookie(cookieStore.load() ?: "")
         return yamiboClient.fetchSearchById(query, searchId, page)
@@ -62,7 +62,11 @@ class IOSForumRepository(
     override fun getCachedHomePage(): HomePage? = cachedHomePage
 
     override fun getCachedForumPage(fid: ForumId, page: Int): ForumPage? =
-            cachedForumPages[ForumRepository.ForumCacheKey(fid.value, page)]
+        cachedForumPages[ForumRepository.ForumCacheKey(fid.value, page)]
+
+    override fun setCachedForumPage(fid: ForumId, page: Int, forumPage: ForumPage) {
+        cachedForumPages[ForumRepository.ForumCacheKey(fid.value, page)] = forumPage
+    }
 
     override fun clearCachedForum(fid: ForumId) {
         cachedForumPages.keys.removeAll { it.fid == fid.value }

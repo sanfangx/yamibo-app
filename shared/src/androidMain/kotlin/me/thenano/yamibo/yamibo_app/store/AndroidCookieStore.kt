@@ -8,7 +8,7 @@ import me.thenano.yamibo.yamibo_app.store.auth.CookieStore
 
 class AndroidCookieStore(
     context: Context
-): CookieStore {
+) : CookieStore {
     private val prefs = EncryptedSharedPreferences.create(
         context, prefName, MasterKey.Builder(context).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build(),
         EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,

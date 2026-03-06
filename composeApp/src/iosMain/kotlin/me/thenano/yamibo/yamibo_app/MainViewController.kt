@@ -30,10 +30,10 @@ fun MainViewController() = ComposeUIViewController {
 
     /** Provide Repositories */
     CompositionLocalProvider(
-            LocalNavigator provides navigator,
-            LocalAuthRepository provides authRepository,
-            LocalForumRepository provides forumRepository,
-            LocalThreadRepository provides threadRepository,
-            LocalThemeRepository provides themeRepository,
+        LocalNavigator provides navigator,
+        LocalAuthRepository provides authRepository,
+        LocalForumRepository provides forumRepository,
+        LocalThreadRepository provides threadRepository,
+        LocalThemeRepository provides themeRepository,
     ) { App() }
 }

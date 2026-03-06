@@ -27,5 +27,6 @@ interface ForumRepository {
 
     fun getCachedHomePage(): HomePage?
     fun getCachedForumPage(fid: ForumId, page: Int = 1): ForumPage?
+    fun setCachedForumPage(fid: ForumId, page: Int, forumPage: ForumPage)
     fun clearCachedForum(fid: ForumId)
 }

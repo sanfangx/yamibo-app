@@ -1,5 +1,6 @@
 package me.thenano.yamibo.yamibo_app.thread.novel.components
 
+import Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -17,6 +18,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.littlesurvival.dto.page.Post
+import me.thenano.yamibo.yamibo_app.__info__tag
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 
 /** First floor body preview — scrollable with max half-screen height */
@@ -25,24 +27,15 @@ internal fun FirstFloorPreview(post: Post) {
     val colors = YamiboTheme.colors
 
     /** Strip HTML tags for plain text display */
-    val plainText =
-        remember(post.contentHtml) {
-            post.contentHtml
-                /** Normalize: </div> → newline, <br> → newline */
-                .replace(Regex("</div>", RegexOption.IGNORE_CASE), "\n")
-                .replace(Regex("<br\\s*/?>\r?\n?", RegexOption.IGNORE_CASE), "\n")
-                /** Remove all remaining HTML tags */
-                .replace(Regex("<[^>]*>"), "")
-                /** Decode HTML entities */
-                .replace("&nbsp;", " ")
-                .replace("&amp;", "&")
-                .replace("&lt;", "<")
-                .replace("&gt;", ">")
-                .replace("&quot;", "\"")
-                /** Collapse 2+ consecutive newlines into 1 (no blank lines) */
-                .replace(Regex("(\r?\n){2,}"), "\n")
-                .trim()
-        }
+    val plainText = remember(post.contentHtml) {
+        post.contentHtml.replace(Regex("</div>", RegexOption.IGNORE_CASE), "\n")
+            .replace(Regex("<br\\s*/?>\r?\n?", RegexOption.IGNORE_CASE), "\n").replace(Regex("<[^>]*>"), "")
+            .replace("&nbsp;", " ").replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">")
+            .replace("&quot;", "\"")
+            /** collapse blank lines (including spaces) */
+            .replace(Regex("\\n\\s*\\n+"), "\n").trim()
+    }
+    Log.i(__info__tag("FirstFloorPreview"), "FirstFloorPreview:\n$plainText")
 
     val maxPreviewHeight = 300.dp
 
@@ -71,31 +64,18 @@ internal fun FirstFloorPreview(post: Post) {
                 if (scrollState.maxValue > 0) {
                     val scrollFraction = scrollState.value.toFloat() / scrollState.maxValue
                     val viewportFraction =
-                        scrollState.viewportSize.toFloat() /
-                            (scrollState.viewportSize + scrollState.maxValue).toFloat()
+                        scrollState.viewportSize.toFloat() / (scrollState.viewportSize + scrollState.maxValue).toFloat()
                     val thumbHeight = (viewportFraction * maxPreviewHeight.value).coerceAtLeast(24f)
 
                     Box(
-                        modifier =
-                            Modifier.align(Alignment.TopEnd)
-                                .padding(vertical = 4.dp, horizontal = 2.dp)
-                                .width(3.dp)
-                                .height(maxPreviewHeight)
+                        modifier = Modifier.align(Alignment.TopEnd).padding(vertical = 4.dp, horizontal = 2.dp)
+                            .width(3.dp).height(maxPreviewHeight)
                     ) {
                         Box(
-                            modifier =
-                                Modifier.align(Alignment.TopStart)
-                                    .offset(
-                                        y =
-                                            ((maxPreviewHeight.value -
-                                                thumbHeight) *
-                                                scrollFraction)
-                                                .dp
-                                    )
-                                    .width(3.dp)
-                                    .height(thumbHeight.dp)
-                                    .clip(RoundedCornerShape(1.5.dp))
-                                    .background(colors.brownPrimary.copy(alpha = 0.3f))
+                            modifier = Modifier.align(Alignment.TopStart).offset(
+                                y = ((maxPreviewHeight.value - thumbHeight) * scrollFraction).dp
+                            ).width(3.dp).height(thumbHeight.dp).clip(RoundedCornerShape(1.5.dp))
+                                .background(colors.brownPrimary.copy(alpha = 0.3f))
                         )
                     }
                 }

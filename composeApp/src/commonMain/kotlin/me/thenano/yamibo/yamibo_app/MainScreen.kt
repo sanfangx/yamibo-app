@@ -1,5 +1,6 @@
 package me.thenano.yamibo.yamibo_app
 
+import YamiboIcons
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,22 +25,23 @@ import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 enum class MainTab(val title: String, val icon: ImageVector) {
     Home("首页", YamiboIcons.Home),
     Message("消息", YamiboIcons.Message),
+    Favorite("收藏", YamiboIcons.Explore),
     Profile("我的", YamiboIcons.Profile)
 }
 
-class IMainScreen : Navigatable {
+class IMainScreen(private val initialTab: MainTab = MainTab.Home) : Navigatable {
     override val id = "MainScreen"
 
     @Composable
     override fun Content() {
-        MainScreen()
+        MainScreen(initialTab)
     }
 }
 
 @Composable
-fun MainScreen() {
+fun MainScreen(initialTab: MainTab = MainTab.Home) {
     val colors = YamiboTheme.colors
-    var currentTab by rememberSaveable { mutableStateOf(MainTab.Home) }
+    var currentTab by rememberSaveable { mutableStateOf(initialTab) }
     Scaffold(
         modifier = Modifier.fillMaxSize().systemBarsPadding(),
         containerColor = colors.creamBackground,
@@ -62,6 +64,7 @@ fun MainScreen() {
             when (currentTab) {
                 MainTab.Home -> HomeScreenContent()
                 MainTab.Message -> PlaceholderScreen("Message")
+                MainTab.Favorite -> me.thenano.yamibo.yamibo_app.favorite.FavoritePage()
                 MainTab.Profile -> ProfilePage()
             }
         }
