@@ -69,9 +69,7 @@ fun HomePageScreen() {
         state =
             when (result) {
                 is YamiboResult.Success -> HomeState.Success(result.value)
-                is YamiboResult.Failure -> HomeState.Error(result.reason)
-                is YamiboResult.Maintenance -> HomeState.Error(result.message())
-                is YamiboResult.NotLoggedIn -> HomeState.Error(result.message())
+                else -> HomeState.Error(result.message())
             }
     }
 
@@ -103,27 +101,14 @@ fun HomePageScreen() {
                     onRefresh = {
                         isRefreshing = true
                         scope.launch {
-                            when (val result = forumRepository.fetchHomePage()) {
+                            val result = forumRepository.fetchHomePage()
+                            when (result) {
                                 is YamiboResult.Success ->
                                     state = HomeState.Success(result.value)
 
-                                is YamiboResult.Failure -> {
+                                else -> {
                                     snackbarHostState.showSnackbar(
-                                        message = "刷新失敗：${result.reason}",
-                                        duration = SnackbarDuration.Short
-                                    )
-                                }
-
-                                is YamiboResult.Maintenance -> {
-                                    snackbarHostState.showSnackbar(
-                                        message = "伺服器維護中",
-                                        duration = SnackbarDuration.Short
-                                    )
-                                }
-
-                                is YamiboResult.NotLoggedIn -> {
-                                    snackbarHostState.showSnackbar(
-                                        message = "未登入",
+                                        message = result.message(),
                                         duration = SnackbarDuration.Short
                                     )
                                 }

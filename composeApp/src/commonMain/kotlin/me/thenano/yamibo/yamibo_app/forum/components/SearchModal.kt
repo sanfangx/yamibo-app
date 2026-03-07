@@ -89,9 +89,7 @@ fun SearchModal(fid: ForumId?, onDismiss: () -> Unit, onThreadClick: (ThreadSumm
                         }
                     }
 
-                    is YamiboResult.Failure -> SearchState.Error(result.reason)
-                    is YamiboResult.Maintenance -> SearchState.Error("伺服器維護中")
-                    is YamiboResult.NotLoggedIn -> SearchState.Error("未登入，請先登入後再搜尋")
+                    else -> SearchState.Error(result.message())
                 }
         }
     }

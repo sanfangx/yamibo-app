@@ -59,6 +59,11 @@ class AndroidForumRepository(
         return yamiboClient.fetchSearchById(query, searchId, page)
     }
 
+    override suspend fun addFavorite(forumId: ForumId, formHash: FormHash): YamiboResult<String> {
+        yamiboClient.setCookie(cookieStore.load() ?: "")
+        return yamiboClient.fetchAddFavorite(forumId, formHash)
+    }
+
     override fun getCachedHomePage(): HomePage? = cachedHomePage
 
     override fun getCachedForumPage(fid: ForumId, page: Int): ForumPage? =

@@ -62,9 +62,7 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
                     ThreadState.Success(result.value)
                 }
 
-                is YamiboResult.Failure -> ThreadState.Error(result.reason)
-                is YamiboResult.Maintenance -> ThreadState.Error(result.message())
-                is YamiboResult.NotLoggedIn -> ThreadState.Error(result.message())
+                else -> ThreadState.Error(result.message())
             }
     }
 
@@ -146,12 +144,7 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
                                     }
 
                                     else -> {
-                                        val msg =
-                                            when (result) {
-                                                is YamiboResult.Failure -> result.reason
-                                                is YamiboResult.Maintenance -> "伺服器維護中"
-                                                is YamiboResult.NotLoggedIn -> "未登入"
-                                            }
+                                        val msg = result.message()
                                         snackbarHostState.showSnackbar(
                                             message = "刷新失敗：$msg",
                                             duration = SnackbarDuration.Short

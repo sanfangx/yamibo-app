@@ -27,6 +27,7 @@ import io.github.littlesurvival.dto.page.ForumPage
 import io.github.littlesurvival.dto.value.ForumId
 import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.IMainScreen
+import me.thenano.yamibo.yamibo_app.LocalAuthRepository
 import me.thenano.yamibo.yamibo_app.LocalForumRepository
 import me.thenano.yamibo.yamibo_app.MainTab
 import me.thenano.yamibo.yamibo_app.forum.components.*
@@ -47,6 +48,7 @@ private sealed interface ForumState {
 fun ForumPageScreen(fid: ForumId, name: String) {
     val colors = YamiboTheme.colors
     val forumRepository = LocalForumRepository.current
+    val authRepository = LocalAuthRepository.current
     val navigator = LocalNavigator.current
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -72,9 +74,7 @@ fun ForumPageScreen(fid: ForumId, name: String) {
                     ForumState.Success(result.value)
                 }
 
-                is YamiboResult.Failure -> ForumState.Error(result.reason)
-                is YamiboResult.Maintenance -> ForumState.Error(result.message())
-                is YamiboResult.NotLoggedIn -> ForumState.Error(result.message())
+                else -> ForumState.Error(result.message())
             }
     }
 
@@ -116,9 +116,20 @@ fun ForumPageScreen(fid: ForumId, name: String) {
                 onBack = { navigator.pop() },
                 onSearch = { showSearch = true },
                 onStarClick = {
+                    val formHash = authRepository.currentUser()?.formHash
+                    if (formHash == null) {
+                        scope.launch {
+                            snackbarHostState.showSnackbar(
+                                message = "未登入，請先登入後再收藏",
+                                duration = SnackbarDuration.Short
+                            )
+                        }
+                        return@ForumTopBar
+                    }
                     scope.launch {
+                        val result = forumRepository.addFavorite(fid, formHash)
                         snackbarHostState.showSnackbar(
-                            message = "收藏功能開發中",
+                            message = result.message(),
                             duration = SnackbarDuration.Short
                         )
                     }

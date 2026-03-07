@@ -25,6 +25,8 @@ interface ForumRepository {
         page: Int = 1
     ): YamiboResult<SearchPage>
 
+    suspend fun addFavorite(forumId: ForumId, formHash: FormHash): YamiboResult<String>
+
     fun getCachedHomePage(): HomePage?
     fun getCachedForumPage(fid: ForumId, page: Int = 1): ForumPage?
     fun setCachedForumPage(fid: ForumId, page: Int, forumPage: ForumPage)
