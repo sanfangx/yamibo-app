@@ -20,3 +20,4 @@ node_modules/
 /.agents
 .vscode/settings.json
 *.txt
+/composeApp/src/commonTest
