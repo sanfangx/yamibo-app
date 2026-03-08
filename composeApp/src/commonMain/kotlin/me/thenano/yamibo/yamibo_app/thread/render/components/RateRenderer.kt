@@ -4,7 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -18,7 +18,10 @@ import io.github.littlesurvival.dto.page.RateBlock
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 
 @Composable
-fun RateRenderer(rateBlock: RateBlock, modifier: Modifier = Modifier) {
+fun RateRenderer(
+    rateBlock: RateBlock,
+    modifier: Modifier = Modifier
+) {
     val colors = YamiboTheme.colors
     if (rateBlock.rates.isEmpty()) return
 
@@ -50,7 +53,7 @@ fun RateRenderer(rateBlock: RateBlock, modifier: Modifier = Modifier) {
             }
 
             // Divider
-            Divider(color = colors.brownLight.copy(alpha = 0.5f), thickness = 0.5.dp)
+            HorizontalDivider(Modifier, thickness = 0.5.dp, color = colors.brownLight.copy(alpha = 0.5f))
 
             // Rates List
             Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {

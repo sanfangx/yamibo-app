@@ -22,7 +22,10 @@ import io.kamel.image.asyncPainterResource
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 
 @Composable
-fun CommentRenderer(comments: List<PostComment>, modifier: Modifier = Modifier) {
+fun CommentRenderer(
+    comments: List<PostComment>,
+    modifier: Modifier = Modifier
+) {
     val colors = YamiboTheme.colors
     if (comments.isEmpty()) return
 

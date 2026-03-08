@@ -1,13 +1,18 @@
 package me.thenano.yamibo.yamibo_app.thread.novel.components
 
 import YamiboIcons
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
@@ -94,24 +99,34 @@ internal fun ThreadHeader(
                 /** Info column */
                 Column(modifier = Modifier.weight(1f)) {
                     /** Title (long-press to copy) */
+                    val titleInteractionSource = remember { MutableInteractionSource() }
+                    val isTitlePressed by titleInteractionSource.collectIsPressedAsState()
+                    val titleScale by animateFloatAsState(targetValue = if (isTitlePressed) 0.95f else 1f)
+
                     Text(
                         text = thread.title,
-                        fontSize = 16.sp,
+                        fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = colors.textDark,
                         modifier =
-                            Modifier.combinedClickable(
-                                onClick = {},
-                                onLongClick = {
-                                    haptic.performHapticFeedback(
-                                        HapticFeedbackType.LongPress
-                                    )
-                                    clipboardManager.setText(
-                                        AnnotatedString(thread.title)
-                                    )
-                                    onCopy("已複製標題")
-                                }
-                            )
+                            Modifier.graphicsLayer {
+                                scaleX = titleScale
+                                scaleY = titleScale
+                            }
+                                .combinedClickable(
+                                    interactionSource = titleInteractionSource,
+                                    indication = null,
+                                    onClick = {},
+                                    onLongClick = {
+                                        haptic.performHapticFeedback(
+                                            HapticFeedbackType.LongPress
+                                        )
+                                        clipboardManager.setText(
+                                            AnnotatedString(thread.title)
+                                        )
+                                        onCopy("已複製標題：${thread.title}")
+                                    }
+                                )
                     )
                     Spacer(Modifier.height(6.dp))
 
@@ -125,25 +140,35 @@ internal fun ThreadHeader(
                                 tint = colors.brownPrimary.copy(alpha = 0.7f)
                             )
                             Spacer(Modifier.width(4.dp))
+                            val authorInteractionSource = remember { MutableInteractionSource() }
+                            val isAuthorPressed by authorInteractionSource.collectIsPressedAsState()
+                            val authorScale by animateFloatAsState(targetValue = if (isAuthorPressed) 0.95f else 1f)
+
                             Text(
                                 text = firstPost.author.name,
                                 fontSize = 13.sp,
                                 color = colors.brownPrimary.copy(alpha = 0.8f),
                                 modifier =
-                                    Modifier.combinedClickable(
-                                        onClick = {},
-                                        onLongClick = {
-                                            haptic.performHapticFeedback(
-                                                HapticFeedbackType.LongPress
-                                            )
-                                            clipboardManager.setText(
-                                                AnnotatedString(
-                                                    firstPost.author.name
+                                    Modifier.graphicsLayer {
+                                        scaleX = authorScale
+                                        scaleY = authorScale
+                                    }
+                                        .combinedClickable(
+                                            interactionSource = authorInteractionSource,
+                                            indication = null,
+                                            onClick = {},
+                                            onLongClick = {
+                                                haptic.performHapticFeedback(
+                                                    HapticFeedbackType.LongPress
                                                 )
-                                            )
-                                            onCopy("已複製作者：${firstPost.author.name}")
-                                        }
-                                    )
+                                                clipboardManager.setText(
+                                                    AnnotatedString(
+                                                        firstPost.author.name
+                                                    )
+                                                )
+                                                onCopy("已複製作者：${firstPost.author.name}")
+                                            }
+                                        )
                             )
                         }
                         Spacer(Modifier.height(3.dp))
@@ -275,8 +300,7 @@ internal fun ThreadHeader(
                             modifier =
                                 Modifier.weight(1f)
                                     .graphicsLayer {
-                                        compositingStrategy =
-                                            CompositingStrategy.Offscreen
+                                        compositingStrategy = CompositingStrategy.Offscreen
                                     }
                                     .drawWithContent {
                                         drawContent()
@@ -284,14 +308,11 @@ internal fun ThreadHeader(
                                         drawRect(
                                             brush =
                                                 Brush.horizontalGradient(
-                                                    colors =
-                                                        listOf(
-                                                            Color.Black,
-                                                            Color.Transparent
-                                                        ),
-                                                    startX =
-                                                        size.width -
-                                                            fadeWidth,
+                                                    colors = listOf(
+                                                        Color.Black,
+                                                        Color.Transparent
+                                                    ),
+                                                    startX = size.width - fadeWidth,
                                                     endX = size.width
                                                 ),
                                             size = Size(size.width, size.height),

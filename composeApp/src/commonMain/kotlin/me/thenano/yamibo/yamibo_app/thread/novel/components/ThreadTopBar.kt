@@ -1,5 +1,6 @@
 package me.thenano.yamibo.yamibo_app.thread.novel.components
 
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
@@ -11,7 +12,11 @@ import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 /** Top bar */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun ThreadTopBar(title: String, onBack: () -> Unit) {
+internal fun ThreadTopBar(
+    title: String, 
+    onBack: () -> Unit,
+    actions: @Composable RowScope.() -> Unit = {}
+) {
     val colors = YamiboTheme.colors
     TopAppBar(
         title = {
@@ -27,6 +32,7 @@ internal fun ThreadTopBar(title: String, onBack: () -> Unit) {
         navigationIcon = {
             IconButton(onClick = onBack) { Text("◀", color = Color.White, fontSize = 20.sp) }
         },
+        actions = actions,
         colors =
             TopAppBarDefaults.topAppBarColors(
                 containerColor = colors.brownDeep,

@@ -4,6 +4,9 @@ import io.github.littlesurvival.YamiboClient
 import io.github.littlesurvival.core.YamiboResult
 import io.github.littlesurvival.dto.page.ThreadPage
 import io.github.littlesurvival.dto.value.FormHash
+import io.github.littlesurvival.dto.value.ForumId
+import io.github.littlesurvival.dto.value.PollOptionId
+import io.github.littlesurvival.dto.value.PostId
 import io.github.littlesurvival.dto.value.ThreadId
 import io.github.littlesurvival.dto.value.UserId
 import me.thenano.yamibo.yamibo_app.store.auth.CookieStore
@@ -32,6 +35,21 @@ class IOSThreadRepository(
     override suspend fun addFavorite(tid: ThreadId, formHash: FormHash): YamiboResult<String> {
         yamiboClient.setCookie(cookieStore.load() ?: "")
         return yamiboClient.fetchAddFavorite(tid, formHash)
+    }
+
+    override suspend fun votePoll(fId: ForumId, tId: ThreadId, pollOptionIds: List<PollOptionId>, formHash: FormHash): YamiboResult<String> {
+        yamiboClient.setCookie(cookieStore.load() ?: "")
+        return yamiboClient.votePoll(fId, tId, pollOptionIds, formHash)
+    }
+
+    override suspend fun ratePost(tId: ThreadId, pId: PostId, score: Int, reason: String, formHash: FormHash): YamiboResult<String> {
+        yamiboClient.setCookie(cookieStore.load() ?: "")
+        return yamiboClient.fetchRatePost(tId, pId, score, reason, formHash)
+    }
+
+    override suspend fun commentPost(tId: ThreadId, pId: PostId, message: String, formHash: FormHash): YamiboResult<String> {
+        yamiboClient.setCookie(cookieStore.load() ?: "")
+        return yamiboClient.fetchCommentPost(tId, pId, message, formHash)
     }
 
     override fun getCachedThread(tid: ThreadId, page: Int): ThreadPage? =

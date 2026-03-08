@@ -531,4 +531,24 @@ object YamiboIcons {
                 close()
             }
         }.build()
+
+    val Heart =
+        ImageVector.Builder(
+            name = "Heart",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 1024f,
+            viewportHeight = 1024f
+        ).apply {
+            path(fill = SolidColor(Color.Black)) {
+                moveTo(923f, 283f)
+                curveToRelative(0f, -132f, -107f, -239f, -239f, -239f)
+                curveToRelative(-80f, 0f, -151f, 39f, -195f, 99f)
+                curveToRelative(-44f, -60f, -115f, -99f, -195f, -99f)
+                curveToRelative(-132f, 0f, -239f, 107f, -239f, 239f)
+                curveToRelative(0f, 247f, 434f, 493f, 434f, 493f)
+                reflectiveCurveToRelative(434f, -246f, 434f, -493f)
+                close()
+            }
+        }.build()
 }

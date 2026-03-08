@@ -2,9 +2,11 @@ package me.thenano.yamibo.yamibo_app.thread.render.components
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,8 +17,11 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.PointerInputChange
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -37,6 +42,7 @@ fun HtmlRenderer(html: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
+@Suppress("AssignedValueIsNeverRead")
 private fun HtmlBlockRenderer(block: HtmlBlock) {
     val colors = YamiboTheme.colors
     val uriHandler = LocalUriHandler.current
@@ -44,24 +50,44 @@ private fun HtmlBlockRenderer(block: HtmlBlock) {
     when (block) {
         is HtmlBlock.Text -> {
             var showLinkDialog by remember { mutableStateOf<String?>(null) }
+            val layoutResult = remember { mutableStateOf<TextLayoutResult?>(null) }
 
-            ClickableText(
+            Text(
                 text = block.annotatedString,
-                style = TextStyle(color = colors.textDark, fontSize = 15.sp, lineHeight = 24.sp),
-                modifier = Modifier.padding(vertical = 2.dp),
-                onClick = { offset ->
-                    block.annotatedString.getStringAnnotations("URL", offset, offset)
-                        .firstOrNull()?.let { annotation ->
-                            showLinkDialog = annotation.item
+                style = TextStyle(color = colors.textDark, fontSize = 15.sp, lineHeight = 22.sp),
+                modifier = Modifier
+                    .padding(vertical = 0.dp)
+                    .pointerInput(block.annotatedString) {
+                        awaitEachGesture {
+                            awaitFirstDown(requireUnconsumed = false)
+                            var upEvent: PointerInputChange? = null
+                            try {
+                                upEvent = waitForUpOrCancellation()
+                            } catch (_: Exception) {}
+                            
+                            if (upEvent != null && !upEvent.isConsumed) {
+                                val layout = layoutResult.value
+                                if (layout != null) {
+                                    val offset = layout.getOffsetForPosition(upEvent.position)
+                                    val link = block.annotatedString.getStringAnnotations("URL", offset, offset).firstOrNull()
+                                    if (link != null) {
+                                        showLinkDialog = link.item
+                                        upEvent.consume()
+                                    }
+                                }
+                            }
                         }
-                }
+                    },
+                onTextLayout = { layoutResult.value = it }
             )
 
             if (showLinkDialog != null) {
                 val url = showLinkDialog ?: ""
                 val fullUrl = if (url.startsWith("http")) url else "https://bbs.yamibo.com/$url"
                 AlertDialog(
-                    onDismissRequest = { showLinkDialog = null },
+                    onDismissRequest = {
+                        showLinkDialog = null
+                    },
                     title = { Text("外部連結", style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 20.sp)) },
                     text = { Text("即將開啟連結：\n${fullUrl}\n\n是否以瀏覽器開啟？") },
                     confirmButton = {
@@ -109,20 +135,22 @@ private fun HtmlBlockRenderer(block: HtmlBlock) {
         is HtmlBlock.Collapse -> {
             var expanded by remember { mutableStateOf(false) }
             Card(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = colors.creamBackground),
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                shape = RoundedCornerShape(4.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, colors.brownPrimary.copy(alpha = 0.2f)),
+                colors = CardDefaults.cardColors(containerColor = colors.creamSurface),
                 onClick = { expanded = !expanded }
             ) {
                 Column(modifier = Modifier.padding(12.dp).fillMaxWidth()) {
                     Text(
-                        text = if (expanded) "▼ ${block.title ?: "點擊收起"}" else "▶ ${block.title ?: "點擊展開"}",
-                        color = colors.brownPrimary,
+                        text = if (expanded) "▼ ${block.title ?: "點擊展開 / 收起"}" else "▶ ${block.title ?: "點擊展開 / 收起"}",
+                        color = colors.brownDeep,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp
+                        fontSize = 13.sp
                     )
                     AnimatedVisibility(visible = expanded) {
-                        Column(modifier = Modifier.padding(top = 8.dp)) {
+                        Column(modifier = Modifier.padding(top = 12.dp)) {
+                            HorizontalDivider(Modifier.padding(bottom = 12.dp), color = colors.brownPrimary.copy(alpha = 0.1f))
                             block.contentBlocks.forEach { HtmlBlockRenderer(it) }
                         }
                     }

@@ -2,6 +2,10 @@ package me.thenano.yamibo.yamibo_app.thread.novel.components
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
@@ -26,7 +30,8 @@ internal fun PostPageSection(
     isExpanded: Boolean,
     posts: List<Post>?,
     isFirstPage: Boolean,
-    onToggle: () -> Unit
+    onToggle: () -> Unit,
+    onPostClick: (Post) -> Unit
 ) {
     val colors = YamiboTheme.colors
     val rotation by
@@ -75,11 +80,11 @@ internal fun PostPageSection(
         androidx.compose.animation.AnimatedVisibility(
             visible = isExpanded,
             enter =
-                androidx.compose.animation.expandVertically(animationSpec = tween(300)) +
-                    androidx.compose.animation.fadeIn(animationSpec = tween(300)),
+                expandVertically(animationSpec = tween(300)) +
+                    fadeIn(animationSpec = tween(300)),
             exit =
-                androidx.compose.animation.shrinkVertically(animationSpec = tween(300)) +
-                    androidx.compose.animation.fadeOut(animationSpec = tween(300))
+                shrinkVertically(animationSpec = tween(300)) +
+                    fadeOut(animationSpec = tween(300))
         ) {
             Column {
                 if (posts == null) {
@@ -95,7 +100,12 @@ internal fun PostPageSection(
                         )
                     }
                 } else {
-                    posts.forEach { post -> PostTitleRow(post = post) }
+                    posts.forEach { post ->
+                        PostTitleRow(
+                            post = post,
+                            onClick = { onPostClick(post) }
+                        )
+                    }
                 }
             }
         }
@@ -104,13 +114,14 @@ internal fun PostPageSection(
 
 /** Single post title row (lightweight — just title) */
 @Composable
-private fun PostTitleRow(post: Post) {
+private fun PostTitleRow(post: Post, onClick: () -> Unit) {
     val colors = YamiboTheme.colors
 
     Surface(
         modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp, horizontal = 4.dp),
         shape = RoundedCornerShape(10.dp),
-        color = colors.creamSurface
+        color = colors.creamSurface,
+        onClick = onClick
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),

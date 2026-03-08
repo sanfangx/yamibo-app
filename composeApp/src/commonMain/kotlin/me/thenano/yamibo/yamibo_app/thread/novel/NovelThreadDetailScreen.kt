@@ -191,6 +191,17 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
                                     }
                                 }
                             },
+                            onPostClick = { page, post ->
+                                navigator.navigate(
+                                    me.thenano.yamibo.yamibo_app.thread.reader.IThreadReaderScreen(
+                                        tid = tid,
+                                        title = current.page.thread.title,
+                                        authorId = authorId,
+                                        initialPage = page,
+                                        targetPid = post.pid
+                                    )
+                                )
+                            },
                             onFavorite = {
                                 scope.launch {
                                     snackbarHostState.showSnackbar(
@@ -216,6 +227,7 @@ private fun ThreadContent(
     expandedPages: Set<Int>,
     onTogglePage: (Int) -> Unit,
     onLoadPage: (Int) -> Unit,
+    onPostClick: (Int, Post) -> Unit,
     onFavorite: () -> Unit,
     snackbarHostState: SnackbarHostState,
     scope: kotlinx.coroutines.CoroutineScope
@@ -282,7 +294,8 @@ private fun ThreadContent(
                     if (posts == null) {
                         onLoadPage(page)
                     }
-                }
+                },
+                onPostClick = { post -> onPostClick(page, post) }
             )
         }
     }
