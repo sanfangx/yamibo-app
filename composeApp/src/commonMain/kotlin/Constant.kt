@@ -518,16 +518,16 @@ object YamiboIcons {
         ).apply {
             path(fill = SolidColor(Color.Black)) {
                 moveTo(9.5f, 13f)
-                arcToRelative(1.5f, 1.5f, 0f, true, true, -3f, 0f)
-                arcToRelative(1.5f, 1.5f, 0f, false, true, 3f, 0f)
+                arcToRelative(1.5f, 1.5f, 0f, isMoreThanHalf = true, isPositiveArc = true, dx1 = -3f, dy1 = 0f)
+                arcToRelative(1.5f, 1.5f, 0f, isMoreThanHalf = false, isPositiveArc = true, dx1 = 3f, dy1 = 0f)
                 close()
                 moveTo(9.5f, 8f)
-                arcToRelative(1.5f, 1.5f, 0f, true, true, -3f, 0f)
-                arcToRelative(1.5f, 1.5f, 0f, false, true, 3f, 0f)
+                arcToRelative(1.5f, 1.5f, 0f, isMoreThanHalf = true, isPositiveArc = true, dx1 = -3f, dy1 = 0f)
+                arcToRelative(1.5f, 1.5f, 0f, isMoreThanHalf = false, isPositiveArc = true, dx1 = 3f, dy1 = 0f)
                 close()
                 moveTo(9.5f, 3f)
-                arcToRelative(1.5f, 1.5f, 0f, true, true, -3f, 0f)
-                arcToRelative(1.5f, 1.5f, 0f, false, true, 3f, 0f)
+                arcToRelative(1.5f, 1.5f, 0f, isMoreThanHalf = true, isPositiveArc = true, dx1 = -3f, dy1 = 0f)
+                arcToRelative(1.5f, 1.5f, 0f, isMoreThanHalf = false, isPositiveArc = true, dx1 = 3f, dy1 = 0f)
                 close()
             }
         }.build()

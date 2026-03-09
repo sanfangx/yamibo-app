@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.component
+package me.thenano.yamibo.yamibo_app.home
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring

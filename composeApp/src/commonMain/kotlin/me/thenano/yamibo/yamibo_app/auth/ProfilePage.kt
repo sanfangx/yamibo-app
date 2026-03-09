@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.profile
+package me.thenano.yamibo.yamibo_app.auth
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*

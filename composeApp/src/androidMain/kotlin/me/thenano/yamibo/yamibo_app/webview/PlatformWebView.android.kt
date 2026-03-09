@@ -5,23 +5,65 @@ import android.util.Log
 import android.webkit.*
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.runtime.Composable
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 import me.thenano.yamibo.yamibo_app.__error_tag
 import me.thenano.yamibo.yamibo_app.__info__tag
-import me.thenano.yamibo.yamibo_app.component.ReturnButtonTopBar
+import me.thenano.yamibo.yamibo_app.LocalAuthRepository
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 actual fun PlatformWebView(url: String) {
     val navigator = LocalNavigator.current
-    Column(modifier = Modifier.fillMaxSize()) {
-        ReturnButtonTopBar("WebView", onBackClick = { navigator.pop() })
+    val authRepo = LocalAuthRepository.current
+    val cookies = authRepo.cookieStore.load() ?: ""
+    
+    var webView by remember { mutableStateOf<WebView?>(null) }
+    var currentTitle by remember { mutableStateOf("WebView") }
+    
+    // Prioritize webview back navigation
+    DisposableEffect(webView) {
+        val handler: () -> Boolean = {
+            if (webView?.canGoBack() == true) {
+                webView?.goBack()
+                true
+            } else {
+                false
+            }
+        }
+        navigator.backHandlers.add(handler)
+        onDispose {
+            navigator.backHandlers.remove(handler)
+        }
+    }
+    
+    Column(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
+        WebViewTopBar(
+            title = currentTitle,
+            onBackClick = {
+                if (webView?.canGoBack() == true) {
+                    webView?.goBack()
+                } else {
+                    navigator.pop()
+                }
+            },
+            onForwardClick = {
+                if (webView?.canGoForward() == true) {
+                    webView?.goForward()
+                }
+            },
+            onRefreshClick = {
+                webView?.reload()
+            }
+        )
         AndroidView(
-            factory = {
-                WebView(it).apply {
+            modifier = Modifier.fillMaxSize(),
+            factory = { context ->
+                WebView(context).apply {
+                    webView = this
                     webViewClient = object : WebViewClient() {
                         override fun onReceivedError(
                             view: WebView?,
@@ -30,13 +72,24 @@ actual fun PlatformWebView(url: String) {
                         ) {
                             Log.e(__error_tag("WebView"), error?.description.toString())
                         }
+
+                        override fun shouldOverrideUrlLoading(
+                            view: WebView?,
+                            request: WebResourceRequest?
+                        ): Boolean {
+                            return false
+                        }
                     }
-                    webChromeClient = WebChromeClient()
+                    webChromeClient = object : WebChromeClient() {
+                        override fun onReceivedTitle(view: WebView?, title: String?) {
+                            super.onReceivedTitle(view, title)
+                            title?.let { currentTitle = it }
+                        }
+                    }
                     settings.apply {
                         javaScriptEnabled = true
                         domStorageEnabled = true
                         databaseEnabled = true
-                        domStorageEnabled = true
                         loadsImagesAutomatically = true
                         useWideViewPort = true
                         loadWithOverviewMode = true
@@ -50,15 +103,24 @@ actual fun PlatformWebView(url: String) {
 
                         setSupportZoom(true)
                     }
+                    
                     val cookieManager = CookieManager.getInstance()
                     cookieManager.setAcceptCookie(true)
                     cookieManager.setAcceptThirdPartyCookies(this, true)
+                    
+                    if (cookies.isNotEmpty()) {
+                        cookies.split(";").forEach {
+                            cookieManager.setCookie(url, it.trim())
+                        }
+                        cookieManager.flush()
+                    }
 
                     loadUrl(url)
                 }
+            },
+            update = {
+                webView = it
             }
         )
     }
-
-    Log.i(__info__tag("WebView"), "Navigator Size : ${navigator.stack.size}, canBack : ${navigator.canGoBack()}")
 }

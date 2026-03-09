@@ -78,7 +78,7 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
     }
 
     Scaffold(
-        modifier = Modifier.fillMaxSize().systemBarsPadding(),
+        modifier = Modifier.fillMaxSize(),
         containerColor = colors.creamBackground,
         snackbarHost = {
             SnackbarHost(

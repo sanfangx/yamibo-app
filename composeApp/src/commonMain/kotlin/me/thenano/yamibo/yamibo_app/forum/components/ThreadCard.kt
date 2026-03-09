@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -14,6 +15,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -56,6 +58,28 @@ fun ThreadCard(thread: ThreadSummary, onClick: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 thread.author?.let { user ->
+                    val avatarUrl = user.avatarUrl
+                    if (!avatarUrl.isNullOrEmpty()) {
+                        coil3.compose.SubcomposeAsyncImage(
+                            model = avatarUrl,
+                            contentDescription = "Avatar",
+                            modifier = Modifier.size(28.dp).clip(CircleShape),
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                            error = {
+                                Icon(imageVector = YamiboIcons.PersonFill, contentDescription = null, modifier = Modifier.size(28.dp), tint = colors.textDark.copy(alpha = 0.5f))
+                            },
+                            loading = {
+                                CircularProgressIndicator(
+                                    color = colors.brownPrimary,
+                                    modifier = Modifier.padding(6.dp),
+                                    strokeWidth = 1.5.dp
+                                )
+                            }
+                        )
+                    } else {
+                        Icon(imageVector = YamiboIcons.PersonFill, contentDescription = null, modifier = Modifier.size(28.dp), tint = colors.textDark.copy(alpha = 0.5f))
+                    }
+                    Spacer(Modifier.width(8.dp))
                     Text(
                         text = user.name,
                         fontSize = 13.sp,

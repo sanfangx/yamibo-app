@@ -7,7 +7,7 @@ import me.thenano.yamibo.yamibo_app.navigation.Navigatable
 expect fun PlatformWebView(url: String)
 
 class IPlatformWebView(val link: String = "https://bbs.yamibo.com/") : Navigatable {
-    override val id: Any = Any()
+    override val id: Any = "WebView_$link"
 
     @Composable
     override fun Content() {

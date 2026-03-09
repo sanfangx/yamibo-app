@@ -23,13 +23,14 @@ object HtmlParser {
         val blocks = mutableListOf<HtmlBlock>()
         val globalBuilder = AnnotatedString.Builder()
         var lastCommitIndex = 0
+        var currentLinkHref: String? = null
 
         fun commitText() {
             if (globalBuilder.length > lastCommitIndex) {
                 var textStr = globalBuilder.toAnnotatedString().subSequence(lastCommitIndex, globalBuilder.length)
                 
                 // Trim trailing newlines manually to avoid overblown spacing
-                while (textStr.length > 0 && textStr.lastOrNull() == '\n') {
+                while (textStr.isNotEmpty() && textStr.lastOrNull() == '\n') {
                     textStr = textStr.subSequence(0, textStr.length - 1)
                 }
                 
@@ -40,6 +41,7 @@ object HtmlParser {
             }
         }
 
+        @Suppress("AssignedValueIsNeverRead")
         fun parseNode(node: com.fleeksoft.ksoup.nodes.Node) {
             when (node) {
                 is TextNode -> {
@@ -58,9 +60,12 @@ object HtmlParser {
                         }
                         "img" -> {
                             commitText()
-                            val src = node.attr("src")
+                            val srcRaw = node.attr("file").takeIf { it.isNotBlank() }
+                                ?: node.attr("zoomfile").takeIf { it.isNotBlank() }
+                                ?: node.attr("src")
+                            val src = if (srcRaw.contains("none.gif")) "" else srcRaw
                             val alt = node.attr("alt").takeIf { it.isNotBlank() }
-                            if (src.isNotBlank()) blocks.add(HtmlBlock.Image(src, alt))
+                            if (src.isNotBlank()) blocks.add(HtmlBlock.Image(src, alt, currentLinkHref))
                         }
                         "div" -> {
                             val clazz = node.attr("class")
@@ -115,13 +120,22 @@ object HtmlParser {
                         "s", "strike" -> globalBuilder.withStyle(SpanStyle(textDecoration = TextDecoration.LineThrough)) { node.childNodes().forEach { parseNode(it) } }
                         "a" -> {
                             val href = node.attr("href")
+                            val prevLink = currentLinkHref
+                            if (href.isNotBlank()) currentLinkHref = href
+                            
                             val start = globalBuilder.length
                             node.childNodes().forEach { parseNode(it) }
                             val end = globalBuilder.length
+                            
                             if (href.isNotBlank() && start < end) {
-                                globalBuilder.addStringAnnotation("URL", href, start, end)
-                                globalBuilder.addStyle(SpanStyle(color = Color(0xFF007BFF), textDecoration = TextDecoration.Underline), start, end)
+                                val textContent = globalBuilder.toAnnotatedString().substring(start, end)
+                                // Only annotate as text UI link if there is visible text or non-blank space
+                                if (textContent.trim().isNotEmpty()) {
+                                    globalBuilder.addStringAnnotation("URL", href, start, end)
+                                    globalBuilder.addStyle(SpanStyle(color = Color(0xFF007BFF), textDecoration = TextDecoration.Underline), start, end)
+                                }
                             }
+                            currentLinkHref = prevLink
                         }
                         "font" -> {
                             val colorAttr = node.attr("color")

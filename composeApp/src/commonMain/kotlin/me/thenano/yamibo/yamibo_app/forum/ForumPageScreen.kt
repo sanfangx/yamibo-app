@@ -89,7 +89,7 @@ fun ForumPageScreen(fid: ForumId, name: String) {
     }
 
     Scaffold(
-        modifier = Modifier.fillMaxSize().systemBarsPadding(),
+        modifier = Modifier.fillMaxSize(),
         containerColor = colors.creamBackground,
         snackbarHost = {
             SnackbarHost(

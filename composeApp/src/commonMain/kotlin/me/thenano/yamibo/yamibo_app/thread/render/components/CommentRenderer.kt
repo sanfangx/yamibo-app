@@ -4,10 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -16,9 +13,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
 import io.github.littlesurvival.dto.page.PostComment
-import io.kamel.image.KamelImage
-import io.kamel.image.asyncPainterResource
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 
 @Composable
@@ -53,8 +49,8 @@ fun CommentRenderer(
                     // Avatar
                     val avatarUrl = comment.user.avatarUrl ?: ""
                     if (avatarUrl.isNotEmpty()) {
-                        KamelImage(
-                            resource = asyncPainterResource(data = avatarUrl),
+                        AsyncImage(
+                            model = avatarUrl,
                             contentDescription = "Avatar",
                             modifier = Modifier
                                 .size(36.dp)
@@ -101,9 +97,12 @@ fun CommentRenderer(
                         )
                     }
                 }
-
                 if (index < comments.size - 1) {
-                    Divider(color = colors.brownLight.copy(alpha = 0.3f), modifier = Modifier.padding(start = 48.dp))
+                    HorizontalDivider(
+                        modifier = Modifier.padding(start = 48.dp),
+                        thickness = DividerDefaults.Thickness,
+                        color = colors.brownLight.copy(alpha = 0.3f)
+                    )
                 }
             }
         }

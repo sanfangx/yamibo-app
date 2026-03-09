@@ -21,7 +21,7 @@ ksoup = "0.2.6"
 ktor = "3.4.0"
 ktorClientCore = "3.4.0"
 logback = "1.5.20"
-mediaKamelImageDefault = "1.0.8"
+coil3 = "3.1.0"
 securityCrypto = "1.1.0"
 yamiboApi = "1.0.9"
 
@@ -49,7 +49,8 @@ logback = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
 ktor-serverCore = { module = "io.ktor:ktor-server-core-jvm", version.ref = "ktor" }
 ktor-serverNetty = { module = "io.ktor:ktor-server-netty-jvm", version.ref = "ktor" }
 ktor-serverTestHost = { module = "io.ktor:ktor-server-test-host-jvm", version.ref = "ktor" }
-media-kamel-kamel-image-default = { module = "media.kamel:kamel-image-default", version.ref = "mediaKamelImageDefault" }
+coil3-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil3" }
+coil3-network-ktor3 = { module = "io.coil-kt.coil3:coil-network-ktor3", version.ref = "coil3" }
 yamibo-api = { module = "io.github.littlesurvival:yamibo-api", version.ref = "yamiboApi" }
 
 [plugins]

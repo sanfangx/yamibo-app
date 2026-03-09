@@ -17,12 +17,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import me.thenano.yamibo.yamibo_app.component.BottomNavItem
-import me.thenano.yamibo.yamibo_app.component.HomePageBottomBar
+import me.thenano.yamibo.yamibo_app.home.BottomNavItem
+import me.thenano.yamibo.yamibo_app.home.HomePageBottomBar
 import me.thenano.yamibo.yamibo_app.favorite.FavoritePage
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.navigation.Navigatable
-import me.thenano.yamibo.yamibo_app.profile.ProfilePage
+import me.thenano.yamibo.yamibo_app.auth.ProfilePage
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 
 enum class MainTab(val title: String, val icon: ImageVector) {

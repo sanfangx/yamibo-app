@@ -4,7 +4,9 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -195,37 +197,44 @@ internal fun ThreadReaderScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .background(colors.creamBackground)
-                .systemBarsPadding()
                 .pointerInput(Unit) {
-                    detectTapGestures { offset ->
-                        val height = size.height
-                        val oneThird = height / 3f
-                        val twoThirds = height * 2f / 3f
-
-                        if (offset.y in oneThird..twoThirds) {
-                            showMenu = !showMenu
+                    awaitEachGesture {
+                        // Accept the down even if already consumed by a child (e.g. link, button)
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        val up = waitForUpOrCancellation()
+                        // Only toggle menu when:
+                        // 1. Touch ended (not cancelled)
+                        // 2. No child consumed the up event (links/buttons will consume theirs)
+                        // 3. Tap is in center 1/3 of screen width
+                        if (up != null && !up.isConsumed) {
+                            val x = up.position.x
+                            val width = size.width
+                            if (x in (width / 3f)..(width * 2f / 3f)) {
+                                showMenu = !showMenu
+                            }
                         }
                     }
                 }
         ) {
             when (val currentState = state) {
-                is ReaderState.Loading -> ThreadLoadingSkeleton()
-                is ReaderState.Error -> ThreadErrorContent(
-                    message = currentState.message,
-                    onRetry = {
-                        state = ReaderState.Loading
-                        scope.launch { loadPage(1) }
-                    }
-                )
+                is ReaderState.Loading -> Box(modifier = Modifier.systemBarsPadding().fillMaxSize()) { ThreadLoadingSkeleton() }
+                is ReaderState.Error -> Box(modifier = Modifier.systemBarsPadding().fillMaxSize()) { 
+                    ThreadErrorContent(
+                        message = currentState.message,
+                        onRetry = {
+                            state = ReaderState.Loading
+                            scope.launch { loadPage(1) }
+                        }
+                    )
+                }
 
                 is ReaderState.Success -> {
-                    SelectionContainer {
-                        LazyColumn(
+                    LazyColumn(
                             state = listState,
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(
-                                top = 0.dp,
-                                bottom = 40.dp
+                                top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding(),
+                                bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 40.dp
                             )
                         ) {
                             itemsIndexed(posts, key = { _, post -> post.pid.value }) { index, post ->
@@ -316,7 +325,6 @@ internal fun ThreadReaderScreen(
                                     }
                                 }
                             }
-                        }
                     }
                 }
             }
@@ -325,7 +333,7 @@ internal fun ThreadReaderScreen(
             // Snackbar host for feedback messages
             SnackbarHost(
                 hostState = snackbarHostState,
-                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 32.dp)
+                modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 32.dp)
             )
 
             // Overlay Menu (TopBar)
