@@ -5,8 +5,11 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.sp
 import com.fleeksoft.ksoup.Ksoup
 import com.fleeksoft.ksoup.nodes.Document
 import com.fleeksoft.ksoup.nodes.Element
@@ -24,6 +27,7 @@ object HtmlParser {
         val globalBuilder = AnnotatedString.Builder()
         var lastCommitIndex = 0
         var currentLinkHref: String? = null
+        var currentAlign = TextAlign.Start
 
         fun commitText() {
             if (globalBuilder.length > lastCommitIndex) {
@@ -35,14 +39,13 @@ object HtmlParser {
                 }
                 
                 if (textStr.isNotEmpty()) {
-                    blocks.add(HtmlBlock.Text(textStr))
+                    blocks.add(HtmlBlock.Text(textStr, currentAlign))
                 }
                 lastCommitIndex = globalBuilder.length
             }
         }
 
-        @Suppress("AssignedValueIsNeverRead")
-        fun parseNode(node: com.fleeksoft.ksoup.nodes.Node) {
+        fun parseNode(node: com.fleeksoft.ksoup.nodes.Node, parentAlign: TextAlign = TextAlign.Start) {
             when (node) {
                 is TextNode -> {
                     val txt = node.text()
@@ -69,12 +72,20 @@ object HtmlParser {
                         }
                         "div" -> {
                             val clazz = node.attr("class")
+                            val alignAttr = node.attr("align").lowercase()
+                            val newAlign = when (alignAttr) {
+                                "center" -> TextAlign.Center
+                                "right" -> TextAlign.Right
+                                "left" -> TextAlign.Left
+                                else -> parentAlign
+                            }
+                            
                             when {
                                 clazz.contains("showcollapse_box") -> {
                                     commitText()
                                     val titleNode = node.selectFirst(".showcollapse_title")
                                     val titleText = titleNode?.text()?.takeIf { it.isNotBlank() } ?: "點擊展開 / 收起"
-                                    titleNode?.remove() // removed so it doesn't render twice in content blocks
+                                    titleNode?.remove()
                                     val innerBlocks = parseHtml(node.html())
                                     blocks.add(HtmlBlock.Collapse(title = titleText, contentBlocks = innerBlocks))
                                 }
@@ -95,12 +106,24 @@ object HtmlParser {
                                     blocks.add(HtmlBlock.Code(node.text()))
                                 }
                                 else -> {
+                                    // Handle nested alignment
+                                    val prevAlign = currentAlign
+                                    if (newAlign != prevAlign) {
+                                        commitText()
+                                        currentAlign = newAlign
+                                    }
+                                    
                                     if (globalBuilder.length > 0 && globalBuilder.toAnnotatedString().lastOrNull() != '\n') {
                                         globalBuilder.append("\n")
                                     }
-                                    node.childNodes().forEach { parseNode(it) }
+                                    node.childNodes().forEach { parseNode(it, newAlign) }
                                     if (globalBuilder.length > 0 && globalBuilder.toAnnotatedString().lastOrNull() != '\n') {
                                         globalBuilder.append("\n")
+                                    }
+                                    
+                                    if (newAlign != prevAlign) {
+                                        commitText()
+                                        currentAlign = prevAlign
                                     }
                                 }
                             }
@@ -109,27 +132,26 @@ object HtmlParser {
                             if (globalBuilder.length > 0 && globalBuilder.toAnnotatedString().lastOrNull() != '\n') {
                                 globalBuilder.append("\n")
                             }
-                            node.childNodes().forEach { parseNode(it) }
+                            node.childNodes().forEach { parseNode(it, parentAlign) }
                             if (globalBuilder.length > 0 && globalBuilder.toAnnotatedString().lastOrNull() != '\n') {
                                 globalBuilder.append("\n")
                             }
                         }
-                        "b", "strong" -> globalBuilder.withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { node.childNodes().forEach { parseNode(it) } }
-                        "i", "em" -> globalBuilder.withStyle(SpanStyle(fontStyle = FontStyle.Italic)) { node.childNodes().forEach { parseNode(it) } }
-                        "u" -> globalBuilder.withStyle(SpanStyle(textDecoration = TextDecoration.Underline)) { node.childNodes().forEach { parseNode(it) } }
-                        "s", "strike" -> globalBuilder.withStyle(SpanStyle(textDecoration = TextDecoration.LineThrough)) { node.childNodes().forEach { parseNode(it) } }
+                        "b", "strong" -> globalBuilder.withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { node.childNodes().forEach { parseNode(it, parentAlign) } }
+                        "i", "em" -> globalBuilder.withStyle(SpanStyle(fontStyle = FontStyle.Italic)) { node.childNodes().forEach { parseNode(it, parentAlign) } }
+                        "u" -> globalBuilder.withStyle(SpanStyle(textDecoration = TextDecoration.Underline)) { node.childNodes().forEach { parseNode(it, parentAlign) } }
+                        "s", "strike" -> globalBuilder.withStyle(SpanStyle(textDecoration = TextDecoration.LineThrough)) { node.childNodes().forEach { parseNode(it, parentAlign) } }
                         "a" -> {
                             val href = node.attr("href")
                             val prevLink = currentLinkHref
                             if (href.isNotBlank()) currentLinkHref = href
                             
                             val start = globalBuilder.length
-                            node.childNodes().forEach { parseNode(it) }
+                            node.childNodes().forEach { parseNode(it, parentAlign) }
                             val end = globalBuilder.length
                             
                             if (href.isNotBlank() && start < end) {
                                 val textContent = globalBuilder.toAnnotatedString().substring(start, end)
-                                // Only annotate as text UI link if there is visible text or non-blank space
                                 if (textContent.trim().isNotEmpty()) {
                                     globalBuilder.addStringAnnotation("URL", href, start, end)
                                     globalBuilder.addStyle(SpanStyle(color = Color(0xFF007BFF), textDecoration = TextDecoration.Underline), start, end)
@@ -139,32 +161,29 @@ object HtmlParser {
                         }
                         "font" -> {
                             val colorAttr = node.attr("color")
-                            var color: Color? = null
-                            if (colorAttr.isNotEmpty()) {
-                                color = try {
-                                    if (colorAttr.startsWith("#")) Color(colorAttr.removePrefix("#").toLong(16) or 0xFF000000)
-                                    else Color.Unspecified
-                                } catch (_: Exception) { Color.Unspecified }
+                            val sizeAttr = node.attr("size")
+                            val styleAttr = node.attr("style")
+                            
+                            var spanStyle = SpanStyle()
+                            parseColor(colorAttr)?.let { spanStyle = spanStyle.copy(color = it) }
+                            if (sizeAttr.isNotEmpty()) {
+                                spanStyle = spanStyle.copy(fontSize = fontSizeToSp(sizeAttr))
                             }
-                            val style = if (color != null && color != Color.Unspecified) SpanStyle(color = color) else SpanStyle()
-                            globalBuilder.withStyle(style) { node.childNodes().forEach { parseNode(it) } }
+                            if (styleAttr.isNotEmpty()) {
+                                spanStyle = parseStylesFromStyleAttr(styleAttr, spanStyle)
+                            }
+                            
+                            globalBuilder.withStyle(spanStyle) { node.childNodes().forEach { parseNode(it, parentAlign) } }
                         }
                         "span" -> {
                             val styleAttr = node.attr("style")
-                            var color: Color? = null
-                            var bgColor: Color? = null
-                            if (styleAttr.contains("color:")) {
-                                val match = Regex("color:\\s*#([0-9a-fA-F]{6})").find(styleAttr)
-                                if (match != null) color = Color(match.groupValues[1].toLong(16) or 0xFF000000)
+                            var spanStyle = SpanStyle()
+                            if (styleAttr.isNotEmpty()) {
+                                spanStyle = parseStylesFromStyleAttr(styleAttr, spanStyle)
                             }
-                            if (styleAttr.contains("background-color:")) {
-                                val match = Regex("background-color:\\s*#([0-9a-fA-F]{6})").find(styleAttr)
-                                if (match != null) bgColor = Color(match.groupValues[1].toLong(16) or 0xFF000000)
-                            }
-                            val style = SpanStyle(color = color ?: Color.Unspecified, background = bgColor ?: Color.Unspecified)
-                            globalBuilder.withStyle(style) { node.childNodes().forEach { parseNode(it) } }
+                            globalBuilder.withStyle(spanStyle) { node.childNodes().forEach { parseNode(it, parentAlign) } }
                         }
-                        else -> { node.childNodes().forEach { parseNode(it) } }
+                        else -> { node.childNodes().forEach { parseNode(it, parentAlign) } }
                     }
                 }
                 else -> { /* Other node types, ignore */ }
@@ -175,5 +194,71 @@ object HtmlParser {
         commitText()
 
         return blocks
+    }
+
+    private fun parseColor(color: String?): Color? {
+        if (color.isNullOrBlank()) return null
+        return try {
+            if (color.startsWith("#")) {
+                val hex = color.removePrefix("#")
+                if (hex.length == 3) {
+                    val r = hex[0].toString().repeat(2).toInt(16)
+                    val g = hex[1].toString().repeat(2).toInt(16)
+                    val b = hex[2].toString().repeat(2).toInt(16)
+                    Color(r shl 16 or (g shl 8) or b or (0xFF shl 24))
+                } else {
+                    Color(hex.toLong(16) or 0xFF000000)
+                }
+            } else {
+                when (color.lowercase()) {
+                    "red" -> Color.Red
+                    "blue" -> Color.Blue
+                    "green" -> Color.Green
+                    "yellow" -> Color.Yellow
+                    "black" -> Color.Black
+                    "white" -> Color.White
+                    "grey", "gray" -> Color.Gray
+                    "pink" -> Color(0xFFFFC0CB)
+                    "orange" -> Color(0xFFFFA500)
+                    "purple" -> Color(0xFF800080)
+                    "skyblue" -> Color(0xFF87CEEB)
+                    "palegreen" -> Color(0xFF98FB98)
+                    "cyan" -> Color.Cyan
+                    "magenta" -> Color.Magenta
+                    else -> null
+                }
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun fontSizeToSp(size: String?): TextUnit {
+        return when (size) {
+            "1" -> 10.sp
+            "2" -> 13.sp
+            "3" -> 15.sp // Standard base
+            "4" -> 18.sp
+            "5" -> 24.sp
+            "6" -> 32.sp
+            "7" -> 44.sp // Huge
+            else -> 15.sp
+        }
+    }
+
+    private fun parseStylesFromStyleAttr(styleAttr: String, spanStyle: SpanStyle): SpanStyle {
+        var current = spanStyle
+        // Support color: #xxxxxx or color: name
+        val colorMatch = Regex("color:\\s*([^;\\s]+)").find(styleAttr)
+        colorMatch?.groupValues?.get(1)?.trim()?.let { colorStr ->
+             parseColor(colorStr)?.let { current = current.copy(color = it) }
+        }
+        
+        // Support background-color: #xxxxxx or background-color: name
+        val bgMatch = Regex("background-color:\\s*([^;\\s]+)").find(styleAttr)
+        bgMatch?.groupValues?.get(1)?.trim()?.let { bgStr ->
+            parseColor(bgStr)?.let { current = current.copy(background = it) }
+        }
+        return current
     }
 }

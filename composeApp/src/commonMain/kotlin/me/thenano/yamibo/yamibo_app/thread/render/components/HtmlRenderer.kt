@@ -82,15 +82,20 @@ private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
 
     when (block) {
         is HtmlBlock.Text -> {
-            var showLinkDialog by remember { mutableStateOf<String?>(null) }
             var showLongPressMenu by remember { mutableStateOf<Pair<String, String>?>(null) }
             val layoutResult = remember { mutableStateOf<TextLayoutResult?>(null) }
             val clipboardManager = LocalClipboardManager.current
 
             Text(
                 text = block.annotatedString,
-                style = TextStyle(color = colors.textDark, fontSize = 15.sp, lineHeight = 22.sp),
+                style = TextStyle(
+                    color = colors.textDark,
+                    fontSize = 15.sp,
+                    lineHeight = 22.sp,
+                    textAlign = block.textAlign
+                ),
                 modifier = Modifier
+                    .fillMaxWidth()
                     .padding(vertical = 0.dp)
                     .pointerInput(block.annotatedString) {
                         awaitPointerEventScope {
@@ -98,20 +103,21 @@ private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
                                 // 1. Initial Pass: Intercept 'down' on links to disable global selection
                                 val event = awaitPointerEvent(PointerEventPass.Initial)
                                 val down = event.changes.firstOrNull { it.changedToDown() }
-                                
+
                                 if (down != null) {
                                     val layout = layoutResult.value
                                     if (layout != null) {
                                         val offset = layout.getOffsetForPosition(down.position)
-                                        val hasLink = block.annotatedString.getStringAnnotations("URL", offset, offset).isNotEmpty()
+                                        val hasLink = block.annotatedString.getStringAnnotations("URL", offset, offset)
+                                            .isNotEmpty()
                                         if (hasLink) {
                                             // Consume down in Initial pass -> Parents/Selection internal won't see it (prevents selection)
                                             down.consume()
-                                            
+
                                             // 2. Manual detection for this specific link tap/long press
                                             val longPressTimeout = viewConfiguration.longPressTimeoutMillis
                                             var isLongPress = false
-                                            
+
                                             // Manual wait for up or timeout
                                             val upOrNull = withTimeoutOrNull(longPressTimeout) {
                                                 waitForUpOrCancellation()
@@ -120,9 +126,14 @@ private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
                                             if (upOrNull == null) {
                                                 // Long press detected (timeout)
                                                 isLongPress = true
-                                                val link = block.annotatedString.getStringAnnotations("URL", offset, offset).firstOrNull()
+                                                val link =
+                                                    block.annotatedString.getStringAnnotations("URL", offset, offset)
+                                                        .firstOrNull()
                                                 if (link != null) {
-                                                    showLongPressMenu = link.item to block.annotatedString.substring(link.start, link.end)
+                                                    showLongPressMenu = link.item to block.annotatedString.substring(
+                                                        link.start,
+                                                        link.end
+                                                    )
                                                     // Consume all movement until release
                                                     while (true) {
                                                         val moveEvent = awaitPointerEvent()
@@ -132,9 +143,13 @@ private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
                                                 }
                                             } else {
                                                 // Fast tap (up before timeout)
-                                                val link = block.annotatedString.getStringAnnotations("URL", offset, offset).firstOrNull()
+                                                val link =
+                                                    block.annotatedString.getStringAnnotations("URL", offset, offset)
+                                                        .firstOrNull()
                                                 if (link != null) {
-                                                    showLinkDialog = link.item
+                                                    val url = link.item
+                                                    val fullUrl = if (url.startsWith("http")) url else "https://bbs.yamibo.com/$url"
+                                                    navigator.navigate(IPlatformWebView(fullUrl))
                                                 }
                                             }
                                         }
@@ -187,12 +202,12 @@ private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
                     )
                 }
             }
-            
+
             if (showLongPressMenu != null) {
                 DisableSelection {
                     val (url, linkText) = showLongPressMenu!!
                     val fullUrl = if (url.startsWith("http")) url else "https://bbs.yamibo.com/$url"
-                    
+
                     AlertDialog(
                         onDismissRequest = { showLongPressMenu = null },
                         title = { Text("連結選項", style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 20.sp)) },
@@ -207,14 +222,17 @@ private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
                                     clipboardManager.setText(androidx.compose.ui.text.AnnotatedString(fullUrl))
                                     showLongPressMenu = null
                                 }) { Text("複製連結地址", color = colors.brownPrimary, fontSize = 16.sp) }
-                                
+
                                 TextButton(onClick = {
                                     clipboardManager.setText(androidx.compose.ui.text.AnnotatedString(linkText))
                                     showLongPressMenu = null
                                 }) { Text("複製連結文字", color = colors.brownPrimary, fontSize = 16.sp) }
-                                
+
                                 TextButton(onClick = {
-                                    try { uriHandler.openUri(fullUrl) } catch (_: Exception) {}
+                                    try {
+                                        uriHandler.openUri(fullUrl)
+                                    } catch (_: Exception) {
+                                    }
                                     showLongPressMenu = null
                                 }) { Text("使用外部瀏覽器開啟", color = colors.brownPrimary, fontSize = 16.sp) }
                             }
@@ -231,10 +249,11 @@ private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
                 }
             }
         }
+
         is HtmlBlock.Image -> {
             var retryKey by remember { mutableStateOf(0) }
             val url = if (block.url.startsWith("http")) block.url else "https://bbs.yamibo.com/${block.url}"
-            
+
             val context = LocalPlatformContext.current
             val authRepo = LocalAuthRepository.current
 
@@ -244,7 +263,7 @@ private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
             } else {
                 "https://bbs.yamibo.com/"
             }
-            
+
             val imageRequest = remember(url, tid, cookie, retryKey) {
                 val builder = ImageRequest.Builder(context)
                     .data(url)
@@ -255,10 +274,10 @@ private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
                             .build()
                     )
                     .crossfade(true)
-                
+
                 if (retryKey > 0) {
                     builder.memoryCachePolicy(coil3.request.CachePolicy.READ_ONLY)
-                           .diskCachePolicy(coil3.request.CachePolicy.READ_ONLY)
+                        .diskCachePolicy(coil3.request.CachePolicy.READ_ONLY)
                 }
                 builder.build()
             }
@@ -278,6 +297,7 @@ private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
                             CircularProgressIndicator(color = colors.brownPrimary)
                         }
                     }
+
                     is AsyncImagePainter.State.Error -> {
                         val errorState = state as AsyncImagePainter.State.Error
                         val errorMsg = errorState.result.throwable.message ?: "Unknown Error"
@@ -294,9 +314,19 @@ private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
                                 modifier = Modifier.size(64.dp)
                             )
                             Spacer(modifier = Modifier.height(12.dp))
-                            Text("載入失敗: $errorMsg", color = colors.textDark, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                            Text(
+                                "載入失敗: $errorMsg",
+                                color = colors.textDark,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
                             Spacer(modifier = Modifier.height(4.dp))
-                            Text(url, color = colors.brownDeep, fontSize = 10.sp, style = TextStyle(textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline))
+                            Text(
+                                url,
+                                color = colors.brownDeep,
+                                fontSize = 10.sp,
+                                style = TextStyle(textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline)
+                            )
                             Spacer(modifier = Modifier.height(12.dp))
                             OutlinedButton(
                                 onClick = { retryKey++ },
@@ -307,12 +337,14 @@ private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
                             }
                         }
                     }
+
                     is AsyncImagePainter.State.Success -> {
                         SubcomposeAsyncImageContent()
                     }
                 }
             }
         }
+
         is HtmlBlock.Collapse -> {
             var expanded by remember { mutableStateOf(false) }
             Card(
@@ -331,13 +363,17 @@ private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
                     )
                     AnimatedVisibility(visible = expanded) {
                         Column(modifier = Modifier.padding(top = 12.dp)) {
-                            HorizontalDivider(Modifier.padding(bottom = 12.dp), color = colors.brownPrimary.copy(alpha = 0.1f))
+                            HorizontalDivider(
+                                Modifier.padding(bottom = 12.dp),
+                                color = colors.brownPrimary.copy(alpha = 0.1f)
+                            )
                             block.contentBlocks.forEach { HtmlBlockRenderer(it, tid) }
                         }
                     }
                 }
             }
         }
+
         is HtmlBlock.Locked -> {
             val dashPattern = remember { PathEffect.dashPathEffect(floatArrayOf(15f, 10f), 0f) }
             Box(
@@ -372,6 +408,7 @@ private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
                 }
             }
         }
+
         is HtmlBlock.Quote -> {
             Row(
                 modifier = Modifier
@@ -391,6 +428,7 @@ private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
                 }
             }
         }
+
         is HtmlBlock.Code -> {
             Surface(
                 color = Color(0xFF2B2B2B), // very dark gray for code
