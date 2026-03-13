@@ -1,0 +1,40 @@
+upsert:
+INSERT OR REPLACE INTO ReadingHistory(
+    threadId, threadName, threadCover, forumName, forumId, authorId,
+    page, postId, postTitle,
+    anchorPostId, anchorPostRatio,
+    anchorBlockId, anchorBlockType, anchorBlockRatio,
+    globalScrollY, viewportHeight,
+    firstVisibleItemIndex, firstVisibleItemOffset,
+    lastVisitTime
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+getByThreadId:
+SELECT * FROM ReadingHistory WHERE threadId = ?;
+
+getPage:
+SELECT * FROM ReadingHistory
+ORDER BY lastVisitTime DESC
+LIMIT ? OFFSET ?;
+
+countAll:
+SELECT COUNT(*) FROM ReadingHistory;
+
+deleteByThreadId:
+DELETE FROM ReadingHistory WHERE threadId = ?;
+
+deleteAll:
+DELETE FROM ReadingHistory;
+
+searchByName:
+SELECT * FROM ReadingHistory
+WHERE threadName LIKE '%' || ? || '%'
+ORDER BY lastVisitTime DESC
+LIMIT ? OFFSET ?;
+
+countByName:
+SELECT COUNT(*) FROM ReadingHistory
+WHERE threadName LIKE '%' || ? || '%';
+
+deleteByThreadIds:
+DELETE FROM ReadingHistory WHERE threadId IN ?;

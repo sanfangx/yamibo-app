@@ -26,6 +26,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.layout.ContentScale
+import coil3.compose.SubcomposeAsyncImage
 import io.github.littlesurvival.dto.page.ThreadPage
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import org.jetbrains.compose.resources.painterResource
@@ -39,6 +41,8 @@ internal fun ThreadHeader(
     threadPage: ThreadPage,
     onFavorite: () -> Unit,
     onShare: () -> Unit,
+    onContinueRead: () -> Unit = {},
+    readingProgressText: String? = null,
     onCopy: (String) -> Unit = {}
 ) {
     val clipboardManager = LocalClipboardManager.current
@@ -46,7 +50,13 @@ internal fun ThreadHeader(
     val colors = YamiboTheme.colors
     val thread = threadPage.thread
     val firstPost = threadPage.posts.firstOrNull()
-    val coverUrl = firstPost?.images?.firstOrNull()?.url
+    
+    val coverUrl = remember(firstPost) {
+        val attachedImage = firstPost?.images?.firstOrNull()?.url ?: return@remember null
+
+        if (attachedImage.contains("none.gif") || attachedImage.contains("smiley/") || attachedImage.contains("face")) return@remember null
+        if (attachedImage.startsWith("http")) attachedImage else "${io.github.littlesurvival.YamiboRoute.Domain.build()}$attachedImage"
+    }
 
     Card(
         modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -60,28 +70,45 @@ internal fun ThreadHeader(
                 Card(
                     modifier = Modifier.size(width = 100.dp, height = 130.dp),
                     shape = RoundedCornerShape(12.dp),
-                    elevation = CardDefaults.cardElevation(2.dp)
+                    elevation = CardDefaults.cardElevation(2.dp),
+                    colors = CardDefaults.cardColors(containerColor = colors.brownPrimary.copy(alpha = 0.1f))
                 ) {
                     if (coverUrl != null) {
-                        /** TODO: use AsyncImage/coil for network images */
-                        Box(
-                            modifier =
-                                Modifier.fillMaxSize()
-                                    .background(colors.brownPrimary.copy(alpha = 0.1f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                painter = painterResource(Res.drawable.book),
-                                contentDescription = "cover",
-                                modifier = Modifier.size(48.dp),
-                                tint = colors.brownPrimary.copy(alpha = 0.4f)
-                            )
-                        }
+                        SubcomposeAsyncImage(
+                            model = coverUrl,
+                            contentDescription = "cover",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize(),
+                            loading = {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        painter = painterResource(Res.drawable.book),
+                                        contentDescription = "loading",
+                                        modifier = Modifier.size(32.dp),
+                                        tint = colors.brownPrimary.copy(alpha = 0.2f)
+                                    )
+                                }
+                            },
+                            error = {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        painter = painterResource(Res.drawable.book),
+                                        contentDescription = "error",
+                                        modifier = Modifier.size(48.dp),
+                                        tint = colors.brownPrimary.copy(alpha = 0.4f)
+                                    )
+                                }
+                            }
+                        )
                     } else {
                         Box(
-                            modifier =
-                                Modifier.fillMaxSize()
-                                    .background(colors.brownPrimary.copy(alpha = 0.1f)),
+                            modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -273,9 +300,9 @@ internal fun ThreadHeader(
                     }
                 }
 
-                /** Continue reading button */
+                /** Continue / Start reading button */
                 Surface(
-                    onClick = { /* TODO: navigate to reader */ },
+                    onClick = onContinueRead,
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp),
                     color = colors.brownDeep
@@ -287,44 +314,26 @@ internal fun ThreadHeader(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "繼續閱讀",
+                            text = if (readingProgressText != null) "繼續閱讀" else "開始閱讀",
                             color = Color.White,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.SemiBold
                         )
-                        Spacer(Modifier.width(8.dp))
 
-                        /** Progress text with right fade-out */
-                        Text(
-                            text = "閱讀進度 TODO",
-                            modifier =
-                                Modifier.weight(1f)
-                                    .graphicsLayer {
-                                        compositingStrategy = CompositingStrategy.Offscreen
-                                    }
-                                    .drawWithContent {
-                                        drawContent()
-                                        val fadeWidth = 24.dp.toPx()
-                                        drawRect(
-                                            brush =
-                                                Brush.horizontalGradient(
-                                                    colors = listOf(
-                                                        Color.Black,
-                                                        Color.Transparent
-                                                    ),
-                                                    startX = size.width - fadeWidth,
-                                                    endX = size.width
-                                                ),
-                                            size = Size(size.width, size.height),
-                                            blendMode = BlendMode.DstIn
-                                        )
-                                    },
-                            color = Color.White.copy(alpha = 0.6f),
-                            fontSize = 11.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Clip
-                        )
-                        Spacer(Modifier.width(8.dp))
+                        if (readingProgressText != null) {
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = readingProgressText,
+                                modifier = Modifier.weight(1f),
+                                color = Color.White.copy(alpha = 0.6f),
+                                fontSize = 11.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Spacer(Modifier.width(8.dp))
+                        } else {
+                            Spacer(Modifier.weight(1f))
+                        }
 
                         /** Play icon */
                         Text(text = "▶", color = Color.White, fontSize = 16.sp)

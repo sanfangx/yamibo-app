@@ -1,7 +1,10 @@
 package me.thenano.yamibo.yamibo_app.thread.novel
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -18,9 +21,12 @@ import io.github.littlesurvival.dto.page.Post
 import io.github.littlesurvival.dto.page.ThreadPage
 import io.github.littlesurvival.dto.value.ThreadId
 import io.github.littlesurvival.dto.value.UserId
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import me.thenano.yamibo.yamibo_app.LocalReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.LocalThreadRepository
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
+import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository.ThreadReadingHistory
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.thread.novel.components.*
 import me.thenano.yamibo.yamibo_app.thread.reader.IThreadReaderScreen
@@ -38,6 +44,7 @@ internal sealed interface ThreadState {
 internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: UserId? = null) {
     val colors = YamiboTheme.colors
     val threadRepository = LocalThreadRepository.current
+    val readHistoryRepo = LocalReadHistoryRepository.current
     val navigator = LocalNavigator.current
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -46,9 +53,17 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
     var isRefreshing by remember { mutableStateOf(false) }
     val pagePostsCache = remember { mutableStateMapOf<Int, List<Post>>() }
     var expandedPages by remember { mutableStateOf(setOf(1)) }
+    var readHistory by remember { mutableStateOf<ThreadReadingHistory?>(null) }
+
+    /** Load reading history for this thread */
+    LaunchedEffect(tid) {
+        try {
+            readHistory = readHistoryRepo.getPosition(tid)
+        } catch (_: Exception) { }
+    }
 
     suspend fun loadThread(page: Int = 1) {
-        val cached = threadRepository.getCachedThread(tid, page)
+        val cached = threadRepository.getCachedThread(tid, authorId, page)
         if (cached != null) {
             pagePostsCache[page] = cached.posts
             state = ThreadState.Success(cached)
@@ -69,7 +84,7 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
 
     /** initial load — use cache if available, only fetch on cold start */
     LaunchedEffect(tid) {
-        val cached = threadRepository.getCachedThread(tid)
+        val cached = threadRepository.getCachedThread(tid, authorId)
         if (cached != null) {
             pagePostsCache[1] = cached.posts
             state = ThreadState.Success(cached)
@@ -135,6 +150,7 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
                                         threadRepository.clearCachedThread(tid)
                                         threadRepository.setCachedThread(
                                             tid,
+                                            authorId,
                                             1,
                                             result.value
                                         )
@@ -171,7 +187,7 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
                             },
                             onLoadPage = { page ->
                                 scope.launch {
-                                    val cached = threadRepository.getCachedThread(tid, page)
+                                    val cached = threadRepository.getCachedThread(tid, authorId, page)
                                     if (cached != null) {
                                         pagePostsCache[page] = cached.posts
                                     } else {
@@ -212,6 +228,38 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
                                     )
                                 }
                             },
+                            onContinueRead = {
+                                val history = readHistory
+                                if (history != null) {
+                                    navigator.navigate(
+                                        IThreadReaderScreen(
+                                            tid = tid,
+                                            title = current.page.thread.title,
+                                            authorId = authorId,
+                                            initialPage = history.page,
+                                            isAuthorOnly = authorId != null
+                                        )
+                                    )
+                                } else {
+                                    navigator.navigate(
+                                        IThreadReaderScreen(
+                                            tid = tid,
+                                            title = current.page.thread.title,
+                                            authorId = authorId,
+                                            initialPage = 1,
+                                            isAuthorOnly = authorId != null
+                                        )
+                                    )
+                                }
+                            },
+                            readingProgressText = readHistory?.let { h ->
+                                buildString {
+                                    append("第${h.page}頁")
+                                    if (h.postTitle.isNotEmpty()) {
+                                        append(" · ${h.postTitle}")
+                                    }
+                                }
+                            },
                             snackbarHostState = snackbarHostState,
                             scope = scope
                         )
@@ -231,8 +279,10 @@ private fun ThreadContent(
     onLoadPage: (Int) -> Unit,
     onPostClick: (Int, Post) -> Unit,
     onFavorite: () -> Unit,
+    onContinueRead: () -> Unit,
+    readingProgressText: String?,
     snackbarHostState: SnackbarHostState,
-    scope: kotlinx.coroutines.CoroutineScope
+    scope: CoroutineScope
 ) {
     val colors = YamiboTheme.colors
     val clipboardManager = LocalClipboardManager.current
@@ -256,6 +306,8 @@ private fun ThreadContent(
                         )
                     }
                 },
+                onContinueRead = onContinueRead,
+                readingProgressText = readingProgressText,
                 onCopy = { message ->
                     scope.launch {
                         snackbarHostState.showSnackbar(

@@ -27,7 +27,7 @@ class IOSThreadRepository(
         val result = yamiboClient.fetchThreadById(tid, authorId, page)
 
         if (result is YamiboResult.Success) {
-            cachedThreadPages[ThreadRepository.ThreadCacheKey(tid.value, page)] = result.value
+            cachedThreadPages[ThreadRepository.ThreadCacheKey(tid.value, page, authorId?.value)] = result.value
         }
         return result
     }
@@ -60,11 +60,11 @@ class IOSThreadRepository(
         return yamiboClient.fetchCommentPost(tId, pId, message, formHash)
     }
 
-    override fun getCachedThread(tid: ThreadId, page: Int): ThreadPage? =
-        cachedThreadPages[ThreadRepository.ThreadCacheKey(tid.value, page)]
+    override fun getCachedThread(tid: ThreadId, authorId: UserId?, page: Int): ThreadPage? =
+        cachedThreadPages[ThreadRepository.ThreadCacheKey(tid.value, page, authorId?.value)]
 
-    override fun setCachedThread(tid: ThreadId, page: Int, threadPage: ThreadPage) {
-        cachedThreadPages[ThreadRepository.ThreadCacheKey(tid.value, page)] = threadPage
+    override fun setCachedThread(tid: ThreadId, authorId: UserId?, page: Int, threadPage: ThreadPage) {
+        cachedThreadPages[ThreadRepository.ThreadCacheKey(tid.value, page, authorId?.value)] = threadPage
     }
 
     override fun clearCachedThread(tid: ThreadId) {

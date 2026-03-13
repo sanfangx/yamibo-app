@@ -506,7 +506,9 @@ private fun ForumErrorContent(message: String, onRetry: () -> Unit) {
     }
 }
 
-/** Check if a forum is a novel forum that should use author-only thread viewing */
+/**
+ * 文學區, 輕小說譯文區
+ */
 private fun isNovelForum(fid: ForumId): Boolean =
     fid.value == YamiboForum.LITERATURE.id.value ||
         fid.value == YamiboForum.TRANSLATED_LIGHT_NOVEL.id.value

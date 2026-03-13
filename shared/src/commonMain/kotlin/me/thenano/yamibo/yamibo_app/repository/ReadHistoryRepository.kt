@@ -1,32 +1,68 @@
 package me.thenano.yamibo.yamibo_app.repository
 
+import io.github.littlesurvival.dto.value.ForumId
+import io.github.littlesurvival.dto.value.PostId
 import io.github.littlesurvival.dto.value.ThreadId
+import io.github.littlesurvival.dto.value.UserId
 
 /**
  * Repository for tracking reading history and precise scroll positions.
  *
- * Supports both thread reader (novel/forum) and manga reader positions.
+ * Uses content-anchor positioning for accurate reading position restoration.
  */
 interface ReadHistoryRepository {
 
-    /** Precise scroll position for thread reader */
-    data class ThreadReadPosition(
-        val tid: Int,
+    /** Full reading history entry with anchor-based positioning data */
+    data class ThreadReadingHistory(
+        val threadName: String,
+        val threadId: ThreadId,
+        val threadCover: String?,
+        val forumName: String?,
+        val forumId: ForumId?,
+        val authorId: UserId?,
         val page: Int,
-        val postId: Int,
-        val blockIndex: Int,
-        val scrollOffset: Int
+        val postId: PostId,
+        val postTitle: String,
+
+        val anchorPostId: Long,
+        val anchorPostRatio: Float? = null,
+
+        val anchorBlockId: String? = null,
+        val anchorBlockType: String? = null,
+        val anchorBlockRatio: Float? = null,
+
+        val globalScrollY: Int? = null,
+        val viewportHeight: Int? = null,
+        val firstVisibleItemIndex: Int? = null,
+        val firstVisibleItemOffset: Int? = null,
+
+        val lastVisitTime: Long,
     )
 
-    /** Get saved thread reading position */
-    fun getThreadPosition(tid: ThreadId): ThreadReadPosition?
+    /** Save or update a reading position */
+    suspend fun savePosition(history: ThreadReadingHistory)
 
-    /** Save thread reading position */
-    fun saveThreadPosition(position: ThreadReadPosition) // TODO: implement persistence
+    /** Get saved position for a given thread */
+    suspend fun getPosition(tid: ThreadId): ThreadReadingHistory?
 
-    /** Get manga reading position */
-    fun getMangaPosition(tid: ThreadId): Any? // TODO: manga reader
+    /** Get a page of history entries (newest first) */
+    suspend fun getHistoryPage(page: Int, pageSize: Int = 20): List<ThreadReadingHistory>
 
-    /** Save manga reading position */
-    fun saveMangaPosition(tid: ThreadId, position: Any) // TODO: manga reader
+    /** Total number of history entries */
+    suspend fun getHistoryCount(): Long
+
+    /** Delete a single history entry */
+    suspend fun deleteHistory(tid: ThreadId)
+
+    /** Delete all history entries */
+    suspend fun deleteAll()
+
+    /** Search history entries by thread name (newest first) */
+    suspend fun searchHistory(query: String, page: Int, pageSize: Int = 20): List<ThreadReadingHistory>
+
+    /** Count search results */
+    suspend fun searchHistoryCount(query: String): Long
+
+    /** Delete multiple history entries by thread IDs */
+    suspend fun deleteHistoryBatch(tids: List<ThreadId>)
 }

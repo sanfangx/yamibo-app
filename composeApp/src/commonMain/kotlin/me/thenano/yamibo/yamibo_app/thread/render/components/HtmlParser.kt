@@ -17,6 +17,12 @@ import com.fleeksoft.ksoup.nodes.TextNode
 
 object HtmlParser {
 
+    /** Generate a stable content-hash based ID */
+    private fun hashId(type: String, content: String, index: Int): String {
+        val raw = "${type}_${index}_${content.take(64)}"
+        return raw.hashCode().toUInt().toString(16)
+    }
+
     /** Parses raw HTML string into a list of HtmlBlock for Compose to render */
     fun parseHtml(html: String): List<HtmlBlock> {
         // Strip raw newlines from HTML to prevent false double-newlines
@@ -27,6 +33,7 @@ object HtmlParser {
         val globalBuilder = AnnotatedString.Builder()
         var lastCommitIndex = 0
         var currentLinkHref: String? = null
+        var blockCounter = 0
         var currentAlign = TextAlign.Start
 
         fun commitText() {
@@ -39,7 +46,8 @@ object HtmlParser {
                 }
                 
                 if (textStr.isNotEmpty()) {
-                    blocks.add(HtmlBlock.Text(textStr, currentAlign))
+                    val aid = hashId("t", textStr.text, blockCounter++)
+                    blocks.add(HtmlBlock.Text(textStr, currentAlign, anchorId = aid))
                 }
                 lastCommitIndex = globalBuilder.length
             }
@@ -68,7 +76,10 @@ object HtmlParser {
                                 ?: node.attr("src")
                             val src = if (srcRaw.contains("none.gif")) "" else srcRaw
                             val alt = node.attr("alt").takeIf { it.isNotBlank() }
-                            if (src.isNotBlank()) blocks.add(HtmlBlock.Image(src, alt, currentLinkHref))
+                            if (src.isNotBlank()) {
+                                val aid = hashId("i", src, blockCounter++)
+                                blocks.add(HtmlBlock.Image(src, alt, currentLinkHref, anchorId = aid))
+                            }
                         }
                         "div" -> {
                             val clazz = node.attr("class")
@@ -87,23 +98,28 @@ object HtmlParser {
                                     val titleText = titleNode?.text()?.takeIf { it.isNotBlank() } ?: "點擊展開 / 收起"
                                     titleNode?.remove()
                                     val innerBlocks = parseHtml(node.html())
-                                    blocks.add(HtmlBlock.Collapse(title = titleText, contentBlocks = innerBlocks))
+                                    val aid = hashId("col", titleText, blockCounter++)
+                                    blocks.add(HtmlBlock.Collapse(title = titleText, contentBlocks = innerBlocks, anchorId = aid))
                                 }
                                 clazz.contains("locked-content") -> {
                                     commitText()
                                     val costText = node.select(".locked-tip").text()
                                     val cost = costText.toIntOrNull() ?: 0
                                     val innerBlocks = parseHtml(node.html())
-                                    blocks.add(HtmlBlock.Locked(cost = cost, contentBlocks = innerBlocks))
+                                    val aid = hashId("lck", cost.toString(), blockCounter++)
+                                    blocks.add(HtmlBlock.Locked(cost = cost, contentBlocks = innerBlocks, anchorId = aid))
                                 }
                                 clazz.contains("quote") || clazz.contains("blockquote") -> {
                                     commitText()
                                     val innerBlocks = parseHtml(node.html())
-                                    blocks.add(HtmlBlock.Quote(innerBlocks))
+                                    val aid = hashId("q", node.text().take(32), blockCounter++)
+                                    blocks.add(HtmlBlock.Quote(innerBlocks, anchorId = aid))
                                 }
                                 clazz.contains("blockcode") -> {
                                     commitText()
-                                    blocks.add(HtmlBlock.Code(node.text()))
+                                    val codeText = node.text()
+                                    val aid = hashId("c", codeText.take(32), blockCounter++)
+                                    blocks.add(HtmlBlock.Code(codeText, anchorId = aid))
                                 }
                                 else -> {
                                     // Handle nested alignment
@@ -146,7 +162,8 @@ object HtmlParser {
                                     }
                                     HtmlBlock.TableRow(cells = cells)
                                 }
-                                blocks.add(HtmlBlock.Table(rows = rows))
+                                val aid = hashId("tbl", rows.size.toString(), blockCounter++)
+                                blocks.add(HtmlBlock.Table(rows = rows, anchorId = aid))
                             } else {
                                 // Single-cell wrapper table — treat as inline content
                                 if (globalBuilder.length > 0 && globalBuilder.toAnnotatedString().lastOrNull() != '\n') {

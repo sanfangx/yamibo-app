@@ -1,22 +1,109 @@
 package me.thenano.yamibo.yamibo_app.repository
 
+import io.github.littlesurvival.dto.value.ForumId
+import io.github.littlesurvival.dto.value.PostId
 import io.github.littlesurvival.dto.value.ThreadId
+import io.github.littlesurvival.dto.value.UserId
+import me.thenano.yamibo.yamibo_app.Database
+import me.thenano.yamibo.yamibo_app.db.DatabaseFactory
+import me.thenano.yamibo.yamiboapp.ReadingHistory
 
-class IOSReadHistoryRepository : ReadHistoryRepository {
+class IOSReadHistoryRepository(dbFactory: DatabaseFactory) : ReadHistoryRepository {
 
-    override fun getThreadPosition(tid: ThreadId): ReadHistoryRepository.ThreadReadPosition? {
-        TODO("Not yet implemented")
+    private val db = Database(dbFactory.createDriver())
+    private val queries = db.readingHistoryQueries
+
+    override suspend fun savePosition(history: ReadHistoryRepository.ThreadReadingHistory) {
+        queries.upsert(
+            threadId = history.threadId.value.toLong(),
+            threadName = history.threadName,
+            threadCover = history.threadCover,
+            forumName = history.forumName,
+            forumId = history.forumId?.value?.toLong(),
+            authorId = history.authorId?.value?.toLong(),
+            page = history.page.toLong(),
+            postId = history.postId.value.toLong(),
+            postTitle = history.postTitle,
+            anchorPostId = history.anchorPostId,
+            anchorPostRatio = history.anchorPostRatio?.toDouble(),
+            anchorBlockId = history.anchorBlockId,
+            anchorBlockType = history.anchorBlockType,
+            anchorBlockRatio = history.anchorBlockRatio?.toDouble(),
+            globalScrollY = history.globalScrollY?.toLong(),
+            viewportHeight = history.viewportHeight?.toLong(),
+            firstVisibleItemIndex = history.firstVisibleItemIndex?.toLong(),
+            firstVisibleItemOffset = history.firstVisibleItemOffset?.toLong(),
+            lastVisitTime = history.lastVisitTime
+        )
     }
 
-    override fun saveThreadPosition(position: ReadHistoryRepository.ThreadReadPosition) {
-        TODO("Not yet implemented")
+    override suspend fun getPosition(tid: ThreadId): ReadHistoryRepository.ThreadReadingHistory? {
+        return queries.getByThreadId(tid.value.toLong()).executeAsOneOrNull()?.toHistory()
     }
 
-    override fun getMangaPosition(tid: ThreadId): Any? {
-        TODO("Not yet implemented")
+    override suspend fun getHistoryPage(
+        page: Int,
+        pageSize: Int
+    ): List<ReadHistoryRepository.ThreadReadingHistory> {
+        val offset = (page - 1).coerceAtLeast(0) * pageSize
+        return queries.getPage(pageSize.toLong(), offset.toLong())
+            .executeAsList()
+            .map { it.toHistory() }
     }
 
-    override fun saveMangaPosition(tid: ThreadId, position: Any) {
-        TODO("Not yet implemented")
+    override suspend fun getHistoryCount(): Long {
+        return queries.countAll().executeAsOne()
+    }
+
+    override suspend fun deleteHistory(tid: ThreadId) {
+        queries.deleteByThreadId(tid.value.toLong())
+    }
+
+    override suspend fun deleteAll() {
+        queries.deleteAll()
+    }
+
+    override suspend fun searchHistory(
+        query: String,
+        page: Int,
+        pageSize: Int
+    ): List<ReadHistoryRepository.ThreadReadingHistory> {
+        val offset = (page - 1).coerceAtLeast(0) * pageSize
+        return queries.searchByName(query, pageSize.toLong(), offset.toLong())
+            .executeAsList()
+            .map { it.toHistory() }
+    }
+
+    override suspend fun searchHistoryCount(query: String): Long {
+        return queries.countByName(query).executeAsOne()
+    }
+
+    override suspend fun deleteHistoryBatch(tids: List<ThreadId>) {
+        if (tids.isEmpty()) return
+        queries.deleteByThreadIds(tids.map { it.value.toLong() })
+    }
+
+    private fun ReadingHistory.toHistory(): ReadHistoryRepository.ThreadReadingHistory {
+        return ReadHistoryRepository.ThreadReadingHistory(
+            threadName = threadName,
+            threadId = ThreadId(threadId.toInt()),
+            threadCover = threadCover,
+            forumName = forumName,
+            forumId = forumId?.toInt()?.let { ForumId(it) },
+            authorId = authorId?.toInt()?.let { UserId(it) },
+            page = page.toInt(),
+            postId = PostId(postId.toInt()),
+            postTitle = postTitle,
+            anchorPostId = anchorPostId,
+            anchorPostRatio = anchorPostRatio?.toFloat(),
+            anchorBlockId = anchorBlockId,
+            anchorBlockType = anchorBlockType,
+            anchorBlockRatio = anchorBlockRatio?.toFloat(),
+            globalScrollY = globalScrollY?.toInt(),
+            viewportHeight = viewportHeight?.toInt(),
+            firstVisibleItemIndex = firstVisibleItemIndex?.toInt(),
+            firstVisibleItemOffset = firstVisibleItemOffset?.toInt(),
+            lastVisitTime = lastVisitTime
+        )
     }
 }

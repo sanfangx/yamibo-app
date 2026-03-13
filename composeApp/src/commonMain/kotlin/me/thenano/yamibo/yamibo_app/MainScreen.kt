@@ -23,10 +23,12 @@ import me.thenano.yamibo.yamibo_app.favorite.FavoritePage
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.navigation.Navigatable
 import me.thenano.yamibo.yamibo_app.auth.ProfilePage
+import me.thenano.yamibo.yamibo_app.history.ReadHistoryPage
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 
 enum class MainTab(val title: String, val icon: ImageVector) {
     Home("首页", YamiboIcons.Home),
+    History("紀錄", YamiboIcons.History),
     Message("消息", YamiboIcons.Message),
     Favorite("收藏", YamiboIcons.Explore),
     Profile("我的", YamiboIcons.Profile)
@@ -81,6 +83,7 @@ fun MainScreen(initialTab: MainTab = MainTab.Home) {
         ) {
             when (currentTab) {
                 MainTab.Home -> HomeScreenContent()
+                MainTab.History -> ReadHistoryPage()
                 MainTab.Message -> PlaceholderScreen("Message")
                 MainTab.Favorite -> FavoritePage()
                 MainTab.Profile -> ProfilePage()

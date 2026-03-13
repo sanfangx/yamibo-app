@@ -24,10 +24,15 @@ import io.github.littlesurvival.dto.value.FormHash
 import io.github.littlesurvival.dto.value.PostId
 import io.github.littlesurvival.dto.value.ThreadId
 import io.github.littlesurvival.dto.value.UserId
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import me.thenano.yamibo.yamibo_app.LocalAuthRepository
+import me.thenano.yamibo.yamibo_app.LocalReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.LocalThreadRepository
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
+import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository.ThreadReadingHistory
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.thread.novel.components.ThreadErrorContent
 import me.thenano.yamibo.yamibo_app.thread.novel.components.ThreadLoadingSkeleton
@@ -35,6 +40,7 @@ import me.thenano.yamibo.yamibo_app.thread.reader.components.CommentBanner
 import me.thenano.yamibo.yamibo_app.thread.reader.components.ReaderCatalogPanel
 import me.thenano.yamibo.yamibo_app.thread.reader.components.ReaderOverlayMenu
 import me.thenano.yamibo.yamibo_app.thread.render.PostRenderer
+import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
 
 internal sealed interface ReaderState {
     data object Loading : ReaderState
@@ -55,6 +61,7 @@ internal fun ThreadReaderScreen(
 ) {
     val colors = YamiboTheme.colors
     val threadRepository = LocalThreadRepository.current
+    val readHistoryRepo = LocalReadHistoryRepository.current
     val navigator = LocalNavigator.current
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
@@ -75,8 +82,93 @@ internal fun ThreadReaderScreen(
     val authRepo = LocalAuthRepository.current
     val snackbarHostState = remember { SnackbarHostState() }
 
+    /** Debounced save job reference */
+    var saveJob by remember { mutableStateOf<Job?>(null) }
+    var hasRestoredPosition by remember { mutableStateOf(false) }
+
     fun getFormHash(): FormHash? {
         return authRepo.currentUser()?.formHash
+    }
+
+    /** Extract first image URL from first post as thread avatar */
+    fun extractAvatar(): String? {
+        val firstPost = posts.firstOrNull() ?: return null
+        val content = firstPost.contentHtml
+        val imgRegex = Regex("""<img[^>]+(?:file|zoomfile|src)="([^"]+)"[^>]*>""")
+        val match = imgRegex.find(content) ?: return null
+        val url = match.groupValues[1]
+        if (url.contains("none.gif")) return null
+        return if (url.startsWith("http")) url else "https://bbs.yamibo.com/$url"
+    }
+
+    /** Build a reading history snapshot from current scroll state (does NOT save) */
+    fun buildHistory(): ThreadReadingHistory? {
+        if (posts.isEmpty()) return null
+        val layoutInfo = listState.layoutInfo
+        val visibleItems = layoutInfo.visibleItemsInfo
+        if (visibleItems.isEmpty()) return null
+
+        /** Find visible post at viewport center */
+        val viewportTop = layoutInfo.viewportStartOffset
+        val viewportBottom = layoutInfo.viewportEndOffset
+        val viewportCenter = (viewportTop + viewportBottom) / 2
+
+        val centerItem = visibleItems.firstOrNull { item ->
+            item.offset <= viewportCenter && item.offset + item.size >= viewportCenter
+        } ?: visibleItems.first()
+
+        val centerPostIndex = centerItem.index.coerceIn(0, posts.lastIndex)
+        val centerPost = posts[centerPostIndex]
+
+        /** Calculate ratio within this post */
+        val postTop = centerItem.offset
+        val postSize = centerItem.size.coerceAtLeast(1)
+        val anchorPostRatio = ((viewportCenter - postTop).toFloat() / postSize).coerceIn(0f, 1f)
+
+        /** Find which page this post is on */
+        val postPage = loadedPostsByPage.entries
+            .firstOrNull { (_, pagePosts) -> pagePosts.any { it.pid == centerPost.pid } }
+            ?.key ?: initialPage
+
+        val forumInfo = threadInfo?.forum
+        val firstVisible = listState.firstVisibleItemIndex
+        val firstVisibleOffset = listState.firstVisibleItemScrollOffset
+
+        return ThreadReadingHistory(
+            threadName = title,
+            threadId = tid,
+            threadCover = extractAvatar(),
+            forumName = forumInfo?.name,
+            forumId = forumInfo?.fid,
+            authorId = authorId,
+            page = postPage,
+            postId = centerPost.pid,
+            postTitle = centerPost.title,
+            anchorPostId = centerPost.pid.value.toLong(),
+            anchorPostRatio = anchorPostRatio,
+            anchorBlockId = null,
+            anchorBlockType = null,
+            anchorBlockRatio = null,
+            globalScrollY = null,
+            viewportHeight = (viewportBottom - viewportTop),
+            firstVisibleItemIndex = firstVisible,
+            firstVisibleItemOffset = firstVisibleOffset,
+            lastVisitTime = currentTimeMillis()
+        )
+    }
+
+    /** Debounced save — wait 2 seconds after scroll stops */
+    fun scheduleSave() {
+        saveJob?.cancel()
+        saveJob = scope.launch {
+            delay(2000)
+            val history = buildHistory() ?: return@launch
+            try {
+                readHistoryRepo.savePosition(history)
+            } catch (_: Exception) {
+                // Silently fail — non-critical
+            }
+        }
     }
 
     suspend fun loadPage(page: Int) {
@@ -84,18 +176,20 @@ internal fun ThreadReaderScreen(
 
         isLoadingNextPage = true
 
-        if (page == 1) {
-            val cached = threadRepository.getCachedThread(tid, page)
-            if (cached != null) {
-                posts = cached.posts
-                loadedPostsByPage[page] = cached.posts
+        val cached = threadRepository.getCachedThread(tid, authorId, page)
+        if (cached != null) {
+            posts = (posts + cached.posts).distinctBy { it.pid }.sortedBy { it.floor }
+            loadedPostsByPage[page] = cached.posts
+            if (threadInfo == null) {
                 threadInfo = cached.thread
-                totalPages = cached.pageNav?.totalPages ?: 1
-                loadedPages = loadedPages + page
-                state = ReaderState.Success
-                isLoadingNextPage = false
-                return
             }
+            totalPages = cached.pageNav?.totalPages ?: 1
+            loadedPages = loadedPages + page
+            if (page == initialPage) {
+                state = ReaderState.Success
+            }
+            isLoadingNextPage = false
+            return
         }
 
         when (val result = threadRepository.fetchThread(tid, authorId, page)) {
@@ -106,14 +200,16 @@ internal fun ThreadReaderScreen(
                 totalPages = result.value.pageNav?.totalPages ?: 1
                 loadedPages = loadedPages + page
 
-                if (page == 1) {
+                if (threadInfo == null) {
                     threadInfo = result.value.thread
+                }
+                if (page == initialPage || page == 1) {
                     state = ReaderState.Success
                 }
             }
 
             else -> {
-                if (page == 1) {
+                if (page == initialPage || page == 1) {
                     state = ReaderState.Error(result.message())
                 }
             }
@@ -121,7 +217,7 @@ internal fun ThreadReaderScreen(
         isLoadingNextPage = false
     }
 
-    // Initial load
+    // Initial load + position restore
     LaunchedEffect(tid, initialPage, targetPid) {
         loadPage(initialPage)
 
@@ -129,8 +225,49 @@ internal fun ThreadReaderScreen(
             val targetIndex = posts.indexOfFirst { it.pid == targetPid }
             if (targetIndex >= 0) {
                 listState.scrollToItem(targetIndex)
+                hasRestoredPosition = true
             }
         }
+
+        /** Restore position from history if no explicit targetPid */
+        if (!hasRestoredPosition && targetPid == null) {
+            try {
+                val savedPosition = readHistoryRepo.getPosition(tid)
+                if (savedPosition != null) {
+                    // Ensure the saved page is loaded
+                    if (savedPosition.page != initialPage) {
+                        loadPage(savedPosition.page)
+                    }
+                    // Restore by firstVisibleItemIndex/offset (most reliable)
+                    val savedIndex = savedPosition.firstVisibleItemIndex
+                    val savedOffset = savedPosition.firstVisibleItemOffset
+                    if (savedIndex != null && savedIndex >= 0 && savedIndex < posts.size) {
+                        listState.scrollToItem(savedIndex, savedOffset ?: 0)
+                        hasRestoredPosition = true
+                    }
+                    // Fallback: restore by post ID
+                    if (!hasRestoredPosition && savedPosition.anchorPostId > 0) {
+                        val postIndex = posts.indexOfFirst {
+                            it.pid.value.toLong() == savedPosition.anchorPostId
+                        }
+                        if (postIndex >= 0) {
+                            listState.scrollToItem(postIndex)
+                            hasRestoredPosition = true
+                        }
+                    }
+                }
+            } catch (_: Exception) {
+                // Silently fail — non-critical
+            }
+            hasRestoredPosition = true
+        }
+    }
+
+    /** Scroll detection → debounced position save */
+    LaunchedEffect(listState, state) {
+        if (state != ReaderState.Success) return@LaunchedEffect
+        snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }
+            .collect { scheduleSave() }
     }
 
     // Infinite scroll detection
@@ -142,9 +279,11 @@ internal fun ThreadReaderScreen(
                 val visibleItems = layoutInfo.visibleItemsInfo
                 if (visibleItems.isEmpty()) return@collect
 
+                val firstVisibleItemIndex = visibleItems.first().index
                 val lastVisibleItemIndex = visibleItems.last().index
                 val totalItems = layoutInfo.totalItemsCount
 
+                // Load next page
                 if (lastVisibleItemIndex >= totalItems - 5) {
                     val nextPage = (loadedPages.maxOrNull() ?: 0) + 1
                     if (nextPage <= totalPages) {
@@ -152,7 +291,33 @@ internal fun ThreadReaderScreen(
                         scope.launch { loadPage(nextPage) }
                     }
                 }
+
+                // Load previous page
+                if (firstVisibleItemIndex <= 5) {
+                    val prevPage = (loadedPages.minOrNull() ?: 2) - 1
+                    if (prevPage >= 1 && prevPage !in loadedPages) {
+                        currentPageFetching = prevPage
+                        scope.launch { loadPage(prevPage) }
+                    }
+                }
             }
+    }
+
+    /** Save on leaving screen — use runBlocking since scope is already cancelled */
+    DisposableEffect(tid) {
+        onDispose {
+            saveJob?.cancel()
+            val history = buildHistory()
+            if (history != null) {
+                runBlocking {
+                    try {
+                        readHistoryRepo.savePosition(history)
+                    } catch (_: Exception) {
+                        // Silently fail — non-critical
+                    }
+                }
+            }
+        }
     }
 
     ModalNavigationDrawer(

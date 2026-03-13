@@ -21,6 +21,7 @@ import me.thenano.yamibo.yamibo_app.repository.AndroidThemeRepository
 import me.thenano.yamibo.yamibo_app.repository.AndroidThreadRepository
 import me.thenano.yamibo.yamibo_app.repository.AndroidNovelThreadCacheRepository
 import me.thenano.yamibo.yamibo_app.repository.AndroidReadHistoryRepository
+import me.thenano.yamibo.yamibo_app.db.DatabaseFactory
 import me.thenano.yamibo.yamibo_app.store.AndroidCookieStore
 import me.thenano.yamibo.yamibo_app.store.AndroidUserStore
 
@@ -63,7 +64,8 @@ class MainActivity : ComponentActivity() {
             val forumRepository = remember { AndroidForumRepository(cookieStore, yamiboClient) }
             val threadRepository = remember { AndroidThreadRepository(cookieStore, yamiboClient) }
             val novelCacheRepository = remember { AndroidNovelThreadCacheRepository() }
-            val readHistoryRepository = remember { AndroidReadHistoryRepository() }
+            val dbFactory = remember { DatabaseFactory(context) }
+            val readHistoryRepository = remember { AndroidReadHistoryRepository(dbFactory) }
             val themeRepository = remember { AndroidThemeRepository() }
 
             /** Provide Repositories */

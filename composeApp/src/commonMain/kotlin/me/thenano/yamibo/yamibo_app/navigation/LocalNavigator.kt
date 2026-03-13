@@ -6,8 +6,6 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.saveable.SaveableStateHolder
 import me.thenano.yamibo.yamibo_app.IMainScreen
 
-annotation class ScreenKey(val name: String)
-
 enum class NavAction {
     Push,
     Pop,

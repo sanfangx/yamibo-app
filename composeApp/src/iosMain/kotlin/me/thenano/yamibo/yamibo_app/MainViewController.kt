@@ -12,6 +12,7 @@ import me.thenano.yamibo.yamibo_app.repository.IOSThemeRepository
 import me.thenano.yamibo.yamibo_app.repository.IOSThreadRepository
 import me.thenano.yamibo.yamibo_app.repository.IOSNovelThreadCacheRepository
 import me.thenano.yamibo.yamibo_app.repository.IOSReadHistoryRepository
+import me.thenano.yamibo.yamibo_app.db.DatabaseFactory
 import me.thenano.yamibo.yamibo_app.store.IOSCookieStore
 import me.thenano.yamibo.yamibo_app.store.IOSUserStore
 
@@ -29,7 +30,8 @@ fun MainViewController() = ComposeUIViewController {
     val forumRepository = remember { IOSForumRepository(cookieStore, yamiboClient) }
     val threadRepository = remember { IOSThreadRepository(cookieStore, yamiboClient) }
     val novelCacheRepository = remember { IOSNovelThreadCacheRepository() }
-    val readHistoryRepository = remember { IOSReadHistoryRepository() }
+    val dbFactory = remember { DatabaseFactory() }
+    val readHistoryRepository = remember { IOSReadHistoryRepository(dbFactory) }
     val themeRepository = remember { IOSThemeRepository() }
 
     /** Provide Repositories */

@@ -10,7 +10,7 @@ import io.github.littlesurvival.dto.value.ThreadId
 import io.github.littlesurvival.dto.value.UserId
 
 interface ThreadRepository {
-    data class ThreadCacheKey(val tid: Int, val page: Int)
+    data class ThreadCacheKey(val tid: Int, val page: Int, val authorId: Int? = null)
 
     suspend fun fetchThread(
         tid: ThreadId,
@@ -30,7 +30,7 @@ interface ThreadRepository {
     suspend fun ratePost(tId: ThreadId, pId: PostId, score: Int, reason: String, formHash: FormHash): YamiboResult<String>
     suspend fun commentPost(tId: ThreadId, pId: PostId, message: String, formHash: FormHash): YamiboResult<String>
 
-    fun getCachedThread(tid: ThreadId, page: Int = 1): ThreadPage?
-    fun setCachedThread(tid: ThreadId, page: Int, threadPage: ThreadPage)
+    fun getCachedThread(tid: ThreadId, authorId: UserId? = null, page: Int = 1): ThreadPage?
+    fun setCachedThread(tid: ThreadId, authorId: UserId? = null, page: Int, threadPage: ThreadPage)
     fun clearCachedThread(tid: ThreadId)
 }

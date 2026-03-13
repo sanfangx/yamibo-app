@@ -1,5 +1,7 @@
 package me.thenano.yamibo.yamibo_app.repository
 
+import me.thenano.yamibo.yamibo_app.repository.scheme.YamiboColorScheme
+
 class IOSThemeRepository : ThemeRepository {
     private var currentScheme: YamiboColorScheme = YamiboColorScheme.Default
 
