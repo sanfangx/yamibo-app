@@ -345,7 +345,8 @@ fun ReadHistoryPage() {
                                             }
                                         } else {
                                             // Navigation logic for novel forum covers
-                                            if (isNovelForum(history.forumId)) {
+                                            val forumId = history.forumId
+                                            if (forumId != null && YamiboForum.isNovelForum(forumId)) {
                                                 navigator.navigate(
                                                     INovelThreadDetailScreen(
                                                         tid = history.threadId,
@@ -367,7 +368,6 @@ fun ReadHistoryPage() {
                                         }
                                     },
                                     onDelete = {
-
                                         scope.launch {
                                             readHistoryRepo.deleteHistory(history.threadId)
                                             loadPage(currentPage)
@@ -693,9 +693,3 @@ private fun formatTime(timestamp: Long): String {
 
 private fun isLeapYear(year: Int): Boolean =
     (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)
-
-private fun isNovelForum(fid: io.github.littlesurvival.dto.value.ForumId?): Boolean {
-    if (fid == null) return false
-    return fid.value == YamiboForum.LITERATURE.id.value ||
-        fid.value == YamiboForum.TRANSLATED_LIGHT_NOVEL.id.value
-}

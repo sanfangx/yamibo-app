@@ -227,7 +227,7 @@ fun ForumPageScreen(fid: ForumId, name: String) {
                                 }
                             },
                             onThreadClick = { thread ->
-                                if (isNovelForum(fid)) {
+                                if (YamiboForum.isNovelForum(fid)) {
                                     navigator.navigate(
                                         INovelThreadDetailScreen(
                                             thread.tid,
@@ -262,7 +262,7 @@ fun ForumPageScreen(fid: ForumId, name: String) {
             onThreadClick = { thread ->
                 @Suppress("AssignedValueIsNeverRead")
                 showSearch = false
-                if (isNovelForum(fid)) {
+                if (YamiboForum.isNovelForum(fid)) {
                     navigator.navigate(
                         INovelThreadDetailScreen(
                             thread.tid,
@@ -529,10 +529,3 @@ private fun ForumErrorContent(message: String, onRetry: () -> Unit) {
         }
     }
 }
-
-/**
- * 文學區, 輕小說譯文區
- */
-private fun isNovelForum(fid: ForumId): Boolean =
-    fid.value == YamiboForum.LITERATURE.id.value ||
-        fid.value == YamiboForum.TRANSLATED_LIGHT_NOVEL.id.value

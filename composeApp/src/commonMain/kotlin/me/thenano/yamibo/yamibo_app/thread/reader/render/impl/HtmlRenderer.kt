@@ -96,7 +96,7 @@ private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
                 text = block.annotatedString,
                 style = TextStyle(
                     color = colors.textDark,
-                    fontSize = 17.sp,
+                    fontSize = 16.sp,
                     lineHeight = 26.sp,
                     textAlign = block.textAlign
                 ),

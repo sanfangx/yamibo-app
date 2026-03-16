@@ -284,13 +284,13 @@ object HtmlParser {
     private fun fontSizeToSp(size: String?): TextUnit {
         return when (size) {
             "1" -> 12.sp
-            "2" -> 15.sp
-            "3" -> 17.sp // Standard base
-            "4" -> 21.sp
+            "2" -> 14.sp
+            "3" -> 16.sp // Standard base
+            "4" -> 22.sp
             "5" -> 28.sp
             "6" -> 36.sp
             "7" -> 48.sp // Huge
-            else -> 17.sp
+            else -> 16.sp
         }
     }
 

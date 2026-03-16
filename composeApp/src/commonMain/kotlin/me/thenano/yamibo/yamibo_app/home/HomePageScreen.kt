@@ -132,7 +132,7 @@ fun HomePageScreen() {
                 fid = null,
                 onDismiss = { showSearch = false },
                 onThreadClick = { thread ->
-                    if (isNovelForum(thread.tag)) {
+                    if (YamiboForum.isNovelForum(thread.tag ?: "")) {
                         navigator.navigate(
                             INovelThreadDetailScreen(
                                 thread.tid,
@@ -509,7 +509,3 @@ private fun ErrorContent(message: String, onRetry: () -> Unit) {
         }
     }
 }
-
-private fun isNovelForum(name: String?): Boolean =
-    name == YamiboForum.LITERATURE.forumName || name == "文学区" ||
-        name == YamiboForum.TRANSLATED_LIGHT_NOVEL.forumName || name == "輕小說/譯文區"

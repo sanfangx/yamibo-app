@@ -26,6 +26,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.window.Dialog
 import coil3.compose.SubcomposeAsyncImage
+import me.thenano.yamibo.yamibo_app.theme.YamiboColors
 import me.thenano.yamibo.yamibo_app.thread.reader.render.impl.AttachmentRenderer
 import me.thenano.yamibo.yamibo_app.thread.reader.render.impl.CommentRenderer
 import me.thenano.yamibo.yamibo_app.thread.reader.render.impl.HtmlRenderer
@@ -37,6 +38,7 @@ import me.thenano.yamibo.yamibo_app.thread.reader.render.impl.RateRenderer
 fun PostRenderer(
     post: Post,
     modifier: Modifier = Modifier,
+    threadTitle: String? = null,
     onVote: ((List<PollOptionId>) -> Unit)? = null,
     onRate: ((Int, String) -> Unit)? = null,
     onComment: ((String) -> Unit)? = null,
@@ -44,8 +46,22 @@ fun PostRenderer(
 ) {
     var showRateDialog by remember { mutableStateOf(false) }
     var showCommentDialog by remember { mutableStateOf(false) }
+    val colors = YamiboTheme.colors
 
     Column(modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+        // Title
+        if (post.floor == 1 && !threadTitle.isNullOrEmpty()) {
+            Text(
+                text = threadTitle,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = YamiboTheme.colors.textDark,
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+        }
+
+        HorizontalDivider(Modifier, thickness = 0.5.dp, color = colors.brownLight.copy(alpha = 0.5f))
+
         // Author Header
         Row(
             modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),

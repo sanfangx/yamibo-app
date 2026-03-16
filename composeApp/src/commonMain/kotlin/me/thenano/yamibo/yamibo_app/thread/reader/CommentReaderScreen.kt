@@ -317,6 +317,7 @@ internal fun CommentReaderScreen(
                             ) { index, post ->
                                 PostRenderer(
                                     post = post,
+                                    threadTitle = postTitle,
                                     onRate = { score, reason ->
                                         val formHash = getFormHash()
                                         if (formHash == null) {

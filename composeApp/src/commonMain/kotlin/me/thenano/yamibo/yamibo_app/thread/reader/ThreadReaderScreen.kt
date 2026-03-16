@@ -532,6 +532,7 @@ internal fun ThreadReaderScreen(
                         itemsIndexed(posts, key = { _, post -> post.pid.value }) { index, post ->
                             PostRenderer(
                                 post = post,
+                                threadTitle = title,
                                 onVote = { optionIds -> handleVote(optionIds) },
                                 onRate = { score, reason -> handleRate(post.pid, score, reason) },
                                 onComment = { message -> handleComment(post.pid, message) },
