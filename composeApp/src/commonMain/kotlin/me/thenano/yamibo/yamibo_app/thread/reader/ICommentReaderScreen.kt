@@ -13,7 +13,7 @@ class ICommentReaderScreen(
     private val oPostId: PostId,
     private val authorId: UserId
 ) : Navigatable {
-    override val id = "CommentReader_${tid.value}_${oPostId.value}"
+    override val id = buildId(tid.value, oPostId.value)
 
     @Composable
     override fun Content() {

@@ -36,8 +36,8 @@ import me.thenano.yamibo.yamibo_app.store.auth.UserStore
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
-class ILoginWebView : Navigatable {
-    override val id: String = "LoginScreen_${Any().hashCode()}"
+class ILoginScreen : Navigatable {
+    override val id: String = buildId(Any().hashCode())
 
     @Composable
     override fun Content() {
@@ -146,7 +146,7 @@ private fun LoginContent() {
     Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
         AnimatedYamiboButton(
             text = "登入",
-            onClick = { navigator.navigate(ILoginWebView()) },
+            onClick = { navigator.navigate(ILoginScreen()) },
             modifier = Modifier.fillMaxWidth(0.6f)
         )
     }

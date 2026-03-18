@@ -10,7 +10,7 @@ class IActionWebView(
     private val successCondition: (url: String) -> Boolean = { false },
     private val onSuccess: () -> Unit = {},
 ) : Navigatable {
-    override val id = "ActionWebView_${initialUrl.hashCode()}"
+    override val id = buildId(initialUrl.hashCode())
 
     @Composable
     override fun Content() {

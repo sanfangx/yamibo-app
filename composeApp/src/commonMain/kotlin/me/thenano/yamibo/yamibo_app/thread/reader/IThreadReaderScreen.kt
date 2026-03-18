@@ -15,7 +15,7 @@ class IThreadReaderScreen(
     private val targetPid: PostId? = null,
     private val isAuthorOnly: Boolean = false
 ) : Navigatable {
-    override val id = "ReaderScreen_${tid.value}_${authorId?.value ?: "all"}"
+    override val id = buildId(tid.value, authorId?.value ?: "all")
 
     @Composable
     override fun Content() {

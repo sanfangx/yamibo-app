@@ -9,7 +9,7 @@ class IForumScreen(
     private val fid: ForumId,
     private val name: String
 ) : Navigatable {
-    override val id = "ForumScreen_${fid.value}"
+    override val id = buildId(fid.value)
 
     @Composable
     override fun Content() {
