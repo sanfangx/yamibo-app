@@ -10,7 +10,7 @@ class ITagListScreen(
     private val tid: ThreadId,
     private val initialTags: List<TagValue>
 ) : Navigatable {
-    override val id: String = buildId(tid)
+    override val id: String = buildId(tid.value)
 
     @Composable
     override fun Content() {

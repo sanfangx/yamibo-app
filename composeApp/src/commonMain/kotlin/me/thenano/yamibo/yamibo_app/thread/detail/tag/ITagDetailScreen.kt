@@ -9,7 +9,7 @@ class ITagDetailScreen(
     private val title: String,
     private val page: Int? = null
 ) : Navigatable {
-    override val id: String = buildId(tagId, page)
+    override val id: String = buildId(tagId.value, page)
 
     @Composable
     override fun Content() {

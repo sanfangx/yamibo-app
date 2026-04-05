@@ -8,6 +8,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculateCentroid
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
@@ -56,6 +59,7 @@ import androidx.compose.animation.core.exponentialDecay
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.INovelThreadDetailScreen
+import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
 fun ImagesReaderScreen(
@@ -227,7 +231,7 @@ fun ImagesReaderScreen(
                                     currentPage = finalPageToRestore
                                     if (history.firstVisibleItemIndex != null && finalPageToRestore > 0 && isScrollMode) {
                                         scope.launch {
-                                            while (scrollListState.layoutInfo.totalItemsCount == 0) delay(20)
+                                            while (scrollListState.layoutInfo.totalItemsCount == 0) delay(20.milliseconds)
                                             scrollListState.scrollToItem(history.firstVisibleItemIndex!!, history.firstVisibleItemOffset ?: 0)
                                         }
                                     }
@@ -242,7 +246,7 @@ fun ImagesReaderScreen(
                                     currentPage = finalPageToRestore
                                     if (history.firstVisibleItemIndex != null && finalPageToRestore > 0 && isScrollMode) {
                                         scope.launch {
-                                            while (scrollListState.layoutInfo.totalItemsCount == 0) delay(20)
+                                            while (scrollListState.layoutInfo.totalItemsCount == 0) delay(20.milliseconds)
                                             scrollListState.scrollToItem(history.firstVisibleItemIndex!!, history.firstVisibleItemOffset ?: 0)
                                         }
                                     }
@@ -252,14 +256,14 @@ fun ImagesReaderScreen(
                             
                             if (!didRestore && isScrollMode) {
                                 scope.launch {
-                                    while (scrollListState.layoutInfo.totalItemsCount == 0) delay(20)
+                                    while (scrollListState.layoutInfo.totalItemsCount == 0) delay(20.milliseconds)
                                     scrollListState.scrollToItem(if (tagId != null) 1 else 0)
                                 }
                             }
                         } else {
                             if (isScrollMode) {
                                 scope.launch {
-                                    while (scrollListState.layoutInfo.totalItemsCount == 0) delay(20)
+                                    while (scrollListState.layoutInfo.totalItemsCount == 0) delay(20.milliseconds)
                                     scrollListState.scrollToItem(if (tagId != null) 1 else 0)
                                 }
                             }
@@ -336,7 +340,7 @@ fun ImagesReaderScreen(
     }
 
     LaunchedEffect(activeTid, currentPage, currentTagPage) {
-        delay(2000)
+        delay(2000.milliseconds)
         currentHistorySaver()
     }
 
@@ -351,7 +355,7 @@ fun ImagesReaderScreen(
             val targetIndex = if (tagId != null) currentPage.coerceAtLeast(0) + 1 else currentPage.coerceAtLeast(0)
             if (targetIndex >= 0) {
                 while (scrollListState.layoutInfo.totalItemsCount == 0 && actualImageList.isNotEmpty()) {
-                    delay(20)
+                    delay(20.milliseconds)
                 }
                 scrollListState.scrollToItem(targetIndex)
             }
@@ -405,7 +409,7 @@ fun ImagesReaderScreen(
                         snackbarHostState.showSnackbar("無法載入下一頁")
                     }
                 }
-                delay(600)
+                delay(600.milliseconds)
                 isLoadingImages = false
             }
         }
@@ -442,7 +446,7 @@ fun ImagesReaderScreen(
                         snackbarHostState.showSnackbar("無法載入上一頁")
                     }
                 }
-                kotlinx.coroutines.delay(600)
+                delay(600.milliseconds)
                 isLoadingImages = false
             }
         }
@@ -556,17 +560,17 @@ fun ImagesReaderScreen(
         }
     }
 
-    // Outer wrapper so nothing outside goes black
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
-            .onSizeChanged { containerSize = it }
+            .windowInsetsPadding(WindowInsets.systemBars)
     ) {
         // Zoomable Content Box
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .onSizeChanged { containerSize = it }
                 // 1. Unified Tap Handler
                 .pointerInput(touchZoneLayout, readingMode, actualImageList.size) {
                     detectTapGestures(
@@ -634,13 +638,15 @@ fun ImagesReaderScreen(
                         var boundY = 0f
                         var lastMoveTime = down.uptimeMillis
                         var isStaleFling = false
+                        var isPanning = false
 
                         val velocityTracker = VelocityTracker()
                         velocityTracker.addPosition(down.uptimeMillis, down.position)
 
                         do {
                             val event = awaitPointerEvent()
-                            event.changes.forEach { change ->
+                            if (event.changes.size == 1) {
+                                val change = event.changes[0]
                                 if (change.pressed) {
                                     velocityTracker.addPosition(change.uptimeMillis, change.position)
                                     if ((change.position - change.previousPosition).getDistance() > 1f) {
@@ -651,19 +657,31 @@ fun ImagesReaderScreen(
                                         isStaleFling = true
                                     }
                                 }
+                            } else {
+                                velocityTracker.resetTracking()
+                                isStaleFling = true // Never fling after a multi-touch/pinch release
                             }
 
                             if (event.changes.size >= 2) {
-                                val firstChange = event.changes[0]
-                                val secondChange = event.changes[1]
-                                val prevDist = (firstChange.previousPosition - secondChange.previousPosition).getDistance()
-                                val currDist = (firstChange.position - secondChange.position).getDistance()
-                                if (prevDist > 0f) {
-                                    val zoom = currDist / prevDist
-                                    currentScale = (currentScale * zoom).coerceIn(1f, 5f)
+                                val zoomChange = event.calculateZoom()
+                                val panChange = event.calculatePan()
+                                
+                                if (zoomChange != 1f || panChange != Offset.Zero) {
+                                    val newScale = (currentScale * zoomChange).coerceIn(1f, 5f)
+                                    val effectiveZoom = newScale / currentScale
+                                    currentScale = newScale
+                                    
+                                    val centroid = event.calculateCentroid(useCurrent = false)
+                                    val centerX = containerSize.width / 2f
+                                    val centerY = containerSize.height / 2f
+                                    val locCentroidX = centroid.x - centerX
+                                    val locCentroidY = centroid.y - centerY
+                                    
+                                    currentOffsetX = locCentroidX - (locCentroidX - currentOffsetX) * effectiveZoom + panChange.x
+                                    currentOffsetY = locCentroidY - (locCentroidY - currentOffsetY) * effectiveZoom + panChange.y
                                     
                                     boundX = if (currentScale > 1f) (containerSize.width * (currentScale - 1f)) / 2f else 0f
-                                    boundY = if (currentScale > 1f && !isScrollMode) (containerSize.height * (currentScale - 1f)) / 2f else 0f
+                                    boundY = if (currentScale > 1f) (containerSize.height * (currentScale - 1f)) / 2f else 0f
                                     offsetXAnim.updateBounds(-boundX, boundX)
                                     offsetYAnim.updateBounds(-boundY, boundY)
                                     
@@ -682,18 +700,24 @@ fun ImagesReaderScreen(
                                 pan = change.position - change.previousPosition
                                 
                                 boundX = if (currentScale > 1f) (containerSize.width * (currentScale - 1f)) / 2f else 0f
-                                boundY = if (currentScale > 1f && !isScrollMode) (containerSize.height * (currentScale - 1f)) / 2f else 0f
+                                boundY = if (currentScale > 1f) (containerSize.height * (currentScale - 1f)) / 2f else 0f
                                 offsetXAnim.updateBounds(-boundX, boundX)
                                 offsetYAnim.updateBounds(-boundY, boundY)
                                 
-                                currentOffsetX = (currentOffsetX + pan.x).coerceIn(-boundX, boundX)
-                                if (!isScrollMode) {
-                                    currentOffsetY = (currentOffsetY + pan.y).coerceIn(-boundY, boundY)
-                                    change.consume() // Consume 1-finger drag so background lists don't scroll
+                                if (!isPanning && (change.position - down.position).getDistance() > 18f) {
+                                    isPanning = true
                                 }
-                                scope.launch {
-                                    offsetXAnim.snapTo(currentOffsetX)
-                                    if (!isScrollMode) offsetYAnim.snapTo(currentOffsetY)
+                                
+                                if (isPanning) {
+                                    currentOffsetX = (currentOffsetX + pan.x).coerceIn(-boundX, boundX)
+                                    if (!isScrollMode) {
+                                        currentOffsetY = (currentOffsetY + pan.y).coerceIn(-boundY, boundY)
+                                        change.consume() // Consume 1-finger drag so background lists don't scroll
+                                    }
+                                    scope.launch {
+                                        offsetXAnim.snapTo(currentOffsetX)
+                                        if (!isScrollMode) offsetYAnim.snapTo(currentOffsetY)
+                                    }
                                 }
                             }
                         } while (event.changes.any { it.pressed })
@@ -715,7 +739,7 @@ fun ImagesReaderScreen(
                                         launch {
                                             offsetYAnim.animateDecay(
                                                 initialVelocity = velocity.y * 0.4f,
-                                                animationSpec = androidx.compose.animation.core.exponentialDecay()
+                                                animationSpec = exponentialDecay()
                                             )
                                         }
                                     }

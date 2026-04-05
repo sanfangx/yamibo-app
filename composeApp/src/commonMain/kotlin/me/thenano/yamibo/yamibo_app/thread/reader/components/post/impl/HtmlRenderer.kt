@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.DisableSelection
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -57,9 +58,11 @@ fun HtmlRenderer(html: String, tid: ThreadId? = null, modifier: Modifier = Modif
             true
         }
     }
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(0.dp)) {
-        blocks.forEach { block ->
-            HtmlBlockRenderer(block, tid)
+    SelectionContainer {
+        Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(0.dp)) {
+            blocks.forEach { block ->
+                HtmlBlockRenderer(block, tid)
+            }
         }
     }
 }

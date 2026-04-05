@@ -26,7 +26,7 @@ class IImageReaderScreen(
     private val tagPage: Int? = null,
     private val tagTotalPages: Int? = null,
 ) : Navigatable {
-    override val id: String = buildId(tid, postId, tagId)
+    override val id: String = buildId(tid.value, postId?.value, tagId?.value)
 
     @Composable
     override fun Content() {
