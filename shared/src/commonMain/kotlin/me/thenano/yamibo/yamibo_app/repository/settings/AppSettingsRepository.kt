@@ -1,23 +1,22 @@
 package me.thenano.yamibo.yamibo_app.repository.settings
 
-import kotlinx.serialization.Serializable
+import me.thenano.yamibo.yamibo_app.repository.settings.core.SettingsRegistry
 import me.thenano.yamibo.yamibo_app.store.settings.SettingsStore
 
-@Serializable
-data class ThemeSettings(
-    val mode: String = "SYSTEM",
-    val scheme: String = "百合會"
-)
+class AppSettingsRepository(store: SettingsStore) : SettingsRegistry(store, prefix = "appsettings") {
 
-@Serializable
-data class AppSettings(
-    val theme: ThemeSettings = ThemeSettings(),
-    val isMangaMode: Boolean = false
-)
+    val themeMode by stringSetting(
+        name = "顏色主題",
+        default = "SYSTEM"
+    )
 
-class AppSettingsRepository(store: SettingsStore) : BaseSettingsRepository<AppSettings>(
-    store = store,
-    serializer = AppSettings.serializer(),
-    prefix = "appsettings",
-    default = AppSettings()
-)
+    val themeScheme by stringSetting(
+        name = "配色風格",
+        default = "百合會"
+    )
+
+    val isMangaMode by boolSetting(
+        name = "漫畫模式",
+        default = false
+    )
+}

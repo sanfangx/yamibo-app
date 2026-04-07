@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.littlesurvival.YamiboForum
+import io.github.littlesurvival.YamiboRoute
 import io.github.littlesurvival.core.YamiboResult
 import io.github.littlesurvival.dto.model.ThreadSummary
 import io.github.littlesurvival.dto.value.*
@@ -60,6 +61,11 @@ import androidx.compose.animation.core.exponentialDecay
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.INovelThreadDetailScreen
+import me.thenano.yamibo.yamibo_app.util.shareText
+import me.thenano.yamibo.yamibo_app.util.state
+import coil3.compose.LocalPlatformContext
+import me.thenano.yamibo.yamibo_app.repository.settings.ReadingMode
+import me.thenano.yamibo.yamibo_app.repository.settings.TouchZoneLayout
 import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
@@ -85,6 +91,7 @@ fun ImagesReaderScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val historyRepo = LocalReadHistoryRepository.current
     val threadRepository = LocalThreadRepository.current
+    val platformContext = LocalPlatformContext.current
 
     // Tag specific state
     var currentTagPage by remember { mutableStateOf(tagPage ?: 1) }
@@ -104,9 +111,10 @@ fun ImagesReaderScreen(
     val isMangaForum = remember(activeFid, tagId) { tagId != null || (activeFid?.let { YamiboForum.isMangaForum(it) } == true) }
 
     val mangaSettingsRepo = LocalMangaReaderSettingsRepository.current
-    val mangaSettings by mangaSettingsRepo.settings.collectAsState()
+    val readingModeStr = mangaSettingsRepo.readingMode.state()
+    val touchZoneStr = mangaSettingsRepo.touchZone.state()
     
-    val readingMode = runCatching { ReadingMode.valueOf(mangaSettings.readingMode) }.getOrDefault(ReadingMode.SINGLE_LTR)
+    val readingMode = runCatching { ReadingMode.valueOf(readingModeStr) }.getOrDefault(ReadingMode.SINGLE_LTR)
     val isRtl = readingMode == ReadingMode.SINGLE_RTL
     val isVerticalMode = readingMode == ReadingMode.SINGLE_TTB
     val isScrollMode = readingMode == ReadingMode.SCROLL_CONTINUOUS || readingMode == ReadingMode.SCROLL_GAP
@@ -117,7 +125,7 @@ fun ImagesReaderScreen(
     var startFromLastPage by remember { mutableStateOf(false) }
 
     /** State */
-    val touchZoneLayout = runCatching { TouchZoneLayout.valueOf(mangaSettings.touchZone) }.getOrDefault(TouchZoneLayout.L_SHAPE)
+    val touchZoneLayout = runCatching { TouchZoneLayout.valueOf(touchZoneStr) }.getOrDefault(TouchZoneLayout.L_SHAPE)
     var showOverlay by remember { mutableStateOf(false) }
     var showSettings by remember { mutableStateOf(false) }
     var showTouchZonePreview by remember { mutableStateOf(false) }
@@ -983,7 +991,11 @@ fun ImagesReaderScreen(
                     navigator.navigate(IThreadReaderScreen(tid = activeTid, title = activeTitle, authorId = activeAuthorId))
                 }
             } } else null,
-            subtitle = tagName
+            subtitle = tagName,
+            onShare = {
+                val url = YamiboRoute.Thread(activeTid).build()
+                shareText(platformContext, url, activeTitle)
+            }
         )
 
         // Catalog Panel
@@ -1053,8 +1065,8 @@ fun ImagesReaderScreen(
             visible = showSettings,
             currentReadingMode = readingMode,
             currentTouchZoneLayout = touchZoneLayout,
-            onReadingModeChange = { mode -> mangaSettingsRepo.update { it.copy(readingMode = mode.name) }; resetZoom() },
-            onTouchZoneLayoutChange = { layout -> mangaSettingsRepo.update { it.copy(touchZone = layout.name) }; showTouchZonePreview = true },
+            onReadingModeChange = { mode -> mangaSettingsRepo.readingMode.setValue(mode.name); resetZoom() },
+            onTouchZoneLayoutChange = { layout -> mangaSettingsRepo.touchZone.setValue(layout.name); showTouchZonePreview = true },
             onDismiss = { showSettings = false },
             modifier = Modifier.align(Alignment.BottomCenter)
         )

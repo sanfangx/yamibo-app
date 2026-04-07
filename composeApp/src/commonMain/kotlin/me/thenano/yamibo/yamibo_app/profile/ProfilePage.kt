@@ -63,11 +63,6 @@ fun ProfilePage() {
         )
         Spacer(Modifier.height(8.dp))
 
-        // content blocks
-        SectionCard(title = "功能區塊 A", description = "這裡可以放設定、收藏、歷史紀錄等內容")
-
-        SectionCard(title = "功能區塊 B", description = "可用於顯示統計、會員資訊或快捷入口")
-
         // Settings entry
         EntryCard(title = "設定", icon = YamiboIcons.Setting, onClick = { navigator.navigate(ISettingsScreen()) })
 
@@ -109,43 +104,6 @@ private fun EntryCard(
                 fontWeight = FontWeight.Medium,
                 color = colors.textDark
             )
-        }
-    }
-}
-
-@Composable
-private fun SectionCard(
-    title: String,
-    onClick: () -> Unit = {},
-    description: String,
-) {
-    val colors = colors
-    Card(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-        shape = RoundedCornerShape(18.dp),
-        elevation = CardDefaults.cardElevation(4.dp),
-        colors = CardDefaults.cardColors(containerColor = colors.creamSurface)
-    ) {
-        Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = colors.textDark
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodyMedium,
-                color = colors.textDark.copy(alpha = 0.6f)
-            )
-            Spacer(Modifier.height(12.dp))
-            Button(
-                onClick = onClick,
-                shape = RoundedCornerShape(50),
-                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = colors.brownPrimary)
-            ) { Text("進入") }
         }
     }
 }

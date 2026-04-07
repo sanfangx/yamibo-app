@@ -1,12 +1,15 @@
 package me.thenano.yamibo.yamibo_app.store.settings
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
 
+@SuppressLint("UseKtx")
 class AndroidSettingsStore(context: Context) : SettingsStore {
     private val prefs: SharedPreferences = context.getSharedPreferences("yamibo_app_settings", Context.MODE_PRIVATE)
 
     override fun getInt(key: String, defaultValue: Int): Int = prefs.getInt(key, defaultValue)
+
     override fun putInt(key: String, value: Int) = prefs.edit().putInt(key, value).apply()
 
     override fun getFloat(key: String, defaultValue: Float): Float = prefs.getFloat(key, defaultValue)

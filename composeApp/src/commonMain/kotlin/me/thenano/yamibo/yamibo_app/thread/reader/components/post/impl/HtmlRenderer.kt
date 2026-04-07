@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.littlesurvival.dto.value.ThreadId
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.util.state
 import me.thenano.yamibo.yamibo_app.LocalNovelReaderSettingsRepository
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.thread.image.ImageViewer
@@ -75,20 +76,22 @@ private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
     val uriHandler = LocalUriHandler.current
     val navigator = LocalNavigator.current
     
-    val novelSettings by LocalNovelReaderSettingsRepository.current.settings.collectAsState()
+    val novelSettingsRepo = LocalNovelReaderSettingsRepository.current
+    val fontSize = novelSettingsRepo.fontSize.state()
+    val lineSpacing = novelSettingsRepo.lineSpacing.state()
+    val clipboardManager = LocalClipboardManager.current
 
     when (block) {
         is HtmlBlock.Text -> {
             var showLongPressMenu by remember { mutableStateOf<Pair<String, String>?>(null) }
             val layoutResult = remember { mutableStateOf<TextLayoutResult?>(null) }
-            val clipboardManager = LocalClipboardManager.current
 
             Text(
                 text = block.annotatedString,
                 style = TextStyle(
                     color = colors.textDark,
-                    fontSize = novelSettings.fontSize.sp,
-                    lineHeight = (novelSettings.fontSize * novelSettings.lineSpacing).sp,
+                    fontSize = fontSize.sp,
+                    lineHeight = (fontSize * lineSpacing).sp,
                     textAlign = block.textAlign
                 ),
                 modifier = Modifier
@@ -381,8 +384,8 @@ private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
                                                                 text = innerBlock.annotatedString,
                                                                 style = TextStyle(
                                                                     color = cellTextColor,
-                                                                    fontSize = (novelSettings.fontSize - 3).coerceAtLeast(10).sp,
-                                                                    lineHeight = ((novelSettings.fontSize - 3).coerceAtLeast(10) * novelSettings.lineSpacing).sp,
+                                                                    fontSize = (fontSize - 3).coerceAtLeast(10).sp,
+                                                                    lineHeight = ((fontSize - 3).coerceAtLeast(10) * lineSpacing).sp,
                                                                     fontWeight = if (cell.isHeader) FontWeight.Bold else FontWeight.Normal,
                                                                     textAlign = innerBlock.textAlign
                                                                 )

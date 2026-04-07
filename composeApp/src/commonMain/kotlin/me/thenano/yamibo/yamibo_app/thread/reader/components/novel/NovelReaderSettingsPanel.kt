@@ -14,6 +14,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -22,22 +24,27 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import me.thenano.yamibo.yamibo_app.repository.settings.NovelReaderSettings
-import me.thenano.yamibo.yamibo_app.repository.settings.ThemeSettings
+import me.thenano.yamibo.yamibo_app.repository.settings.AppSettingsRepository
+import me.thenano.yamibo.yamibo_app.repository.settings.NovelReaderSettingsRepository
 import me.thenano.yamibo.yamibo_app.profile.settings.components.ThemeSelectorContent
+import me.thenano.yamibo.yamibo_app.profile.settings.components.SettingsSlider
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.util.state
+import kotlin.math.roundToInt
 
 @Composable
 fun NovelReaderSettingsPanel(
     visible: Boolean,
-    settings: NovelReaderSettings,
-    themeSettings: ThemeSettings,
-    onSettingsChange: (NovelReaderSettings) -> Unit,
-    onThemeChange: (ThemeSettings) -> Unit,
+    novelSettingsRepo: NovelReaderSettingsRepository,
+    appSettingsRepo: AppSettingsRepository,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val colors = YamiboTheme.colors
+    val fontSize = novelSettingsRepo.fontSize.state()
+    val lineSpacing = novelSettingsRepo.lineSpacing.state()
+    val themeMode = appSettingsRepo.themeMode.state()
+    val themeScheme = appSettingsRepo.themeScheme.state()
 
     AnimatedVisibility(
         visible = visible,
@@ -79,19 +86,19 @@ fun NovelReaderSettingsPanel(
                             .background(Color.White.copy(alpha = 0.1f))
                     ) {
                         IconButton(onClick = { 
-                            onSettingsChange(settings.copy(fontSize = (settings.fontSize - 1).coerceAtLeast(10))) 
+                            novelSettingsRepo.fontSize.setValue((fontSize - 1).coerceAtLeast(10))
                         }) {
                             Text("-", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                         }
                         Text(
-                            text = "${settings.fontSize}",
+                            text = "$fontSize",
                             color = Color.White,
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(horizontal = 12.dp)
                         )
                         IconButton(onClick = { 
-                            onSettingsChange(settings.copy(fontSize = (settings.fontSize + 1).coerceAtMost(40))) 
+                            novelSettingsRepo.fontSize.setValue((fontSize + 1).coerceAtMost(40))
                         }) {
                             Text("+", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                         }
@@ -107,24 +114,15 @@ fun NovelReaderSettingsPanel(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text("行距", color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf(1.25f, 1.5f, 1.75f, 2.0f).forEach { spacing ->
-                            val isSelected = settings.lineSpacing == spacing
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(20.dp))
-                                    .background(if (isSelected) colors.brownPrimary else Color.White.copy(alpha = 0.1f))
-                                    .clickable { onSettingsChange(settings.copy(lineSpacing = spacing)) }
-                                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                            ) {
-                                Text(
-                                    text = "${spacing}x",
-                                    color = if (isSelected) Color.White else Color.White.copy(alpha = 0.8f),
-                                    fontSize = 13.sp,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                                )
-                            }
-                        }
+                    Box(modifier = Modifier.fillMaxWidth(0.6f)) {
+                        SettingsSlider(
+                            label = "",
+                            value = lineSpacing,
+                            valueRange = 1.0f..3.0f,
+                            steps = 39,
+                            valueDisplay = { "${(it * 100f).roundToInt() / 100f}x" },
+                            onValueChange = { novelSettingsRepo.lineSpacing.setValue(it) }
+                        )
                     }
                 }
 
@@ -132,10 +130,10 @@ fun NovelReaderSettingsPanel(
 
                 // Theme Section
                 ThemeSelectorContent(
-                    currentMode = themeSettings.mode,
-                    currentSchemeName = themeSettings.scheme,
-                    onModeChange = { onThemeChange(themeSettings.copy(mode = it)) },
-                    onSchemeChange = { onThemeChange(themeSettings.copy(scheme = it)) }
+                    currentMode = themeMode,
+                    currentSchemeName = themeScheme,
+                    onModeChange = { appSettingsRepo.themeMode.setValue(it) },
+                    onSchemeChange = { appSettingsRepo.themeScheme.setValue(it) }
                 )
                 
                 Spacer(Modifier.height(16.dp))

@@ -15,6 +15,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import io.github.littlesurvival.dto.page.Post
 import io.github.littlesurvival.dto.value.PollOptionId
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.util.state
 import YamiboIcons
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.CircleShape
@@ -49,11 +50,11 @@ fun PostRenderer(
     var showRateDialog by remember { mutableStateOf(false) }
     var showCommentDialog by remember { mutableStateOf(false) }
     val colors = YamiboTheme.colors
-    val novelSettings by LocalNovelReaderSettingsRepository.current.settings.collectAsState()
-    val widthFraction = novelSettings.contentWidthFraction
+    val novelSettingsRepo = LocalNovelReaderSettingsRepository.current
+    val contentWidthFraction = novelSettingsRepo.contentWidthFraction.state()
 
     Box(modifier = modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
-    Column(modifier = Modifier.fillMaxWidth(widthFraction).padding(horizontal = 16.dp, vertical = 8.dp)) {
+    Column(modifier = Modifier.fillMaxWidth(contentWidthFraction).padding(horizontal = 16.dp, vertical = 8.dp)) {
         // Title
         if (post.floor == 1 && !threadTitle.isNullOrEmpty()) {
             Text(

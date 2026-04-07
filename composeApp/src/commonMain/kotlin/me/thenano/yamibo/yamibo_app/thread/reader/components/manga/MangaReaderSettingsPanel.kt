@@ -21,15 +21,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.repository.settings.ReadingMode
+import me.thenano.yamibo.yamibo_app.repository.settings.TouchZoneLayout
 
-/** Reading mode configuration */
-enum class ReadingMode(val label: String) {
-    SINGLE_LTR("單頁(左至右)"),
-    SINGLE_RTL("單頁(右至左)"),
-    SINGLE_TTB("單頁(上至下)"),
-    SCROLL_CONTINUOUS("捲動(連續)"),
-    SCROLL_GAP("捲動(留空)")
-}
 
 /**
  * Settings panel for the manga reader.

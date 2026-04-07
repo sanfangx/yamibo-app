@@ -17,8 +17,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
+import coil3.compose.LocalPlatformContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.littlesurvival.YamiboForum
@@ -53,6 +52,7 @@ import me.thenano.yamibo.yamibo_app.thread.reader.components.ReaderOverlayMenu
 import me.thenano.yamibo.yamibo_app.thread.reader.components.novel.NovelReaderSettingsPanel
 import me.thenano.yamibo.yamibo_app.thread.reader.components.post.PostRenderer
 import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
+import me.thenano.yamibo.yamibo_app.util.shareText
 import me.thenano.yamibo.yamibo_app.webview.action.IActionWebView
 import kotlin.math.abs
 import me.thenano.yamibo.yamibo_app.thread.image.LocalImageClickListener
@@ -80,7 +80,7 @@ internal fun ThreadReaderScreen(
     val threadRepository = LocalThreadRepository.current
     val readHistoryRepo = LocalReadHistoryRepository.current
     val navigator = LocalNavigator.current
-    val clipboardManager = LocalClipboardManager.current
+    val platformContext = LocalPlatformContext.current
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
 
@@ -728,11 +728,7 @@ internal fun ThreadReaderScreen(
                     },
                     onShare = {
                         val url = YamiboRoute.Thread(tid).build()
-
-                        clipboardManager.setText(AnnotatedString(url))
-                        scope.launch {
-                            snackbarHostState.showSnackbar("已複製連結")
-                        }
+                        shareText(platformContext, url, title)
                     },
                     onReply = {
                         val replyUrl = YamiboRoute.ThreadReply(tid, loadedPages.maxOrNull() ?: 1).build()
@@ -794,15 +790,11 @@ internal fun ThreadReaderScreen(
 
                 val novelSettingsRepo = LocalNovelReaderSettingsRepository.current
                 val appSettingsRepo = LocalAppSettingsRepository.current
-                val novelSettings by novelSettingsRepo.settings.collectAsState()
-                val appSettings by appSettingsRepo.settings.collectAsState()
 
                 NovelReaderSettingsPanel(
                     visible = showSettingsPanel,
-                    settings = novelSettings,
-                    themeSettings = appSettings.theme,
-                    onSettingsChange = { newSettings -> novelSettingsRepo.update { newSettings } },
-                    onThemeChange = { newTheme -> appSettingsRepo.update { it.copy(theme = newTheme) } },
+                    novelSettingsRepo = novelSettingsRepo,
+                    appSettingsRepo = appSettingsRepo,
                     onDismiss = { showSettingsPanel = false },
                     modifier = Modifier.align(Alignment.BottomCenter)
                 )

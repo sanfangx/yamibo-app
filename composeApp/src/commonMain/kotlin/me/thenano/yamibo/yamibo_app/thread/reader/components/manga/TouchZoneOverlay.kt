@@ -13,15 +13,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
+import me.thenano.yamibo.yamibo_app.repository.settings.TouchZoneLayout
 
-/** Touch zone layout configuration for the manga reader */
-enum class TouchZoneLayout(val label: String) {
-    L_SHAPE("L式"),
-    KINDLE("Kindle式"),
-    EDGE("邊緣式"),
-    LEFT_RIGHT("左右式"),
-    DISABLED("停用")
-}
 
 /** Describes the action area for a touch zone region */
 enum class TouchAction(val label: String) {

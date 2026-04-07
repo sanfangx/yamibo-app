@@ -1,18 +1,34 @@
 package me.thenano.yamibo.yamibo_app.repository.settings
 
-import kotlinx.serialization.Serializable
+import me.thenano.yamibo.yamibo_app.repository.settings.core.SettingsRegistry
 import me.thenano.yamibo.yamibo_app.store.settings.SettingsStore
 
-@Serializable
-data class NovelReaderSettings(
-    val fontSize: Int = 16,
-    val lineSpacing: Float = 1.5f,
-    val contentWidthFraction: Float = 1.0f
-)
+class NovelReaderSettingsRepository(store: SettingsStore) : SettingsRegistry(store, prefix = "novelreadersettings") {
 
-class NovelReaderSettingsRepository(store: SettingsStore) : BaseSettingsRepository<NovelReaderSettings>(
-    store = store,
-    serializer = NovelReaderSettings.serializer(),
-    prefix = "novelreadersettings",
-    default = NovelReaderSettings()
-)
+    val fontSize by intSetting(
+        name = "文字大小",
+        description = "閱讀器主要的字體大小",
+        default = 16,
+        min = 10,
+        max = 40,
+        interval = 1
+    )
+
+    val lineSpacing by floatSetting(
+        name = "行距",
+        description = "閱讀器整體的行距比例",
+        default = 1.5f,
+        min = 1.0f,
+        max = 3.0f,
+        interval = 0.05f
+    )
+
+    val contentWidthFraction by floatSetting(
+        name = "內容寬度",
+        description = "內文佔螢幕的寬度比例",
+        default = 1.0f,
+        min = 0.6f,
+        max = 1.0f,
+        interval = 0.01f
+    )
+}

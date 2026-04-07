@@ -12,8 +12,8 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
+import coil3.PlatformContext
+import coil3.compose.LocalPlatformContext
 import androidx.compose.ui.unit.dp
 import io.github.littlesurvival.YamiboRoute
 import io.github.littlesurvival.core.YamiboResult
@@ -35,6 +35,7 @@ import me.thenano.yamibo.yamibo_app.thread.detail.novel.components.ThreadHeader
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.components.ThreadLoadingSkeleton
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.components.ThreadTopBar
 import me.thenano.yamibo.yamibo_app.thread.reader.IThreadReaderScreen
+import me.thenano.yamibo.yamibo_app.util.shareText
 
 /** Thread detail state */
 internal sealed interface ThreadState {
@@ -53,6 +54,7 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
     val navigator = LocalNavigator.current
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+    val platformContext = LocalPlatformContext.current
 
     var state by remember { mutableStateOf<ThreadState>(ThreadState.Loading) }
     var isRefreshing by remember { mutableStateOf(false) }
@@ -265,7 +267,8 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
                                 }
                             },
                             snackbarHostState = snackbarHostState,
-                            scope = scope
+                            scope = scope,
+                            platformContext = platformContext
                         )
                     }
             }
@@ -286,10 +289,10 @@ private fun ThreadContent(
     onContinueRead: () -> Unit,
     readingProgressText: String?,
     snackbarHostState: SnackbarHostState,
-    scope: CoroutineScope
+    scope: CoroutineScope,
+    platformContext: PlatformContext
 ) {
     val colors = YamiboTheme.colors
-    val clipboardManager = LocalClipboardManager.current
     val thread = threadPage.thread
     val firstPost = threadPage.posts.firstOrNull()
     val totalPages = threadPage.pageNav?.totalPages ?: 1
@@ -302,13 +305,7 @@ private fun ThreadContent(
                 onFavorite = onFavorite,
                 onShare = {
                     val url = YamiboRoute.Thread(thread.tid).build()
-                    clipboardManager.setText(AnnotatedString(url))
-                    scope.launch {
-                        snackbarHostState.showSnackbar(
-                            message = "已複製連結",
-                            duration = SnackbarDuration.Short
-                        )
-                    }
+                    shareText(platformContext, url, thread.title)
                 },
                 onContinueRead = onContinueRead,
                 readingProgressText = readingProgressText,

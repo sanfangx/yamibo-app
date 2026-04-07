@@ -2,29 +2,28 @@ package me.thenano.yamibo.yamibo_app
 
 import YamiboIcons
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import me.thenano.yamibo.yamibo_app.home.BottomNavItem
-import me.thenano.yamibo.yamibo_app.home.HomePageBottomBar
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import me.thenano.yamibo.yamibo_app.favorite.FavoritePage
+import me.thenano.yamibo.yamibo_app.history.ReadHistoryPage
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.navigation.Navigatable
 import me.thenano.yamibo.yamibo_app.profile.ProfilePage
-import me.thenano.yamibo.yamibo_app.history.ReadHistoryPage
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 
 enum class MainTab(val title: String, val icon: ImageVector) {
@@ -43,6 +42,8 @@ class IMainScreen(private val initialTab: MainTab = MainTab.Home) : Navigatable 
         MainScreen(initialTab)
     }
 }
+
+data class BottomNavItem(val title: String, val icon: ImageVector)
 
 @Composable
 fun MainScreen(initialTab: MainTab = MainTab.Home) {
@@ -67,7 +68,7 @@ fun MainScreen(initialTab: MainTab = MainTab.Home) {
         modifier = Modifier.fillMaxSize().systemBarsPadding(),
         containerColor = colors.creamBackground,
         bottomBar = {
-            HomePageBottomBar(
+            MainScreenBottomBar(
                 tabs = MainTab.entries.map { BottomNavItem(it.title, it.icon) },
                 currentTab = BottomNavItem(currentTab.title, currentTab.icon),
                 onTabSelected = { selected ->
@@ -93,6 +94,52 @@ fun MainScreen(initialTab: MainTab = MainTab.Home) {
                     MainTab.Favorite -> FavoritePage()
                     MainTab.Profile -> ProfilePage()
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun MainScreenBottomBar(
+    tabs: List<BottomNavItem>,
+    currentTab: BottomNavItem,
+    onTabSelected: (BottomNavItem) -> Unit
+) {
+    val colors = YamiboTheme.colors
+    Row(
+        modifier =
+            Modifier.fillMaxWidth()
+                .height(56.dp)
+                .background(colors.navBarBg)
+                .padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.SpaceAround,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        tabs.forEach { tab ->
+            val selected = tab == currentTab
+            val color by
+            animateColorAsState(
+                targetValue = if (selected) colors.navBarIconSelected else colors.navBarIconUnselected,
+                animationSpec = spring(stiffness = Spring.StiffnessLow)
+            )
+
+            Column(
+                modifier =
+                    Modifier.weight(1f).clickable(
+                        interactionSource =
+                            remember { MutableInteractionSource() },
+                        indication = null
+                    ) { onTabSelected(tab) },
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = tab.icon,
+                    contentDescription = tab.title,
+                    tint = color,
+                    modifier = Modifier.size(24.dp)
+                )
+                Text(text = tab.title, color = color, fontSize = 12.sp)
             }
         }
     }

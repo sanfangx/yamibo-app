@@ -11,7 +11,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import coil3.compose.LocalPlatformContext
 import io.github.littlesurvival.YamiboForum
+import io.github.littlesurvival.YamiboRoute
 import io.github.littlesurvival.core.YamiboResult
 import io.github.littlesurvival.dto.model.PageNav
 import io.github.littlesurvival.dto.model.ThreadSummary
@@ -24,6 +26,7 @@ import me.thenano.yamibo.yamibo_app.LocalTagRepository
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.util.state
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.INovelThreadDetailScreen
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.components.ThreadErrorContent
 import me.thenano.yamibo.yamibo_app.thread.detail.tag.components.TagDetailContent
@@ -31,6 +34,7 @@ import me.thenano.yamibo.yamibo_app.thread.detail.tag.components.TagDetailTopBar
 import me.thenano.yamibo.yamibo_app.thread.detail.tag.components.TagLoadingSkeleton
 import me.thenano.yamibo.yamibo_app.thread.reader.IImageReaderScreen
 import me.thenano.yamibo.yamibo_app.thread.reader.IThreadReaderScreen
+import me.thenano.yamibo.yamibo_app.util.shareText
 
 /** Tag page state */
 internal sealed interface TagDetailState {
@@ -50,6 +54,7 @@ internal fun TagDetailScreen(
     val navigator = LocalNavigator.current
     val tagRepository = LocalTagRepository.current
     val historyRepo = LocalReadHistoryRepository.current
+    val platformContext = LocalPlatformContext.current
 
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -60,8 +65,7 @@ internal fun TagDetailScreen(
     var isRefreshing by remember { mutableStateOf(false) }
 
     val appSettingsRepo = LocalAppSettingsRepository.current
-    val appSettings by appSettingsRepo.settings.collectAsState()
-    val isMangaMode = appSettings.isMangaMode
+    val isMangaMode = appSettingsRepo.isMangaMode.state()
 
     // Reading history
     var mangaTagHistory by remember {
@@ -287,14 +291,17 @@ internal fun TagDetailScreen(
                             tagName = currentTagName,
                             coverUrl = coverUrl(),
                             isMangaMode = isMangaMode,
-                            onMangaModeChange = { appSettingsRepo.update { s -> s.copy(isMangaMode = it) } },
+                            onMangaModeChange = { appSettingsRepo.isMangaMode.setValue(it) },
                             hasReadingHistory = mangaTagHistory != null,
                             readingProgressText = readingProgressText,
                             onContinueRead = {
                                 handleContinueRead(currentState.page.threadSummaries, currentState.page.pageNav)
                             },
                             onFavorite = { /* TODO: tag favorite */ },
-                            onShare = { /* TODO: tag share */ },
+                            onShare = {
+                                val url = YamiboRoute.TagPage(tagId).build()
+                                shareText(platformContext, url, currentTagName)
+                            },
                             onPageChange = { page ->
                                 state = TagDetailState.Loading
                                 scope.launch { loadPage(page) }

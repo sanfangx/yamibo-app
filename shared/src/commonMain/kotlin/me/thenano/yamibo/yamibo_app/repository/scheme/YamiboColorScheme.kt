@@ -39,6 +39,15 @@ sealed class YamiboColorScheme {
     /** Announcement background */
     abstract val announceBg: Long
 
+    /** Bottom navigation bar background */
+    abstract val navBarBg: Long
+
+    /** Bottom navigation active icon color */
+    abstract val navBarIconSelected: Long
+
+    /** Bottom navigation inactive icon color */
+    abstract val navBarIconUnselected: Long
+
     /** Default Warm Brown (Light) */
     data object Default : YamiboColorScheme() {
         override val name = "百合會"
@@ -52,6 +61,9 @@ sealed class YamiboColorScheme {
         override val redAccent = 0xFFFF5656
         override val pinnedBg = 0xFFFFF0C8
         override val announceBg = 0xFFFFE8B0
+        override val navBarBg = 0xFFFFE6B7
+        override val navBarIconSelected = 0xFF6E2B19
+        override val navBarIconUnselected = 0xFFD29D7C
     }
 
     /** Default Dark — dark version of warm brown */
@@ -67,6 +79,9 @@ sealed class YamiboColorScheme {
         override val redAccent = 0xFFEF5350
         override val pinnedBg = 0xFF2E2218
         override val announceBg = 0xFF332618
+        override val navBarBg = 0xFF31211B
+        override val navBarIconSelected = 0xFFF5A623
+        override val navBarIconUnselected = 0xFF8B5E3C
     }
 
     /** Classic Black */
@@ -82,6 +97,9 @@ sealed class YamiboColorScheme {
         override val redAccent = 0xFFCF6679
         override val pinnedBg = 0xFF252525
         override val announceBg = 0xFF2A2A2A
+        override val navBarBg = 0xFF121212
+        override val navBarIconSelected = 0xFFBB86FC
+        override val navBarIconUnselected = 0xFF888888
     }
 
     /** Classic White */
@@ -97,6 +115,9 @@ sealed class YamiboColorScheme {
         override val redAccent = 0xFFD32F2F
         override val pinnedBg = 0xFFE3F2FD
         override val announceBg = 0xFFFFF8E1
+        override val navBarBg = 0xFFF5F5F5
+        override val navBarIconSelected = 0xFF1976D2
+        override val navBarIconUnselected = 0xFF888888
     }
 
     /** Catppuccin Mocha */
@@ -112,6 +133,9 @@ sealed class YamiboColorScheme {
         override val redAccent = 0xFFF38BA8
         override val pinnedBg = 0xFF2A2A3D
         override val announceBg = 0xFF2E2E42
+        override val navBarBg = 0xFF181825
+        override val navBarIconSelected = 0xFFF5C2E7
+        override val navBarIconUnselected = 0xFF585B70
     }
 
     /** Green Apple */
@@ -127,6 +151,9 @@ sealed class YamiboColorScheme {
         override val redAccent = 0xFFEF5350
         override val pinnedBg = 0xFF1A3828
         override val announceBg = 0xFF1D3E2C
+        override val navBarBg = 0xFF0A1F14
+        override val navBarIconSelected = 0xFF66BB6A
+        override val navBarIconUnselected = 0xFF4CAF50
     }
 
     /** Lavender */
@@ -142,6 +169,9 @@ sealed class YamiboColorScheme {
         override val redAccent = 0xFFE57373
         override val pinnedBg = 0xFF27204A
         override val announceBg = 0xFF2C254E
+        override val navBarBg = 0xFF15102A
+        override val navBarIconSelected = 0xFFB39DDB
+        override val navBarIconUnselected = 0xFF5A4E73
     }
 
     /** Midnight Dusk */
@@ -157,6 +187,9 @@ sealed class YamiboColorScheme {
         override val redAccent = 0xFFFF6E8C
         override val pinnedBg = 0xFF322432
         override val announceBg = 0xFF382838
+        override val navBarBg = 0xFF201520
+        override val navBarIconSelected = 0xFFF48FB1
+        override val navBarIconUnselected = 0xFF5C4655
     }
 
     /** Nord */
@@ -172,6 +205,9 @@ sealed class YamiboColorScheme {
         override val redAccent = 0xFFBF616A
         override val pinnedBg = 0xFF353D4B
         override val announceBg = 0xFF3A4253
+        override val navBarBg = 0xFF242933
+        override val navBarIconSelected = 0xFF88C0D0
+        override val navBarIconUnselected = 0xFF4C566A
     }
 
     /** Strawberry Daiquiri */
@@ -187,6 +223,9 @@ sealed class YamiboColorScheme {
         override val redAccent = 0xFFFF5370
         override val pinnedBg = 0xFF2E1822
         override val announceBg = 0xFF331C28
+        override val navBarBg = 0xFF18090F
+        override val navBarIconSelected = 0xFFE05575
+        override val navBarIconUnselected = 0xFF6D3B4D
     }
 
     /** Tako */
@@ -202,6 +241,9 @@ sealed class YamiboColorScheme {
         override val redAccent = 0xFFEE6B6B
         override val pinnedBg = 0xFF3A3A50
         override val announceBg = 0xFF3E3E55
+        override val navBarBg = 0xFF2A2A3C
+        override val navBarIconSelected = 0xFFF3B375
+        override val navBarIconUnselected = 0xFF52505C
     }
 
     /** Teal & Turquoise */
@@ -217,6 +259,9 @@ sealed class YamiboColorScheme {
         override val redAccent = 0xFFFF7070
         override val pinnedBg = 0xFF1A3432
         override val announceBg = 0xFF1E3A38
+        override val navBarBg = 0xFF0A1A1C
+        override val navBarIconSelected = 0xFF4DD0B8
+        override val navBarIconUnselected = 0xFF2A5550
     }
 
     /** Tidal Wave */
@@ -232,6 +277,9 @@ sealed class YamiboColorScheme {
         override val redAccent = 0xFFFF7070
         override val pinnedBg = 0xFF1A2E42
         override val announceBg = 0xFF1E3448
+        override val navBarBg = 0xFF0A1018
+        override val navBarIconSelected = 0xFF64B5F6
+        override val navBarIconUnselected = 0xFF2E4A65
     }
 
     /** Yin & Yang */
@@ -247,6 +295,9 @@ sealed class YamiboColorScheme {
         override val redAccent = 0xFFF06060
         override val pinnedBg = 0xFF2C2418
         override val announceBg = 0xFF30281C
+        override val navBarBg = 0xFF181210
+        override val navBarIconSelected = 0xFFE8B87A
+        override val navBarIconUnselected = 0xFF5A4A3A
     }
 
     /** Yotsuba */
@@ -262,6 +313,9 @@ sealed class YamiboColorScheme {
         override val redAccent = 0xFFE85050
         override val pinnedBg = 0xFF342818
         override val announceBg = 0xFF382C1C
+        override val navBarBg = 0xFF1E1610
+        override val navBarIconSelected = 0xFFE8A060
+        override val navBarIconUnselected = 0xFF6B5040
     }
 
     /** Monochrome */
@@ -277,6 +331,9 @@ sealed class YamiboColorScheme {
         override val redAccent = 0xFF333333
         override val pinnedBg = 0xFFE8E8E8
         override val announceBg = 0xFFDDDDDD
+        override val navBarBg = 0xFFFFFFFF
+        override val navBarIconSelected = 0xFF000000
+        override val navBarIconUnselected = 0xFFAAAAAA
     }
 
     companion object {

@@ -19,6 +19,7 @@ import coil3.compose.AsyncImage
 import io.github.littlesurvival.dto.page.PostComment
 import me.thenano.yamibo.yamibo_app.LocalNovelReaderSettingsRepository
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.util.state
 
 @Composable
 fun CommentRenderer(
@@ -26,7 +27,10 @@ fun CommentRenderer(
     modifier: Modifier = Modifier
 ) {
     val colors = YamiboTheme.colors
-    val novelSettings by LocalNovelReaderSettingsRepository.current.settings.collectAsState()
+    val novelSettingsRepo = LocalNovelReaderSettingsRepository.current
+    val contentWidthFraction = novelSettingsRepo.contentWidthFraction.state()
+    val fontSize = novelSettingsRepo.fontSize.state()
+    val lineSpacing = novelSettingsRepo.lineSpacing.state()
     if (comments.isEmpty()) return
 
     Card(
@@ -96,8 +100,8 @@ fun CommentRenderer(
                         Text(
                             text = comment.message,
                             color = colors.textDark,
-                            fontSize = (novelSettings.fontSize - 2).coerceAtLeast(10).sp,
-                            lineHeight = ((novelSettings.fontSize - 2).coerceAtLeast(10) * novelSettings.lineSpacing).sp,
+                            fontSize = (fontSize - 2).coerceAtLeast(10).sp,
+                            lineHeight = ((fontSize - 2).coerceAtLeast(10) * lineSpacing).sp,
                         )
                     }
                 }

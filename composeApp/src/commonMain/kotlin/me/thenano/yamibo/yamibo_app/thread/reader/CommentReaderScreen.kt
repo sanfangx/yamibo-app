@@ -9,8 +9,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
+import coil3.compose.LocalPlatformContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.littlesurvival.YamiboRoute
@@ -34,6 +33,7 @@ import me.thenano.yamibo.yamibo_app.thread.reader.components.CommentBanner
 import me.thenano.yamibo.yamibo_app.thread.reader.components.overlay.ReaderBottomBar
 import me.thenano.yamibo.yamibo_app.thread.reader.components.overlay.ReaderFloatButtons
 import me.thenano.yamibo.yamibo_app.thread.reader.components.post.PostRenderer
+import me.thenano.yamibo.yamibo_app.util.shareText
 import me.thenano.yamibo.yamibo_app.webview.action.IActionWebView
 
 private sealed interface CommentState {
@@ -65,7 +65,7 @@ internal fun CommentReaderScreen(
     val navigator = LocalNavigator.current
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
-    val clipboardManager = LocalClipboardManager.current
+    val platformContext = LocalPlatformContext.current
 
     var state by remember { mutableStateOf<CommentState>(CommentState.Loading) }
     var commentPosts by remember { mutableStateOf<List<Post>>(emptyList()) }
@@ -493,10 +493,7 @@ internal fun CommentReaderScreen(
                 },
                 onShare = {
                     val url = YamiboRoute.Thread(tid).build()
-                    clipboardManager.setText(AnnotatedString(url))
-                    scope.launch {
-                        snackbarHostState.showSnackbar("已複製連結")
-                    }
+                    shareText(platformContext, url, postTitle)
                 },
                 modifier = Modifier.align(Alignment.BottomCenter)
             )

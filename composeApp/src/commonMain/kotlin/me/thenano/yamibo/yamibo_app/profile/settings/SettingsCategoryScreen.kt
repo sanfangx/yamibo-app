@@ -24,7 +24,10 @@ import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.profile.settings.components.SettingsChipRow
 import me.thenano.yamibo.yamibo_app.profile.settings.components.SettingsSlider
 import me.thenano.yamibo.yamibo_app.profile.settings.components.ThemeSelectorContent
+import me.thenano.yamibo.yamibo_app.repository.settings.MangaReaderSettingsRepository
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.util.state
+import kotlin.math.roundToInt
 
 private const val PREVIEW_TEXT = "我是YamiboApp的作者TheNano，這是一個第三方個人獨立開發的開源App"
 
@@ -101,17 +104,14 @@ private fun SectionLabel(text: String) {
 @Composable
 private fun AppearanceContent() {
     val appSettingsRepo = LocalAppSettingsRepository.current
-    val appSettings by appSettingsRepo.settings.collectAsState()
+    val themeMode = appSettingsRepo.themeMode.state()
+    val themeScheme = appSettingsRepo.themeScheme.state()
 
     ThemeSelectorContent(
-        currentMode = appSettings.theme.mode,
-        currentSchemeName = appSettings.theme.scheme,
-        onModeChange = { newMode ->
-            appSettingsRepo.update { it.copy(theme = it.theme.copy(mode = newMode)) }
-        },
-        onSchemeChange = { newScheme ->
-            appSettingsRepo.update { it.copy(theme = it.theme.copy(scheme = newScheme)) }
-        }
+        currentMode = themeMode,
+        currentSchemeName = themeScheme,
+        onModeChange = { appSettingsRepo.themeMode.setValue(it) },
+        onSchemeChange = { appSettingsRepo.themeScheme.setValue(it) }
     )
 }
 
@@ -121,7 +121,9 @@ private fun AppearanceContent() {
 private fun NovelReaderContent() {
     val colors = YamiboTheme.colors
     val novelSettingsRepo = LocalNovelReaderSettingsRepository.current
-    val settings by novelSettingsRepo.settings.collectAsState()
+    val fontSize = novelSettingsRepo.fontSize.state()
+    val lineSpacing = novelSettingsRepo.lineSpacing.state()
+    val contentWidthFraction = novelSettingsRepo.contentWidthFraction.state()
 
     // Preview Area
     SectionLabel("預覽")
@@ -135,12 +137,12 @@ private fun NovelReaderContent() {
     ) {
         Box(
             modifier = Modifier
-                .fillMaxWidth(settings.contentWidthFraction)
+                .fillMaxWidth(contentWidthFraction)
         ) {
             Text(
                 text = PREVIEW_TEXT,
-                fontSize = settings.fontSize.sp,
-                lineHeight = (settings.fontSize * settings.lineSpacing).sp,
+                fontSize = fontSize.sp,
+                lineHeight = (fontSize * lineSpacing).sp,
                 color = colors.textDark
             )
         }
@@ -152,30 +154,24 @@ private fun NovelReaderContent() {
     SectionLabel("字體大小")
     SettingsSlider(
         label = "文字大小",
-        value = settings.fontSize.toFloat(),
-        valueRange = 12f..28f,
-        steps = 15,
+        value = fontSize.toFloat(),
+        valueRange = 10f..40f,
+        steps = 29,
         valueDisplay = { "${it.toInt()} sp" },
-        onValueChange = { newSize ->
-            novelSettingsRepo.update { it.copy(fontSize = newSize.toInt()) }
-        }
+        onValueChange = { novelSettingsRepo.fontSize.setValue(it.toInt()) }
     )
 
     Spacer(Modifier.height(24.dp))
 
     // Line Spacing
     SectionLabel("行距")
-    SettingsChipRow(
-        options = listOf(
-            "1.25" to "1.25x",
-            "1.5" to "1.5x",
-            "1.75" to "1.75x",
-            "2.0" to "2.0x"
-        ),
-        selectedValue = settings.lineSpacing.toString(),
-        onSelect = { value ->
-            novelSettingsRepo.update { it.copy(lineSpacing = value.toFloat()) }
-        }
+    SettingsSlider(
+        label = "行距比例",
+        value = lineSpacing,
+        valueRange = 1.0f..3.0f,
+        steps = 39,
+        valueDisplay = { "${(it * 100f).roundToInt() / 100f}x" },
+        onValueChange = { novelSettingsRepo.lineSpacing.setValue(it) }
     )
 
     Spacer(Modifier.height(24.dp))
@@ -184,13 +180,11 @@ private fun NovelReaderContent() {
     SectionLabel("頁寬")
     SettingsSlider(
         label = "內容寬度",
-        value = settings.contentWidthFraction,
+        value = contentWidthFraction,
         valueRange = 0.6f..1.0f,
-        steps = 7,
-        valueDisplay = { "${(it * 100).toInt()}%" },
-        onValueChange = { newFraction ->
-            novelSettingsRepo.update { it.copy(contentWidthFraction = newFraction) }
-        }
+        steps = 39,
+        valueDisplay = { "${(it * 100f).roundToInt()}%" },
+        onValueChange = { novelSettingsRepo.contentWidthFraction.setValue(it) }
     )
 }
 
@@ -199,37 +193,22 @@ private fun NovelReaderContent() {
 @Composable
 private fun MangaReaderContent() {
     val mangaSettingsRepo = LocalMangaReaderSettingsRepository.current
-    val settings by mangaSettingsRepo.settings.collectAsState()
+    val readingMode = mangaSettingsRepo.readingMode.state()
+    val touchZone = mangaSettingsRepo.touchZone.state()
 
     SectionLabel("閱讀模式")
     SettingsChipRow(
-        options = listOf(
-            "SINGLE_LTR" to "單頁(左至右)",
-            "SINGLE_RTL" to "單頁(右至左)",
-            "SINGLE_TTB" to "單頁(上至下)",
-            "SCROLL_CONTINUOUS" to "捲動(連續)",
-            "SCROLL_GAP" to "捲動(留空)"
-        ),
-        selectedValue = settings.readingMode,
-        onSelect = { value ->
-            mangaSettingsRepo.update { it.copy(readingMode = value) }
-        }
+        options = MangaReaderSettingsRepository.readingModeOptions,
+        selectedValue = readingMode,
+        onSelect = { mangaSettingsRepo.readingMode.setValue(it) }
     )
 
     Spacer(Modifier.height(24.dp))
 
     SectionLabel("輕觸區域")
     SettingsChipRow(
-        options = listOf(
-            "L_SHAPE" to "L式",
-            "KINDLE" to "Kindle式",
-            "EDGE" to "邊緣式",
-            "LEFT_RIGHT" to "左右式",
-            "DISABLED" to "停用"
-        ),
-        selectedValue = settings.touchZone,
-        onSelect = { value ->
-            mangaSettingsRepo.update { it.copy(touchZone = value) }
-        }
+        options = MangaReaderSettingsRepository.touchZoneOptions,
+        selectedValue = touchZone,
+        onSelect = { mangaSettingsRepo.touchZone.setValue(it) }
     )
 }

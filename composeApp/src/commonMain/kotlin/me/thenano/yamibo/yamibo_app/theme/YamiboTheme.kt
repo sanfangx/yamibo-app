@@ -8,6 +8,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import me.thenano.yamibo.yamibo_app.LocalAppSettingsRepository
 import me.thenano.yamibo.yamibo_app.repository.scheme.YamiboColorScheme
+import me.thenano.yamibo.yamibo_app.util.state
 
 /** Compose-layer color wrapper. Converts repo Long hex → Compose Color. */
 @Immutable
@@ -22,14 +23,16 @@ data class YamiboColors(
     val redAccent: Color,
     val pinnedBg: Color,
     val announceBg: Color,
+    val navBarBg: Color,
+    val navBarIconSelected: Color,
+    val navBarIconUnselected: Color,
 )
 /** Central theme object. Access colors via `YamiboTheme.colors`. */
 object YamiboTheme {
     val colors: YamiboColors
         @Composable
         get() {
-            val settings by LocalAppSettingsRepository.current.settings.collectAsState()
-            val schemeName = settings.theme.scheme
+            val schemeName = LocalAppSettingsRepository.current.themeScheme.state()
             val scheme = YamiboColorScheme.all.firstOrNull { it.name == schemeName } ?: YamiboColorScheme.Default
             
             return YamiboColors(
@@ -43,6 +46,9 @@ object YamiboTheme {
                 redAccent = Color(scheme.redAccent),
                 pinnedBg = Color(scheme.pinnedBg),
                 announceBg = Color(scheme.announceBg),
+                navBarBg = Color(scheme.navBarBg),
+                navBarIconSelected = Color(scheme.navBarIconSelected),
+                navBarIconUnselected = Color(scheme.navBarIconUnselected),
             )
         }
 }
