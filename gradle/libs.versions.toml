@@ -26,6 +26,7 @@ coil3 = "3.4.0"
 securityCrypto = "1.1.0"
 yamiboApi = "1.0.18"
 sqldelight = "2.2.1"
+okio = "3.9.0"
 
 [libraries]
 androidx-security-crypto = { module = "androidx.security:security-crypto", version.ref = "securityCrypto" }
@@ -58,6 +59,7 @@ yamibo-api = { module = "io.github.littlesurvival:yamibo-api", version.ref = "ya
 sqldelight-android-driver = { module = "app.cash.sqldelight:android-driver", version.ref = "sqldelight" }
 sqldelight-native-driver = { module = "app.cash.sqldelight:native-driver", version.ref = "sqldelight" }
 sqldelight-coroutines = { module = "app.cash.sqldelight:coroutines-extensions", version.ref = "sqldelight" }
+okio = { module = "com.squareup.okio:okio", version.ref = "okio" }
 
 [plugins]
 sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }

@@ -10,23 +10,23 @@ import io.github.littlesurvival.dto.value.ForumId
 import io.github.littlesurvival.dto.value.SearchId
 import me.thenano.yamibo.yamibo_app.store.auth.CookieStore
 
+import me.thenano.yamibo.yamibo_app.core.cache.DiskCacheFactory
+
 class AndroidForumRepository(
     private val cookieStore: CookieStore,
-    private val yamiboClient: YamiboClient
+    private val yamiboClient: YamiboClient,
+    diskCacheFactory: DiskCacheFactory
 ) : ForumRepository {
 
-    /** in-memory cache */
-    private var cachedHomePage: HomePage? = null
-
-    /** forum page cache — keyed by ForumCacheKey */
-    private val cachedForumPages = mutableMapOf<ForumRepository.ForumCacheKey, ForumPage>()
+    private val homeCache = diskCacheFactory.create<HomePage>("home_page", maxSize = 1, expirationMs = 12 * 60 * 60 * 1000L)
+    private val forumCache = diskCacheFactory.create<ForumPage>("forum_page", maxSize = 20, expirationMs = 24 * 60 * 60 * 1000L)
 
     override suspend fun fetchHomePage(): YamiboResult<HomePage> {
         yamiboClient.setCookie(cookieStore.load() ?: "")
         val result = yamiboClient.fetchHomePage()
 
         if (result is YamiboResult.Success) {
-            cachedHomePage = result.value
+            homeCache.set("main", result.value)
         }
         return result
     }
@@ -36,7 +36,7 @@ class AndroidForumRepository(
         val result = yamiboClient.fetchForumById(fid, page)
 
         if (result is YamiboResult.Success) {
-            cachedForumPages[ForumRepository.ForumCacheKey(fid.value, page)] = result.value
+            forumCache.set("${fid.value}_$page", result.value)
         }
         return result
     }
@@ -64,16 +64,16 @@ class AndroidForumRepository(
         return yamiboClient.fetchAddFavorite(forumId, formHash)
     }
 
-    override fun getCachedHomePage(): HomePage? = cachedHomePage
+    override fun getCachedHomePage(): HomePage? = homeCache.get("main")
 
     override fun getCachedForumPage(fid: ForumId, page: Int): ForumPage? =
-        cachedForumPages[ForumRepository.ForumCacheKey(fid.value, page)]
+        forumCache.get("${fid.value}_$page")
 
     override fun setCachedForumPage(fid: ForumId, page: Int, forumPage: ForumPage) {
-        cachedForumPages[ForumRepository.ForumCacheKey(fid.value, page)] = forumPage
+        forumCache.set("${fid.value}_$page", forumPage)
     }
 
     override fun clearCachedForum(fid: ForumId) {
-        cachedForumPages.keys.removeAll { it.fid == fid.value }
+        forumCache.removeByPrefix("${fid.value}_")
     }
 }

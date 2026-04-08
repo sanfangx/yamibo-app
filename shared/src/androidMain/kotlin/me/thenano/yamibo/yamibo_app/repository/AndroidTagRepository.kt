@@ -8,17 +8,20 @@ import io.github.littlesurvival.dto.value.TagId
 import io.github.littlesurvival.dto.value.ThreadId
 import me.thenano.yamibo.yamibo_app.store.auth.CookieStore
 
+import me.thenano.yamibo.yamibo_app.core.cache.DiskCacheFactory
+
 class AndroidTagRepository(
     private val cookieStore: CookieStore,
-    private val yamiboClient: YamiboClient
+    private val yamiboClient: YamiboClient,
+    diskCacheFactory: DiskCacheFactory
 ) : TagRepository {
-    private val cachedTagPages = mutableMapOf<TagRepository.TagCacheKey, TagPage>()
+    private val tagCache = diskCacheFactory.create<TagPage>("tag_page", maxSize = 10, expirationMs = 24 * 60 * 60 * 1000L)
 
     override suspend fun fetchTagPage(tagId: TagId, page: Int): YamiboResult<TagPage> {
         yamiboClient.setCookie(cookieStore.load() ?: "")
         val result = yamiboClient.fetchTagPageById(tagId, page)
         if (result is YamiboResult.Success) {
-            cachedTagPages[TagRepository.TagCacheKey(tagId.value, page)] = result.value
+            tagCache.set("${tagId.value}_$page", result.value)
         }
         return result
     }
@@ -29,13 +32,13 @@ class AndroidTagRepository(
     }
 
     override fun getCachedTagPage(tagId: TagId, page: Int): TagPage? =
-        cachedTagPages[TagRepository.TagCacheKey(tagId.value, page)]
+        tagCache.get("${tagId.value}_$page")
 
     override fun setCachedTagPage(tagId: TagId, page: Int, tagPage: TagPage) {
-        cachedTagPages[TagRepository.TagCacheKey(tagId.value, page)] = tagPage
+        tagCache.set("${tagId.value}_$page", tagPage)
     }
 
     override fun clearCachedTagPage(tagId: TagId) {
-        cachedTagPages.keys.removeAll { it.tagId == tagId.value }
+        tagCache.clear()
     }
 }

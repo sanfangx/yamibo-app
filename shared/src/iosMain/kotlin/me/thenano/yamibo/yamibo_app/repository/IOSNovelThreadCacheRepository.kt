@@ -5,42 +5,40 @@ import io.github.littlesurvival.dto.page.ThreadPage
 import io.github.littlesurvival.dto.value.PostId
 import io.github.littlesurvival.dto.value.ThreadId
 
-class IOSNovelThreadCacheRepository : NovelThreadCacheRepository {
+import me.thenano.yamibo.yamibo_app.core.cache.DiskCacheFactory
 
-    /** Cache key for full-view pages */
-    private data class FullPageKey(val tid: Int, val page: Int)
+class IOSNovelThreadCacheRepository(
+    diskCacheFactory: DiskCacheFactory
+) : NovelPrePostCommentsCacheRepository {
 
-    /** Cache key for per-post comments */
-    private data class CommentKey(val tid: Int, val postId: Int)
-
-    private val fullPageCache = mutableMapOf<FullPageKey, ThreadPage>()
-    private val commentCache = mutableMapOf<CommentKey, List<Post>>()
-    private val commentCompleteFlags = mutableMapOf<CommentKey, Boolean>()
+    private val fullPageCache = diskCacheFactory.create<ThreadPage>("novel_full_page", maxSize = 10, expirationMs = 24 * 60 * 60 * 1000L)
+    private val commentCache = diskCacheFactory.create<List<Post>>("novel_comments", maxSize = 50, expirationMs = 24 * 60 * 60 * 1000L)
+    private val commentCompleteFlags = diskCacheFactory.create<Boolean>("novel_comment_complete", maxSize = 50, expirationMs = 24 * 60 * 60 * 1000L)
 
     override fun getCachedFullPage(tid: ThreadId, page: Int): ThreadPage? =
-        fullPageCache[FullPageKey(tid.value, page)]
+        fullPageCache.get("${tid.value}_$page")
 
     override fun setCachedFullPage(tid: ThreadId, page: Int, threadPage: ThreadPage) {
-        fullPageCache[FullPageKey(tid.value, page)] = threadPage
+        fullPageCache.set("${tid.value}_$page", threadPage)
     }
 
     override fun getCachedComments(tid: ThreadId, postId: PostId): List<Post>? =
-        commentCache[CommentKey(tid.value, postId.value)]
+        commentCache.get("${tid.value}_${postId.value}")
 
     override fun setCachedComments(tid: ThreadId, postId: PostId, comments: List<Post>) {
-        commentCache[CommentKey(tid.value, postId.value)] = comments
+        commentCache.set("${tid.value}_${postId.value}", comments)
     }
 
     override fun isCommentComplete(tid: ThreadId, postId: PostId): Boolean =
-        commentCompleteFlags[CommentKey(tid.value, postId.value)] ?: false
+        commentCompleteFlags.get("${tid.value}_${postId.value}") ?: false
 
     override fun setCommentComplete(tid: ThreadId, postId: PostId, complete: Boolean) {
-        commentCompleteFlags[CommentKey(tid.value, postId.value)] = complete
+        commentCompleteFlags.set("${tid.value}_${postId.value}", complete)
     }
 
     override fun clearCache(tid: ThreadId) {
-        fullPageCache.keys.removeAll { it.tid == tid.value }
-        commentCache.keys.removeAll { it.tid == tid.value }
-        commentCompleteFlags.keys.removeAll { it.tid == tid.value }
+        fullPageCache.clear()
+        commentCache.clear()
+        commentCompleteFlags.clear()
     }
 }

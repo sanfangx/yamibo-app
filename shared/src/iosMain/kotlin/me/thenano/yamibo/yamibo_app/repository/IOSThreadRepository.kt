@@ -11,12 +11,14 @@ import io.github.littlesurvival.dto.value.ThreadId
 import io.github.littlesurvival.dto.value.UserId
 import me.thenano.yamibo.yamibo_app.store.auth.CookieStore
 
+import me.thenano.yamibo.yamibo_app.core.cache.DiskCacheFactory
+
 class IOSThreadRepository(
     private val cookieStore: CookieStore,
-    private val yamiboClient: YamiboClient
+    private val yamiboClient: YamiboClient,
+    diskCacheFactory: DiskCacheFactory
 ) : ThreadRepository {
-    /** Thread pages cache — keyed by ThreadCacheKey */
-    private val cachedThreadPages = mutableMapOf<ThreadRepository.ThreadCacheKey, ThreadPage>()
+    private val threadCache = diskCacheFactory.create<ThreadPage>("thread_page", maxSize = 50, expirationMs = 24 * 60 * 60 * 1000L)
 
     override suspend fun fetchThread(
         tid: ThreadId,
@@ -27,7 +29,8 @@ class IOSThreadRepository(
         val result = yamiboClient.fetchThreadById(tid, authorId, page)
 
         if (result is YamiboResult.Success) {
-            cachedThreadPages[ThreadRepository.ThreadCacheKey(tid.value, page, authorId?.value)] = result.value
+            val key = "${tid.value}_${page}_${authorId?.value ?: "all"}"
+            threadCache.set(key, result.value)
         }
         return result
     }
@@ -60,14 +63,17 @@ class IOSThreadRepository(
         return yamiboClient.fetchCommentPost(tId, pId, message, formHash)
     }
 
-    override fun getCachedThread(tid: ThreadId, authorId: UserId?, page: Int): ThreadPage? =
-        cachedThreadPages[ThreadRepository.ThreadCacheKey(tid.value, page, authorId?.value)]
+    override fun getCachedThread(tid: ThreadId, authorId: UserId?, page: Int): ThreadPage? {
+        val key = "${tid.value}_${page}_${authorId?.value ?: "all"}"
+        return threadCache.get(key)
+    }
 
     override fun setCachedThread(tid: ThreadId, authorId: UserId?, page: Int, threadPage: ThreadPage) {
-        cachedThreadPages[ThreadRepository.ThreadCacheKey(tid.value, page, authorId?.value)] = threadPage
+        val key = "${tid.value}_${page}_${authorId?.value ?: "all"}"
+        threadCache.set(key, threadPage)
     }
 
     override fun clearCachedThread(tid: ThreadId) {
-        cachedThreadPages.keys.removeAll { it.tid == tid.value }
+        threadCache.removeByPrefix("${tid.value}_")
     }
 }

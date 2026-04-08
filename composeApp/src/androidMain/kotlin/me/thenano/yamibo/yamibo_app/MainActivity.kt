@@ -67,14 +67,16 @@ class MainActivity : ComponentActivity() {
             val authRepository = remember {
                 AndroidAuthRepository(cookieStore, userStore, yamiboClient)
             }
-            val forumRepository = remember { AndroidForumRepository(cookieStore, yamiboClient) }
-            val threadRepository = remember { AndroidThreadRepository(cookieStore, yamiboClient) }
-            val favoriteRepository = remember { AndroidFavoriteRepository(cookieStore, yamiboClient) }
-            val novelCacheRepository = remember { AndroidNovelThreadCacheRepository() }
             val dbFactory = remember { DatabaseFactory(context) }
+            val diskCacheFactory = remember { me.thenano.yamibo.yamibo_app.core.cache.DiskCacheFactory(dbFactory, cacheDirPath = context.cacheDir.absolutePath) }
+            
+            val forumRepository = remember { AndroidForumRepository(cookieStore, yamiboClient, diskCacheFactory) }
+            val threadRepository = remember { AndroidThreadRepository(cookieStore, yamiboClient, diskCacheFactory) }
+            val favoriteRepository = remember { AndroidFavoriteRepository(cookieStore, yamiboClient) }
+            val novelCacheRepository = remember { AndroidNovelThreadCacheRepository(diskCacheFactory) }
             val readHistoryRepository = remember { AndroidReadHistoryRepository(dbFactory) }
             val themeRepository = remember { AndroidThemeRepository() }
-            val tagRepository = remember { AndroidTagRepository(cookieStore, yamiboClient) }
+            val tagRepository = remember { AndroidTagRepository(cookieStore, yamiboClient, diskCacheFactory) }
             val settingsStore = remember { AndroidSettingsStore(context) }
             val appSettingsRepository = remember { AppSettingsRepository(settingsStore) }
             val novelReaderSettingsRepository = remember { NovelReaderSettingsRepository(settingsStore) }

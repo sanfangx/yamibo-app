@@ -33,14 +33,25 @@ fun MainViewController() = ComposeUIViewController {
     /** Repository Logic */
     val yamiboClient = remember { YamiboClient() }
     val authRepository = remember { IOSAuthRepository(cookieStore, userStore, yamiboClient) }
-    val forumRepository = remember { IOSForumRepository(cookieStore, yamiboClient) }
-    val threadRepository = remember { IOSThreadRepository(cookieStore, yamiboClient) }
-    val favoriteRepository = remember { IOSFavoriteRepository(cookieStore, yamiboClient) }
-    val novelCacheRepository = remember { IOSNovelThreadCacheRepository() }
+    
     val dbFactory = remember { DatabaseFactory() }
+    val diskCacheFactory = remember { 
+        val paths = platform.Foundation.NSSearchPathForDirectoriesInDomains(
+            platform.Foundation.NSCachesDirectory, 
+            platform.Foundation.NSUserDomainMask, 
+            true
+        )
+        val cacheDir = paths.first() as String
+        me.thenano.yamibo.yamibo_app.core.cache.DiskCacheFactory(dbFactory, cacheDirPath = cacheDir) 
+    }
+
+    val forumRepository = remember { IOSForumRepository(cookieStore, yamiboClient, diskCacheFactory) }
+    val threadRepository = remember { IOSThreadRepository(cookieStore, yamiboClient, diskCacheFactory) }
+    val favoriteRepository = remember { IOSFavoriteRepository(cookieStore, yamiboClient) }
+    val novelCacheRepository = remember { IOSNovelThreadCacheRepository(diskCacheFactory) }
     val readHistoryRepository = remember { IOSReadHistoryRepository(dbFactory) }
     val themeRepository = remember { IOSThemeRepository() }
-    val tagRepository = remember { IOSTagRepository(cookieStore, yamiboClient) }
+    val tagRepository = remember { IOSTagRepository(cookieStore, yamiboClient, diskCacheFactory) }
     val settingsStore = remember { IOSSettingsStore() }
     val appSettingsRepository = remember { AppSettingsRepository(settingsStore) }
     val novelReaderSettingsRepository = remember { NovelReaderSettingsRepository(settingsStore) }

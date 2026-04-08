@@ -7,6 +7,7 @@ import io.github.littlesurvival.dto.value.ThreadId
 import io.github.littlesurvival.dto.value.UserId
 import me.thenano.yamibo.yamibo_app.Database
 import me.thenano.yamibo.yamibo_app.db.DatabaseFactory
+import me.thenano.yamibo.yamiboapp.MangaTagReadingHistory
 import me.thenano.yamibo.yamiboapp.ReadingHistory
 
 class IOSReadHistoryRepository(dbFactory: DatabaseFactory) : ReadHistoryRepository {
@@ -144,6 +145,7 @@ class IOSReadHistoryRepository(dbFactory: DatabaseFactory) : ReadHistoryReposito
             tagPage = history.tagPage.toLong(),
             threadId = history.threadId.value.toLong(),
             threadTitle = history.threadTitle,
+            coverUrl = history.coverUrl,
             threadImagePageIndex = history.threadImagePageIndex.toLong(),
             threadImageTotalPages = history.threadImageTotalPages.toLong(),
             firstVisibleItemIndex = history.firstVisibleItemIndex?.toLong(),

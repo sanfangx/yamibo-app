@@ -24,6 +24,7 @@ class AndroidCookieStore(
         return prefs.getString(key, null)
     }
 
+    @SuppressLint("UseKtx")
     override fun clear() {
         prefs.edit().clear().apply()
     }

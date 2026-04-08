@@ -25,6 +25,7 @@ import io.github.littlesurvival.YamiboRoute
 import io.github.littlesurvival.core.YamiboResult
 import io.github.littlesurvival.dto.page.Post
 import io.github.littlesurvival.dto.page.ThreadInfo
+import io.github.littlesurvival.dto.page.ThreadPage
 import io.github.littlesurvival.dto.value.FormHash
 import io.github.littlesurvival.dto.value.PollOptionId
 import io.github.littlesurvival.dto.value.PostId
@@ -58,6 +59,7 @@ import kotlin.math.abs
 import me.thenano.yamibo.yamibo_app.thread.image.LocalImageClickListener
 import me.thenano.yamibo.yamibo_app.thread.image.LocalImageDoubleClickListener
 import me.thenano.yamibo.yamibo_app.thread.image.LocalReaderOverlayVisible
+import kotlin.time.Duration.Companion.milliseconds
 
 internal sealed interface ReaderState {
     data object Loading : ReaderState
@@ -66,7 +68,6 @@ internal sealed interface ReaderState {
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Suppress("AssignedValueIsNeverRead")
 @Composable
 internal fun ThreadReaderScreen(
     tid: ThreadId,
@@ -261,7 +262,7 @@ internal fun ThreadReaderScreen(
     fun scheduleSave() {
         saveJob?.cancel()
         saveJob = scope.launch {
-            delay(2000)
+            delay(2000.milliseconds)
             val history = buildHistory() ?: return@launch
             try {
                 readHistoryRepo.savePosition(history)
@@ -288,17 +289,18 @@ internal fun ThreadReaderScreen(
             return false
         }
 
+        fun updatePage(result: YamiboResult.Success<ThreadPage>) {
+            loadedPostsByPage[page] = result.value.posts
+            rebuildPosts()
+            totalPages = result.value.pageNav?.totalPages ?: 1
+            loadedPages = loadedPages + page
+            if (threadInfo == null) threadInfo = result.value.thread
+            if (page == initialPage || page == 1) state = ReaderState.Success
+        }
+
         if (forceRefresh) {
             when (val result = threadRepository.fetchThread(tid, authorId, page)) {
-                is YamiboResult.Success -> {
-                    loadedPostsByPage[page] = result.value.posts
-                    rebuildPosts()
-                    totalPages = result.value.pageNav?.totalPages ?: 1
-                    loadedPages = loadedPages + page
-                    if (threadInfo == null) threadInfo = result.value.thread
-                    if (page == initialPage || page == 1) state = ReaderState.Success
-                }
-
+                is YamiboResult.Success -> updatePage(result)
                 else -> {
                     snackbarHostState.showSnackbar("刷新失敗: ${result.message()}，嘗試讀取快取")
                     if (!loadFromCache() && (page == initialPage || page == 1)) {
@@ -313,15 +315,7 @@ internal fun ThreadReaderScreen(
             }
 
             when (val result = threadRepository.fetchThread(tid, authorId, page)) {
-                is YamiboResult.Success -> {
-                    loadedPostsByPage[page] = result.value.posts
-                    rebuildPosts()
-                    totalPages = result.value.pageNav?.totalPages ?: 1
-                    loadedPages = loadedPages + page
-                    if (threadInfo == null) threadInfo = result.value.thread
-                    if (page == initialPage || page == 1) state = ReaderState.Success
-                }
-
+                is YamiboResult.Success -> updatePage(result)
                 else -> {
                     if (page == initialPage || page == 1) state = ReaderState.Error(result.message())
                     else snackbarHostState.showSnackbar("載入失敗: ${result.message()}")
@@ -508,7 +502,7 @@ internal fun ThreadReaderScreen(
                                 drawerState.close()
                                 if (page !in loadedPages) {
                                     loadPage(page)
-                                    delay(50) // Wait briefly for Compose to layout the new items
+                                    delay(50.milliseconds) // Wait briefly for Compose to layout the new items
                                 }
                                 val targetIndex = posts.indexOfFirst { it.pid == post.pid }
                                 if (targetIndex >= 0) listState.scrollToItem(targetIndex)

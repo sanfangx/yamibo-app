@@ -11,7 +11,7 @@ import io.github.littlesurvival.dto.value.ThreadId
  * Manages both full-view ThreadPage cache and per-post comment cache
  * to minimize redundant fetches when browsing novel threads.
  */
-interface NovelThreadCacheRepository {
+interface NovelPrePostCommentsCacheRepository {
 
     /** Full-view ThreadPage cache (key: tid + page) */
     fun getCachedFullPage(tid: ThreadId, page: Int): ThreadPage?
