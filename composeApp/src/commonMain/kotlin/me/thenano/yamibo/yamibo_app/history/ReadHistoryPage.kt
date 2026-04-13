@@ -65,6 +65,7 @@ import kotlinx.coroutines.withContext
 import me.thenano.yamibo.yamibo_app.IMainScreen
 import me.thenano.yamibo.yamibo_app.LocalAppSettingsRepository
 import me.thenano.yamibo.yamibo_app.LocalFavoriteRepository
+import me.thenano.yamibo.yamibo_app.LocalFavoriteSyncRepository
 import me.thenano.yamibo.yamibo_app.LocalReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.favorite.FavoriteCollectionPickerDialog
 import me.thenano.yamibo.yamibo_app.favorite.FavoriteLocationSelection
@@ -74,7 +75,7 @@ import me.thenano.yamibo.yamibo_app.favorite.FavoriteTargetPayload
 import me.thenano.yamibo.yamibo_app.favorite.IFavoriteCategoryManageScreen
 import me.thenano.yamibo.yamibo_app.favorite.findFavoriteItem
 import me.thenano.yamibo.yamibo_app.favorite.getFavoriteLocationSelection
-import me.thenano.yamibo.yamibo_app.favorite.removeFavorite
+import me.thenano.yamibo.yamibo_app.favorite.removeFavoriteWithSync
 import me.thenano.yamibo.yamibo_app.favorite.saveFavorite
 import me.thenano.yamibo.yamibo_app.forum.components.PageNavigation
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
@@ -112,6 +113,7 @@ fun ReadHistoryPage() {
     val appSettingsRepository = LocalAppSettingsRepository.current
     val readHistoryRepo = LocalReadHistoryRepository.current
     val favoriteRepository = LocalFavoriteRepository.current
+    val favoriteSyncRepository = LocalFavoriteSyncRepository.current
     val navigator = LocalNavigator.current
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -190,33 +192,6 @@ fun ReadHistoryPage() {
         )
     }
 
-    suspend fun saveFavoriteQuick(target: FavoriteTargetPayload) {
-        favoriteRepository.saveFavorite(target)
-        snackbarHostState.showSnackbar("已加入全部收藏")
-    }
-
-    suspend fun openFavoriteDialog(target: FavoriteTargetPayload) {
-        favoriteDialogCategories = favoriteRepository.getCategories()
-        favoriteCollectionOptions = favoriteRepository.getCollectionOptions()
-        favoriteDialogSelection = favoriteRepository.findFavoriteItem(target)
-            ?.let { favoriteRepository.getCollectionIdsForItem(it.id) }
-            ?: emptySet()
-        favoriteDialogTarget = target
-    }
-
-    suspend fun saveFavoriteQuickWithFeedback(target: FavoriteTargetPayload) {
-        val selection = favoriteRepository.getFavoriteLocationSelection(target)
-        if (selection.item != null) {
-            val pathText = selection.paths.joinToString("、").ifBlank { "既有收藏位置" }
-            snackbarHostState.showSnackbar("您已經收藏在 $pathText")
-            return
-        }
-
-        favoriteRepository.saveFavorite(target)
-        favoriteRefreshToken += 1
-        snackbarHostState.showSnackbar("已收藏到預設類別")
-    }
-
     suspend fun openFavoriteDialogWithSelection(target: FavoriteTargetPayload) {
         favoriteDialogCategories = favoriteRepository.getCategories()
         favoriteCollectionOptions = favoriteRepository.getCollectionOptions()
@@ -235,11 +210,14 @@ fun ReadHistoryPage() {
                 if (selection.paths.size > 1) {
                     showFavoriteMultiPathDialog = true
                 } else {
-                    withContext(Dispatchers.Default) {
-                        favoriteRepository.removeFavorite(target)
+                    val removeResult = withContext(Dispatchers.Default) {
+                        removeFavoriteWithSync(favoriteRepository, favoriteSyncRepository, target)
                     }
                     favoriteRefreshToken += 1
-                    snackbarHostState.showSnackbar("已取消收藏")
+                    snackbarHostState.showSnackbar(
+                        if (removeResult.success) "已移除收藏"
+                        else removeResult.message ?: "移除收藏失敗",
+                    )
                     pendingFavoriteRemovalTarget = null
                     pendingFavoriteRemovalSelection = null
                 }
@@ -251,7 +229,7 @@ fun ReadHistoryPage() {
 
         favoriteRepository.saveFavorite(target)
         favoriteRefreshToken += 1
-        snackbarHostState.showSnackbar("已收藏到預設類別")
+        snackbarHostState.showSnackbar("已加入收藏，預設存入未分類")
     }
 
     LaunchedEffect(navigator.stack.size) {
@@ -338,7 +316,7 @@ fun ReadHistoryPage() {
                                 selectedItems = emptySet()
                                 mode = PageMode.Normal
                                 state = HistoryState.Empty
-                                snackbarHostState.showSnackbar("已清空閱讀紀錄")
+                                snackbarHostState.showSnackbar("已刷新閱讀歷史紀錄")
                             }
                         },
                         onCancel = {
@@ -353,7 +331,7 @@ fun ReadHistoryPage() {
                                     selectedItems = emptySet()
                                     mode = PageMode.Normal
                                     loadPage(1)
-                                    snackbarHostState.showSnackbar("已刪除 $deletedAmount 筆紀錄")
+                                    snackbarHostState.showSnackbar("已刪除 $deletedAmount 項紀錄")
                                 }
                             }
                         },
@@ -397,7 +375,7 @@ fun ReadHistoryPage() {
                                             scope.launch {
                                                 readHistoryRepo.deleteHistoryBatch(listOf(history))
                                                 loadPage(currentPage)
-                                                snackbarHostState.showSnackbar("已刪除此筆紀錄")
+                                                snackbarHostState.showSnackbar("已刪除這筆紀錄")
                                             }
                                         },
                                         onFavorite = { scope.launch { toggleFavoriteQuickWithFeedback(threadPayload(history)) } },
@@ -416,7 +394,7 @@ fun ReadHistoryPage() {
                                             scope.launch {
                                                 readHistoryRepo.deleteMangaTagHistory(history.tagId)
                                                 loadPage(currentPage)
-                                                snackbarHostState.showSnackbar("已刪除此筆紀錄")
+                                                snackbarHostState.showSnackbar("已刪除這筆紀錄")
                                             }
                                         },
                                         onFavorite = {
@@ -511,7 +489,7 @@ fun ReadHistoryPage() {
                     }
                     favoriteDialogTarget = null
                     favoriteRefreshToken += 1
-                    snackbarHostState.showSnackbar("收藏類別已更新")
+                    snackbarHostState.showSnackbar("收藏位置已更新")
                 }
             }
         )
@@ -534,10 +512,10 @@ fun ReadHistoryPage() {
                         showFavoriteMultiPathDialog = true
                     } else {
                         withContext(Dispatchers.Default) {
-                            favoriteRepository.removeFavorite(target)
+                            removeFavoriteWithSync(favoriteRepository, favoriteSyncRepository, target)
                         }
                         favoriteRefreshToken += 1
-                        snackbarHostState.showSnackbar("已取消收藏")
+                        snackbarHostState.showSnackbar("已移除收藏")
                         pendingFavoriteRemovalTarget = null
                         pendingFavoriteRemovalSelection = null
                     }
@@ -560,10 +538,10 @@ fun ReadHistoryPage() {
                 showFavoriteMultiPathDialog = false
                 scope.launch {
                     withContext(Dispatchers.Default) {
-                        favoriteRepository.removeFavorite(target)
+                        removeFavoriteWithSync(favoriteRepository, favoriteSyncRepository, target)
                     }
                     favoriteRefreshToken += 1
-                    snackbarHostState.showSnackbar("已取消全部收藏")
+                    snackbarHostState.showSnackbar("已從所有位置移除收藏")
                     pendingFavoriteRemovalTarget = null
                     pendingFavoriteRemovalSelection = null
                 }
@@ -596,13 +574,13 @@ private fun EmptyContent(mode: PageMode) {
         )
         Spacer(Modifier.height(16.dp))
         Text(
-            text = if (mode == PageMode.Search) "沒有找到結果" else "還沒有閱讀紀錄",
+            text = if (mode == PageMode.Search) "搜尋無結果" else "目前還沒有閱讀歷史紀錄",
             fontSize = 16.sp,
             color = colors.textDark.copy(alpha = 0.5f)
         )
         Spacer(Modifier.height(4.dp))
         Text(
-            text = if (mode == PageMode.Search) "可以試試其他關鍵字" else "開始閱讀後，紀錄會顯示在這裡",
+            text = if (mode == PageMode.Search) "Try another keyword" else "Read something to see your history here",
             fontSize = 13.sp,
             color = colors.textDark.copy(alpha = 0.35f)
         )
@@ -618,7 +596,7 @@ private fun ErrorContent(message: String, onRetry: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "讀取失敗：$message",
+            text = "載入錯誤：$message",
             fontSize = 14.sp,
             color = colors.textDark.copy(alpha = 0.7f)
         )
@@ -627,7 +605,7 @@ private fun ErrorContent(message: String, onRetry: () -> Unit) {
             onClick = onRetry,
             colors = ButtonDefaults.buttonColors(containerColor = colors.brownPrimary)
         ) {
-            Text("重新整理", color = Color.White)
+            Text("重新載入", color = Color.White)
         }
     }
 }
@@ -800,7 +778,7 @@ private fun NormalTopBar(onSearch: () -> Unit, onMultiSelect: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = "閱讀紀錄",
+            text = "閱讀歷史",
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold,
             color = colors.brownDeep,
@@ -889,7 +867,7 @@ private fun SelectTopBar(
         horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         Text(
-            text = "已選取 $selectedCount 項",
+            text = "已選 $selectedCount 項",
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold,
             color = colors.brownDeep,
@@ -904,7 +882,7 @@ private fun SelectTopBar(
             }
         }
         Surface(onClick = onClearAll, shape = RoundedCornerShape(10.dp), color = Color(0xFFE53935).copy(alpha = 0.1f)) {
-            Text("清空全部", modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Color(0xFFE53935))
+            Text("清空全選", modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Color(0xFFE53935))
         }
         Surface(onClick = onCancel, shape = RoundedCornerShape(10.dp), color = colors.brownPrimary.copy(alpha = 0.12f)) {
             Text("取消", modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), fontSize = 13.sp, fontWeight = FontWeight.Medium, color = colors.brownDeep)
@@ -964,3 +942,4 @@ private fun formatTime(timestamp: Long): String {
 private fun isLeapYear(year: Int): Boolean {
     return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)
 }
+

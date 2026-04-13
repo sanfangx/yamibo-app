@@ -58,6 +58,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.thenano.yamibo.yamibo_app.LocalFavoriteRepository
+import me.thenano.yamibo.yamibo_app.favorite.components.ReorderActionChip
+import me.thenano.yamibo.yamibo_app.favorite.components.calculateReorderTargetIndex
+import me.thenano.yamibo.yamibo_app.favorite.components.fastReorderDrag
+import me.thenano.yamibo.yamibo_app.favorite.components.rememberReorderGapOffset
+import me.thenano.yamibo.yamibo_app.favorite.components.reorderedList
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository as FavoriteRepositoryContract
 import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.FavoriteCollection

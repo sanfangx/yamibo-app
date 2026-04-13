@@ -199,6 +199,32 @@ object YamiboIcons {
             }
         }.build()
 
+    val Plus: ImageVector =
+        ImageVector.Builder(
+            name = "Plus",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 16f,
+            viewportHeight = 16f,
+        ).apply {
+            path(fill = SolidColor(Color.Black)) {
+                moveTo(10f, 1f)
+                horizontalLineTo(6f)
+                verticalLineTo(6f)
+                lineTo(1f, 6f)
+                verticalLineTo(10f)
+                horizontalLineTo(6f)
+                verticalLineTo(15f)
+                horizontalLineTo(10f)
+                verticalLineTo(10f)
+                horizontalLineTo(15f)
+                verticalLineTo(6f)
+                lineTo(10f, 6f)
+                verticalLineTo(1f)
+                close()
+            }
+        }.build()
+
     val Views: ImageVector =
         ImageVector.Builder(
             name = "Views",
@@ -825,6 +851,89 @@ object YamiboIcons {
                 curveTo(16.9706f, 3.0f, 21.0f, 7.0294f, 21.0f, 12.0f)
                 curveTo(21.0f, 16.9706f, 16.9706f, 21.0f, 12.0f, 21.0f)
                 curveTo(7.7168f, 21.0f, 4.1325f, 18.008f, 3.223f, 14.0f)
+            }
+        }.build()
+
+    val Sync =
+        ImageVector.Builder(
+            name = "Sync",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 24f,
+            viewportHeight = 24f,
+        ).apply {
+            path(fill = SolidColor(Color.Black)) {
+                moveTo(18.43f, 4.25f)
+                curveTo(18.2319f, 4.25259f, 18.0426f, 4.33244f, 17.9025f, 4.47253f)
+                curveTo(17.7625f, 4.61263f, 17.6826f, 4.80189f, 17.68f, 5f)
+                verticalLineTo(7.43f)
+                lineTo(16.84f, 6.59f)
+                curveTo(15.971f, 5.71363f, 14.8924f, 5.07396f, 13.7067f, 4.73172f)
+                curveTo(12.5209f, 4.38948f, 11.2673f, 4.35604f, 10.065f, 4.63458f)
+                curveTo(8.86267f, 4.91312f, 7.7515f, 5.49439f, 6.83703f, 6.32318f)
+                curveTo(5.92255f, 7.15198f, 5.23512f, 8.20078f, 4.84001f, 9.37f)
+                curveTo(4.79887f, 9.46531f, 4.77824f, 9.56821f, 4.77947f, 9.67202f)
+                curveTo(4.7807f, 9.77583f, 4.80375f, 9.87821f, 4.84714f, 9.97252f)
+                curveTo(4.89052f, 10.0668f, 4.95326f, 10.151f, 5.03129f, 10.2194f)
+                curveTo(5.10931f, 10.2879f, 5.20087f, 10.3392f, 5.30001f, 10.37f)
+                curveTo(5.38273f, 10.3844f, 5.4673f, 10.3844f, 5.55001f, 10.37f)
+                curveTo(5.70646f, 10.3684f, 5.85861f, 10.3186f, 5.98568f, 10.2273f)
+                curveTo(6.11275f, 10.136f, 6.20856f, 10.0078f, 6.26001f, 9.86f)
+                curveTo(6.53938f, 9.0301f, 7.00847f, 8.27681f, 7.63001f, 7.66f)
+                curveTo(8.70957f, 6.58464f, 10.1713f, 5.98085f, 11.695f, 5.98085f)
+                curveTo(13.2188f, 5.98085f, 14.6805f, 6.58464f, 15.76f, 7.66f)
+                lineTo(16.6f, 8.5f)
+                horizontalLineTo(14.19f)
+                curveTo(13.9911f, 8.5f, 13.8003f, 8.57902f, 13.6597f, 8.71967f)
+                curveTo(13.519f, 8.86032f, 13.44f, 9.05109f, 13.44f, 9.25f)
+                curveTo(13.44f, 9.44891f, 13.519f, 9.63968f, 13.6597f, 9.78033f)
+                curveTo(13.8003f, 9.92098f, 13.9911f, 10f, 14.19f, 10f)
+                horizontalLineTo(18.43f)
+                curveTo(18.5289f, 10.0013f, 18.627f, 9.98286f, 18.7186f, 9.94565f)
+                curveTo(18.8102f, 9.90844f, 18.8934f, 9.85324f, 18.9633f, 9.78333f)
+                curveTo(19.0333f, 9.71341f, 19.0885f, 9.6302f, 19.1257f, 9.5386f)
+                curveTo(19.1629f, 9.44699f, 19.1814f, 9.34886f, 19.18f, 9.25f)
+                verticalLineTo(5f)
+                curveTo(19.18f, 4.80109f, 19.101f, 4.61032f, 18.9603f, 4.46967f)
+                curveTo(18.8197f, 4.32902f, 18.6289f, 4.25f, 18.43f, 4.25f)
+                close()
+            }
+            path(fill = SolidColor(Color.Black)) {
+                moveTo(18.68f, 13.68f)
+                curveTo(18.5837f, 13.6422f, 18.4808f, 13.6244f, 18.3774f, 13.6277f)
+                curveTo(18.274f, 13.6311f, 18.1724f, 13.6555f, 18.0787f, 13.6995f)
+                curveTo(17.9851f, 13.7435f, 17.9015f, 13.8062f, 17.8329f, 13.8836f)
+                curveTo(17.7643f, 13.9611f, 17.7123f, 14.0517f, 17.68f, 14.15f)
+                curveTo(17.4006f, 14.9799f, 16.9316f, 15.7332f, 16.31f, 16.35f)
+                curveTo(15.2305f, 17.4254f, 13.7688f, 18.0291f, 12.245f, 18.0291f)
+                curveTo(10.7213f, 18.0291f, 9.25957f, 17.4254f, 8.18001f, 16.35f)
+                lineTo(7.34001f, 15.51f)
+                horizontalLineTo(9.81002f)
+                curveTo(10.0089f, 15.51f, 10.1997f, 15.431f, 10.3403f, 15.2903f)
+                curveTo(10.481f, 15.1497f, 10.56f, 14.9589f, 10.56f, 14.76f)
+                curveTo(10.56f, 14.5611f, 10.481f, 14.3703f, 10.3403f, 14.2297f)
+                curveTo(10.1997f, 14.089f, 10.0089f, 14.01f, 9.81002f, 14.01f)
+                horizontalLineTo(5.57001f)
+                curveTo(5.47115f, 14.0086f, 5.37302f, 14.0271f, 5.28142f, 14.0643f)
+                curveTo(5.18982f, 14.1016f, 5.1066f, 14.1568f, 5.03669f, 14.2267f)
+                curveTo(4.96677f, 14.2966f, 4.91158f, 14.3798f, 4.87436f, 14.4714f)
+                curveTo(4.83715f, 14.563f, 4.81867f, 14.6611f, 4.82001f, 14.76f)
+                verticalLineTo(19f)
+                curveTo(4.82001f, 19.1989f, 4.89903f, 19.3897f, 5.03968f, 19.5303f)
+                curveTo(5.18034f, 19.671f, 5.3711f, 19.75f, 5.57001f, 19.75f)
+                curveTo(5.76893f, 19.75f, 5.95969f, 19.671f, 6.10034f, 19.5303f)
+                curveTo(6.241f, 19.3897f, 6.32001f, 19.1989f, 6.32001f, 19f)
+                verticalLineTo(16.57f)
+                lineTo(7.16001f, 17.41f)
+                curveTo(8.02901f, 18.2864f, 9.10761f, 18.926f, 10.2934f, 19.2683f)
+                curveTo(11.4791f, 19.6105f, 12.7327f, 19.6439f, 13.935f, 19.3654f)
+                curveTo(15.1374f, 19.0869f, 16.2485f, 18.5056f, 17.163f, 17.6768f)
+                curveTo(18.0775f, 16.848f, 18.7649f, 15.7992f, 19.16f, 14.63f)
+                curveTo(19.1926f, 14.5362f, 19.2061f, 14.4368f, 19.1995f, 14.3377f)
+                curveTo(19.1929f, 14.2386f, 19.1664f, 14.1418f, 19.1216f, 14.0532f)
+                curveTo(19.0768f, 13.9645f, 19.0146f, 13.8858f, 18.9387f, 13.8217f)
+                curveTo(18.8629f, 13.7576f, 18.7749f, 13.7094f, 18.68f, 13.68f)
+                close()
             }
         }.build()
 

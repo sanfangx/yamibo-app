@@ -7,6 +7,17 @@ findByTarget:
 SELECT * FROM LocalFavoriteItem
 WHERE targetType = ? AND targetId = ? AND authorId = ?;
 
+getById:
+SELECT * FROM LocalFavoriteItem
+WHERE id = ?
+LIMIT 1;
+
+findAnyThreadByTargetId:
+SELECT * FROM LocalFavoriteItem
+WHERE targetId = ? AND targetType IN ('ThreadNormal', 'ThreadNovel')
+ORDER BY updatedAt DESC, id DESC
+LIMIT 1;
+
 updateFavoriteItem:
 UPDATE LocalFavoriteItem
 SET title = ?, coverUrl = ?, forumId = ?, forumName = ?, authorId = ?, updatedAt = ?

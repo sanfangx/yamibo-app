@@ -25,6 +25,8 @@ import io.github.littlesurvival.dto.value.ForumId
 import io.github.littlesurvival.dto.value.TagId
 import io.github.littlesurvival.dto.value.ThreadId
 import io.github.littlesurvival.dto.value.UserId
+import me.thenano.yamibo.yamibo_app.repository.FavoriteSyncRepository
+import me.thenano.yamibo.yamibo_app.repository.FavoriteSyncRepository.FavoriteSyncDeleteResult
 import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
@@ -580,23 +582,33 @@ internal suspend fun LocalFavoriteRepository.getFavoriteLocationSelection(
     )
 }
 
-internal suspend fun LocalFavoriteRepository.removeFavorite(target: FavoriteTargetPayload) {
-    findFavoriteItem(target)?.let { item ->
-        deleteFavoriteItems(setOf(item.id))
+internal suspend fun LocalFavoriteRepository.syncFavoriteMetadata(
+    target: FavoriteTargetPayload,
+) {
+    val selection = getFavoriteLocationSelection(target)
+    val existingItem = selection.item ?: return
+    saveFavorite(
+        target = target,
+        categoryIds = selection.categoryIds.toList(),
+        collectionIds = selection.collectionIds.toList(),
+    )
+    if (existingItem.id != selection.item.id) {
+        setItemLocations(
+            itemId = existingItem.id,
+            categoryIds = selection.categoryIds,
+            collectionIds = selection.collectionIds,
+        )
     }
 }
 
-internal suspend fun LocalFavoriteRepository.removeFavoriteFromLocation(
+internal suspend fun removeFavoriteWithSync(
+    favoriteRepository: LocalFavoriteRepository,
+    favoriteSyncRepository: FavoriteSyncRepository,
     target: FavoriteTargetPayload,
-    categoryId: Long? = null,
-    collectionId: Long? = null,
-) {
-    val item = findFavoriteItem(target) ?: return
-    when {
-        collectionId != null -> removeItemsFromCollections(setOf(item.id), setOf(collectionId))
-        categoryId != null -> removeItemsFromCategory(setOf(item.id), categoryId)
-        else -> deleteFavoriteItems(setOf(item.id))
-    }
+): FavoriteSyncDeleteResult {
+    val item = favoriteRepository.findFavoriteItem(target)
+        ?: return FavoriteSyncDeleteResult(success = true)
+    return favoriteSyncRepository.removeLocalFavoriteItem(item.id)
 }
 
 @Composable

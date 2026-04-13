@@ -23,6 +23,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,7 +40,10 @@ import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 import me.thenano.yamibo.yamibo_app.LocalAppSettingsRepository
 import me.thenano.yamibo.yamibo_app.LocalDiskCacheFactory
+import me.thenano.yamibo.yamibo_app.LocalFavoriteSyncRunner
 import me.thenano.yamibo.yamibo_app.favorite.IFavoriteCategoryManageScreen
+import me.thenano.yamibo.yamibo_app.favorite.sync.FavoriteSyncStatusCard
+import me.thenano.yamibo.yamibo_app.favorite.sync.IFavoriteSyncProgressScreen
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.profile.settings.bound.MangaReadingModeSetting
 import me.thenano.yamibo.yamibo_app.profile.settings.bound.MangaTouchZoneSetting
@@ -49,7 +53,9 @@ import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelLineSpacingSetti
 import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelReaderPreviewSetting
 import me.thenano.yamibo.yamibo_app.profile.settings.components.SettingsChipRow
 import me.thenano.yamibo.yamibo_app.profile.settings.components.ThemeSelectorContent
+import me.thenano.yamibo.yamibo_app.repository.FavoriteSyncRepository.FavoriteSyncState
 import me.thenano.yamibo.yamibo_app.repository.settings.AppSettingsRepository
+import me.thenano.yamibo.yamibo_app.repository.settings.FavoriteSortMode
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.util.state
 
@@ -63,8 +69,8 @@ internal fun SettingsCategoryScreen(category: String) {
         "appearance" -> "外觀"
         "novel_reader" -> "小說閱讀器"
         "manga_reader" -> "漫畫閱讀器"
-        "favorite" -> "收藏管理"
-        "storage" -> "儲存與緩存"
+        "favorite" -> "收藏"
+        "storage" -> "儲存空間"
         else -> "設定"
     }
 
@@ -165,7 +171,7 @@ private fun MangaReaderContent() {
     MangaReadingModeSetting()
     Spacer(Modifier.height(24.dp))
 
-    SectionLabel("觸控區域")
+    SectionLabel("觸控分區")
     MangaTouchZoneSetting()
 }
 
@@ -174,19 +180,24 @@ private fun FavoriteSettingsContent() {
     val colors = YamiboTheme.colors
     val navigator = LocalNavigator.current
     val appSettingsRepository = LocalAppSettingsRepository.current
+    val favoriteSyncRunner = LocalFavoriteSyncRunner.current
     val skipConfirm = appSettingsRepository.skipFavoriteRemovalConfirm.state()
     val gridMode = appSettingsRepository.favoriteGridMode.state()
+    val sortMode = appSettingsRepository.favoriteSortMode.state()
+    val sortDescending = appSettingsRepository.favoriteSortDescending.state()
+    val syncState by favoriteSyncRunner.state.collectAsState()
+    val coroutineScope = rememberCoroutineScope()
 
     SectionLabel("收藏管理")
     SettingsActionRow(
-        title = "管理類別與排序",
-        subtitle = "建立、編輯並拖曳整理收藏類別和集合",
+        title = "管理收藏類別",
+        subtitle = "新增、編輯、刪除或調整你的收藏類別",
         onClick = { navigator.navigate(IFavoriteCategoryManageScreen()) },
     )
 
     Spacer(Modifier.height(24.dp))
 
-    SectionLabel("收藏排列")
+    SectionLabel("收藏顯示")
     Text(
         text = "排列方式",
         fontSize = 16.sp,
@@ -202,9 +213,36 @@ private fun FavoriteSettingsContent() {
         modifier = Modifier.padding(horizontal = 4.dp),
     )
 
+    Spacer(Modifier.height(18.dp))
+    Text(
+        text = "排序方式",
+        fontSize = 16.sp,
+        fontWeight = FontWeight.Medium,
+        color = colors.textDark,
+        modifier = Modifier.padding(horizontal = 4.dp),
+    )
+    Spacer(Modifier.height(6.dp))
+    SettingsChipRow(
+        options = AppSettingsRepository.favoriteSortModeOptions.map { (mode, label) ->
+            mode to if (mode == sortMode) "$label${if (sortDescending) " ↓" else " ↑"}" else label
+        },
+        selectedValue = sortMode,
+        onSelect = {
+            if (it == sortMode) {
+                appSettingsRepository.favoriteSortDescending.setValue(!sortDescending)
+            } else {
+                appSettingsRepository.favoriteSortMode.setValue(it)
+                appSettingsRepository.favoriteSortDescending.setValue(
+                    it != FavoriteSortMode.NAME && it != FavoriteSortMode.FORUM_NAME
+                )
+            }
+        },
+        modifier = Modifier.padding(horizontal = 4.dp),
+    )
+
     Spacer(Modifier.height(24.dp))
 
-    SectionLabel("收藏選項")
+    SectionLabel("收藏刪除")
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -214,14 +252,14 @@ private fun FavoriteSettingsContent() {
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = "取消收藏前先確認",
+                text = "略過刪除確認",
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Medium,
                 color = colors.textDark,
             )
             Spacer(Modifier.height(2.dp))
             Text(
-                text = "關閉後，刪除收藏時將略過確認視窗。",
+                text = "開啟後，刪除收藏時不再跳出確認視窗。",
                 fontSize = 13.sp,
                 color = colors.textDark.copy(alpha = 0.6f),
             )
@@ -235,6 +273,40 @@ private fun FavoriteSettingsContent() {
                 uncheckedThumbColor = colors.textDark.copy(alpha = 0.5f),
                 uncheckedTrackColor = colors.brownLight.copy(alpha = 0.3f),
             ),
+        )
+    }
+
+    Spacer(Modifier.height(24.dp))
+
+    SectionLabel("收藏同步")
+    if (syncState != FavoriteSyncState.Idle) {
+        FavoriteSyncStatusCard(
+            state = syncState,
+            modifier = Modifier.fillMaxWidth(),
+            onOpenProgress = {
+                settingsCurrentSyncRunId(syncState)?.let { navigator.navigate(IFavoriteSyncProgressScreen(it)) }
+            },
+            onResume = {
+                coroutineScope.launch {
+                    val runId = favoriteSyncRunner.resumeInterruptedImport()
+                    if (runId != null) navigator.navigate(IFavoriteSyncProgressScreen(runId))
+                }
+            },
+            onInterrupt = {
+                val runId = settingsCurrentSyncRunId(syncState)
+                if (runId != null) {
+                    coroutineScope.launch {
+                        favoriteSyncRunner.interruptImport(runId)
+                    }
+                }
+            },
+        )
+    } else {
+        Text(
+            text = "這裡會顯示最近一次收藏同步的狀態與進度。同步開始後，你也可以從這裡重新打開進度畫面。",
+            fontSize = 13.sp,
+            color = colors.textDark.copy(alpha = 0.68f),
+            modifier = Modifier.padding(horizontal = 4.dp),
         )
     }
 }
@@ -254,11 +326,25 @@ private fun SettingsActionRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = title, fontSize = 16.sp, fontWeight = FontWeight.Medium, color = colors.textDark)
+            Text(
+                text = title,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Medium,
+                color = colors.textDark,
+            )
             Spacer(Modifier.height(2.dp))
-            Text(text = subtitle, fontSize = 13.sp, color = colors.textDark.copy(alpha = 0.6f))
+            Text(
+                text = subtitle,
+                fontSize = 13.sp,
+                color = colors.textDark.copy(alpha = 0.6f),
+            )
         }
-        Text(">", color = colors.textDark.copy(alpha = 0.35f), fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+        Text(
+            text = ">",
+            color = colors.textDark.copy(alpha = 0.35f),
+            fontSize = 16.sp,
+            fontWeight = FontWeight.SemiBold,
+        )
     }
 }
 
@@ -270,7 +356,7 @@ private fun StorageContent(snackbarHostState: SnackbarHostState) {
     val coroutineScope = rememberCoroutineScope()
 
     val clearOnLaunch = appSettingsRepo.clearCacheOnAppLaunch.state()
-    var cacheSizeText by remember { mutableStateOf("讀取中...") }
+    var cacheSizeText by remember { mutableStateOf("正在計算中...") }
 
     LaunchedEffect(Unit) {
         val size = diskCacheFactory.getTotalCacheSizeBytes() ?: 0L
@@ -289,9 +375,18 @@ private fun StorageContent(snackbarHostState: SnackbarHostState) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text("App 啟動時清除緩存", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = colors.textDark)
+            Text(
+                text = "App 啟動時清除快取",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Medium,
+                color = colors.textDark,
+            )
             Spacer(Modifier.height(2.dp))
-            Text("目前緩存大小：$cacheSizeText", fontSize = 13.sp, color = colors.textDark.copy(alpha = 0.6f))
+            Text(
+                text = "目前快取大小：$cacheSizeText",
+                fontSize = 13.sp,
+                color = colors.textDark.copy(alpha = 0.6f),
+            )
         }
         Switch(
             checked = clearOnLaunch,
@@ -308,14 +403,24 @@ private fun StorageContent(snackbarHostState: SnackbarHostState) {
     Spacer(Modifier.height(24.dp))
 
     SettingsActionRow(
-        title = "立即清除緩存",
-        subtitle = "刪除目前已下載的圖片與緩存資料。",
+        title = "立即清除所有快取",
+        subtitle = "清除圖片、頁面與其他暫存資料，釋放目前已使用的儲存空間。",
         onClick = {
             coroutineScope.launch {
                 diskCacheFactory.clearAllCache()
                 cacheSizeText = "0 kB"
-                snackbarHostState.showSnackbar("已清除緩存")
+                snackbarHostState.showSnackbar("已清除所有快取")
             }
         },
     )
+}
+
+private fun settingsCurrentSyncRunId(state: FavoriteSyncState): String? {
+    return when (state) {
+        FavoriteSyncState.Idle -> null
+        is FavoriteSyncState.Running -> state.snapshot.runId
+        is FavoriteSyncState.Interrupted -> state.snapshot.runId
+        is FavoriteSyncState.Failed -> state.snapshot.runId
+        is FavoriteSyncState.Completed -> state.snapshot.runId
+    }
 }

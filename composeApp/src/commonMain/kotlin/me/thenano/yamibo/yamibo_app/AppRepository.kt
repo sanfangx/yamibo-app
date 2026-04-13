@@ -2,6 +2,8 @@ package me.thenano.yamibo.yamibo_app
 
 import androidx.compose.runtime.compositionLocalOf
 import me.thenano.yamibo.yamibo_app.repository.AuthRepository
+import me.thenano.yamibo.yamibo_app.repository.FavoriteRepository
+import me.thenano.yamibo.yamibo_app.repository.FavoriteSyncRepository
 import me.thenano.yamibo.yamibo_app.repository.ForumRepository
 import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository as LocalFavoriteRepositoryType
 import me.thenano.yamibo.yamibo_app.repository.NovelPrePostCommentsCacheRepository
@@ -12,6 +14,7 @@ import me.thenano.yamibo.yamibo_app.repository.ThreadRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.AppSettingsRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.MangaReaderSettingsRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.NovelReaderSettingsRepository
+import me.thenano.yamibo.yamibo_app.favorite.sync.FavoriteSyncRunner
 
 val LocalAuthRepository =
     compositionLocalOf<AuthRepository> { error("LocalAuthRepository not provided") }
@@ -24,6 +27,15 @@ val LocalThreadRepository =
 
 val LocalFavoriteRepository =
     compositionLocalOf<LocalFavoriteRepositoryType> { error("LocalFavoriteRepository not provided") }
+
+val LocalRemoteFavoriteRepository =
+    compositionLocalOf<FavoriteRepository> { error("LocalRemoteFavoriteRepository not provided") }
+
+val LocalFavoriteSyncRepository =
+    compositionLocalOf<FavoriteSyncRepository> { error("LocalFavoriteSyncRepository not provided") }
+
+val LocalFavoriteSyncRunner =
+    compositionLocalOf<FavoriteSyncRunner> { error("LocalFavoriteSyncRunner not provided") }
 
 val LocalThemeRepository =
     compositionLocalOf<ThemeRepository> { error("LocalThemeRepository not provided") }

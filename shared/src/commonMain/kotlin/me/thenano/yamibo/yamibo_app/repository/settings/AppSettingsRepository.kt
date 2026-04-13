@@ -51,6 +51,16 @@ enum class AppThemeScheme(val label: String) {
 enum class FavoriteGridMode(val label: String) {
     FIXED_GRID("固定網格"),
     STAGGERED("瀑布貼齊"),
+    ROW_CARD("橫排卡片"),
+    ROW_CARD_TEXT("橫排卡片(無封面)"),
+}
+
+enum class FavoriteSortMode(val label: String) {
+    DEFAULT("默認"),
+    UPDATED_AT("更新時間"),
+    NAME("名稱"),
+    FORUM_NAME("版區"),
+    LAST_READ("最後一次閱讀"),
 }
 
 class AppSettingsRepository(store: SettingsStore) : SettingsRegistry(store, prefix = "appsettings") {
@@ -85,9 +95,20 @@ class AppSettingsRepository(store: SettingsStore) : SettingsRegistry(store, pref
         default = FavoriteGridMode.FIXED_GRID,
     )
 
+    val favoriteSortMode by enumSetting(
+        name = "收藏排序方式",
+        default = FavoriteSortMode.DEFAULT,
+    )
+
+    val favoriteSortDescending by boolSetting(
+        name = "收藏排序是否降序",
+        default = true,
+    )
+
     companion object {
         val themeModeOptions = AppThemeMode.entries.map { it to it.label }
         val themeSchemeOptions = AppThemeScheme.entries.map { it to it.label }
         val favoriteGridModeOptions = FavoriteGridMode.entries.map { it to it.label }
+        val favoriteSortModeOptions = FavoriteSortMode.entries.map { it to it.label }
     }
 }

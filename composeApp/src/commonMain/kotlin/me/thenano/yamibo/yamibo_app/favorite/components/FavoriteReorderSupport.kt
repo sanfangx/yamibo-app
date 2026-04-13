@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.favorite
+package me.thenano.yamibo.yamibo_app.favorite.components
 
 import YamiboIcons
 import androidx.compose.animation.core.animateFloatAsState
@@ -7,6 +7,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -18,7 +19,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.withTimeoutOrNull
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 
 @Composable
@@ -150,7 +150,7 @@ internal fun ReorderActionChip(
     Surface(
         onClick = onClick,
         color = if (emphasized) colors.brownDeep else colors.brownPrimary.copy(alpha = 0.12f),
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(12.dp),
         border = BorderStroke(1.dp, if (emphasized) colors.brownDeep else colors.brownPrimary.copy(alpha = 0.18f)),
     ) {
         Text(

@@ -12,7 +12,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.view.WindowInsetsControllerCompat
 import io.github.littlesurvival.YamiboClient
+import me.thenano.yamibo.yamibo_app.Database
 import me.thenano.yamibo.yamibo_app.core.cache.DiskCacheFactory
+import me.thenano.yamibo.yamibo_app.favorite.sync.FavoriteSyncRunner
 import me.thenano.yamibo.yamibo_app.navigation.ComposableNavigator
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.AndroidAuthRepository
@@ -25,6 +27,7 @@ import me.thenano.yamibo.yamibo_app.repository.AndroidNovelThreadCacheRepository
 import me.thenano.yamibo.yamibo_app.repository.AndroidReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.repository.AndroidTagRepository
 import me.thenano.yamibo.yamibo_app.db.DatabaseFactory
+import me.thenano.yamibo.yamibo_app.repository.favorite.FavoriteSyncRepositoryImpl
 import me.thenano.yamibo.yamibo_app.store.AndroidCookieStore
 import me.thenano.yamibo.yamibo_app.store.AndroidUserStore
 import me.thenano.yamibo.yamibo_app.store.settings.AndroidSettingsStore
@@ -79,6 +82,18 @@ class MainActivity : ComponentActivity() {
             val forumRepository = remember { AndroidForumRepository(cookieStore, yamiboClient, diskCacheFactory) }
             val threadRepository = remember { AndroidThreadRepository(cookieStore, yamiboClient, diskCacheFactory) }
             val favoriteRepository = remember { AndroidLocalFavoriteRepository(dbFactory) }
+            val remoteFavoriteRepository = remember { AndroidFavoriteRepository(cookieStore, yamiboClient) }
+            val favoriteSyncDatabase = remember { Database(dbFactory.createDriver()) }
+            val favoriteSyncRepository = remember {
+                FavoriteSyncRepositoryImpl(
+                    db = favoriteSyncDatabase,
+                    authRepository = authRepository,
+                    favoriteRepository = remoteFavoriteRepository,
+                    localFavoriteRepository = favoriteRepository,
+                    threadRepository = threadRepository,
+                )
+            }
+            val favoriteSyncRunner = remember { FavoriteSyncRunner(favoriteSyncRepository) }
             val novelCacheRepository = remember { AndroidNovelThreadCacheRepository(diskCacheFactory) }
             val readHistoryRepository = remember { AndroidReadHistoryRepository(dbFactory) }
             val themeRepository = remember { AndroidThemeRepository() }
@@ -95,6 +110,9 @@ class MainActivity : ComponentActivity() {
                 LocalForumRepository provides forumRepository,
                 LocalThreadRepository provides threadRepository,
                 LocalFavoriteRepository provides favoriteRepository,
+                LocalRemoteFavoriteRepository provides remoteFavoriteRepository,
+                LocalFavoriteSyncRepository provides favoriteSyncRepository,
+                LocalFavoriteSyncRunner provides favoriteSyncRunner,
                 LocalNovelThreadCacheRepository provides novelCacheRepository,
                 LocalReadHistoryRepository provides readHistoryRepository,
                 LocalThemeRepository provides themeRepository,

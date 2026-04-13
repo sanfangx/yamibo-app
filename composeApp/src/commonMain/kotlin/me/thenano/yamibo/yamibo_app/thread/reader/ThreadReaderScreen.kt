@@ -40,6 +40,7 @@ import kotlinx.coroutines.withContext
 import me.thenano.yamibo.yamibo_app.LocalAppSettingsRepository
 import me.thenano.yamibo.yamibo_app.LocalAuthRepository
 import me.thenano.yamibo.yamibo_app.LocalFavoriteRepository
+import me.thenano.yamibo.yamibo_app.LocalFavoriteSyncRepository
 import me.thenano.yamibo.yamibo_app.LocalNovelReaderSettingsRepository
 import me.thenano.yamibo.yamibo_app.LocalReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.LocalThreadRepository
@@ -52,8 +53,9 @@ import me.thenano.yamibo.yamibo_app.favorite.FavoriteTargetPayload
 import me.thenano.yamibo.yamibo_app.favorite.IFavoriteCategoryManageScreen
 import me.thenano.yamibo.yamibo_app.favorite.findFavoriteItem
 import me.thenano.yamibo.yamibo_app.favorite.getFavoriteLocationSelection
-import me.thenano.yamibo.yamibo_app.favorite.removeFavorite
+import me.thenano.yamibo.yamibo_app.favorite.removeFavoriteWithSync
 import me.thenano.yamibo.yamibo_app.favorite.saveFavorite
+import me.thenano.yamibo.yamibo_app.favorite.syncFavoriteMetadata
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository.ThreadReadingHistory
@@ -95,6 +97,7 @@ internal fun ThreadReaderScreen(
     val appSettingsRepository = LocalAppSettingsRepository.current
     val threadRepository = LocalThreadRepository.current
     val favoriteRepository = LocalFavoriteRepository.current
+    val favoriteSyncRepository = LocalFavoriteSyncRepository.current
     val readHistoryRepo = LocalReadHistoryRepository.current
     val navigator = LocalNavigator.current
     val platformContext = LocalPlatformContext.current
@@ -167,9 +170,10 @@ internal fun ThreadReaderScreen(
     }
 
     fun favoriteTarget(): FavoriteTargetPayload.Thread {
+        val currentTitle = threadInfo?.title ?: title
         return FavoriteTargetPayload.Thread(
             tid = tid,
-            title = title,
+            title = currentTitle,
             threadType = threadType,
             authorId = authorId,
             coverUrl = coverUrl,
@@ -179,7 +183,9 @@ internal fun ThreadReaderScreen(
     }
 
     suspend fun refreshFavoriteState() {
-        val selection = favoriteRepository.getFavoriteLocationSelection(favoriteTarget())
+        val target = favoriteTarget()
+        favoriteRepository.syncFavoriteMetadata(target)
+        val selection = favoriteRepository.getFavoriteLocationSelection(target)
         isFavorited = selection.item != null
     }
 
@@ -192,7 +198,7 @@ internal fun ThreadReaderScreen(
                 if (selection.paths.size > 1) {
                     showFavoriteMultiPathDialog = true
                 } else {
-                    withContext(Dispatchers.Default) { favoriteRepository.removeFavorite(target) }
+                    withContext(Dispatchers.Default) { removeFavoriteWithSync(favoriteRepository, favoriteSyncRepository, target) }
                     favoriteRefreshToken += 1
                     snackbarHostState.showSnackbar("已取消收藏")
                     pendingFavoriteRemovalSelection = null
@@ -929,7 +935,7 @@ internal fun ThreadReaderScreen(
                     if ((selection?.paths?.size ?: 0) > 1) {
                         showFavoriteMultiPathDialog = true
                     } else {
-                        withContext(Dispatchers.Default) { favoriteRepository.removeFavorite(favoriteTarget()) }
+                        withContext(Dispatchers.Default) { removeFavoriteWithSync(favoriteRepository, favoriteSyncRepository, favoriteTarget()) }
                         favoriteRefreshToken += 1
                         snackbarHostState.showSnackbar("已取消收藏")
                         pendingFavoriteRemovalSelection = null
@@ -950,7 +956,7 @@ internal fun ThreadReaderScreen(
             onRemoveAll = {
                 showFavoriteMultiPathDialog = false
                 scope.launch {
-                    withContext(Dispatchers.Default) { favoriteRepository.removeFavorite(favoriteTarget()) }
+                        withContext(Dispatchers.Default) { removeFavoriteWithSync(favoriteRepository, favoriteSyncRepository, favoriteTarget()) }
                     favoriteRefreshToken += 1
                     snackbarHostState.showSnackbar("已取消所有收藏")
                     pendingFavoriteRemovalSelection = null

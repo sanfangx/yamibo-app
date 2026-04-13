@@ -27,6 +27,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.thenano.yamibo.yamibo_app.LocalAppSettingsRepository
 import me.thenano.yamibo.yamibo_app.LocalFavoriteRepository
+import me.thenano.yamibo.yamibo_app.LocalFavoriteSyncRepository
 import me.thenano.yamibo.yamibo_app.LocalReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.LocalThreadRepository
 import me.thenano.yamibo.yamibo_app.favorite.FavoriteCollectionPickerDialog
@@ -37,8 +38,9 @@ import me.thenano.yamibo.yamibo_app.favorite.FavoriteTargetPayload
 import me.thenano.yamibo.yamibo_app.favorite.IFavoriteCategoryManageScreen
 import me.thenano.yamibo.yamibo_app.favorite.findFavoriteItem
 import me.thenano.yamibo.yamibo_app.favorite.getFavoriteLocationSelection
-import me.thenano.yamibo.yamibo_app.favorite.removeFavorite
+import me.thenano.yamibo.yamibo_app.favorite.removeFavoriteWithSync
 import me.thenano.yamibo.yamibo_app.favorite.saveFavorite
+import me.thenano.yamibo.yamibo_app.favorite.syncFavoriteMetadata
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository.ThreadReadingHistory
@@ -67,6 +69,7 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
     val appSettingsRepo = LocalAppSettingsRepository.current
     val threadRepository = LocalThreadRepository.current
     val favoriteRepository = LocalFavoriteRepository.current
+    val favoriteSyncRepository = LocalFavoriteSyncRepository.current
     val readHistoryRepo = LocalReadHistoryRepository.current
     val navigator = LocalNavigator.current
     val scope = rememberCoroutineScope()
@@ -117,7 +120,9 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
     }
 
     suspend fun refreshFavoriteState() {
-        val selection = favoriteRepository.getFavoriteLocationSelection(favoriteTarget())
+        val target = favoriteTarget()
+        favoriteRepository.syncFavoriteMetadata(target)
+        val selection = favoriteRepository.getFavoriteLocationSelection(target)
         isFavorited = selection.item != null
         favoritePaths = selection.paths
     }
@@ -131,9 +136,9 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
                 if (selection.paths.size > 1) {
                     showFavoriteMultiPathDialog = true
                 } else {
-                    withContext(Dispatchers.Default) { favoriteRepository.removeFavorite(target) }
+                    withContext(Dispatchers.Default) { removeFavoriteWithSync(favoriteRepository, favoriteSyncRepository, target) }
                     favoriteRefreshToken += 1
-                    snackbarHostState.showSnackbar("已取消收藏")
+                    snackbarHostState.showSnackbar("已移除收藏")
                     pendingFavoriteRemovalSelection = null
                 }
             } else {
@@ -249,10 +254,9 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
                                     }
 
                                     else -> {
-                                        val msg = result.message()
                                         snackbarHostState.showSnackbar(
-                                            message = "??雓???謏??????揭???msg",
-                                            duration = SnackbarDuration.Short
+                                            message = "重新整理帖子失敗：${result.message()}",
+                                            duration = SnackbarDuration.Short,
                                         )
                                     }
                                 }
@@ -289,7 +293,7 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
                                             pagePostsCache[page] = result.value.posts
                                         } else {
                                             snackbarHostState.showSnackbar(
-                                                message = "?雓丐?????$page ??雓?????: ${result.message()}",
+                                                message = "載入第 $page 頁失敗: ${result.message()}",
                                                 duration = SnackbarDuration.Short
                                             )
                                         }
@@ -347,7 +351,7 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
                                 buildString {
                                     append("第 ${h.page} 頁")
                                     if (h.postTitle.isNotEmpty()) {
-                                        append(" 繚 ${h.postTitle}")
+                                        append(" ‧ ${h.postTitle}")
                                     }
                                 }
                             },
@@ -395,7 +399,7 @@ if (showFavoriteDialog) {
                     }
                     showFavoriteDialog = false
                     favoriteRefreshToken += 1
-                    snackbarHostState.showSnackbar("已更新收藏路徑")
+                    snackbarHostState.showSnackbar("收藏位置已更新")
                 }
             }
     )
@@ -415,9 +419,9 @@ if (showFavoriteRemovalConfirm) {
                 if ((selection?.paths?.size ?: 0) > 1) {
                     showFavoriteMultiPathDialog = true
                 } else {
-                    withContext(Dispatchers.Default) { favoriteRepository.removeFavorite(favoriteTarget()) }
-                    favoriteRefreshToken += 1
-                        snackbarHostState.showSnackbar("已取消收藏")
+                        withContext(Dispatchers.Default) { removeFavoriteWithSync(favoriteRepository, favoriteSyncRepository, favoriteTarget()) }
+                        favoriteRefreshToken += 1
+                        snackbarHostState.showSnackbar("已移除收藏")
                     pendingFavoriteRemovalSelection = null
                 }
             }
@@ -436,9 +440,9 @@ if (showFavoriteMultiPathDialog) {
         onRemoveAll = {
             showFavoriteMultiPathDialog = false
             scope.launch {
-                withContext(Dispatchers.Default) { favoriteRepository.removeFavorite(favoriteTarget()) }
+                        withContext(Dispatchers.Default) { removeFavoriteWithSync(favoriteRepository, favoriteSyncRepository, favoriteTarget()) }
                 favoriteRefreshToken += 1
-                    snackbarHostState.showSnackbar("已取消全部收藏")
+                    snackbarHostState.showSnackbar("已從所有位置移除收藏")
                 pendingFavoriteRemovalSelection = null
             }
         },
@@ -529,3 +533,4 @@ private fun ThreadContent(
         }
     }
 }
+

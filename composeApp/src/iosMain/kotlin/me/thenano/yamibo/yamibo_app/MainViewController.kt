@@ -4,6 +4,8 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.window.ComposeUIViewController
 import io.github.littlesurvival.YamiboClient
+import me.thenano.yamibo.yamibo_app.Database
+import me.thenano.yamibo.yamibo_app.favorite.sync.FavoriteSyncRunner
 import me.thenano.yamibo.yamibo_app.navigation.ComposableNavigator
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.IOSAuthRepository
@@ -16,6 +18,7 @@ import me.thenano.yamibo.yamibo_app.repository.IOSNovelThreadCacheRepository
 import me.thenano.yamibo.yamibo_app.repository.IOSReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.repository.IOSTagRepository
 import me.thenano.yamibo.yamibo_app.db.DatabaseFactory
+import me.thenano.yamibo.yamibo_app.repository.favorite.FavoriteSyncRepositoryImpl
 import me.thenano.yamibo.yamibo_app.store.IOSCookieStore
 import me.thenano.yamibo.yamibo_app.store.IOSUserStore
 import me.thenano.yamibo.yamibo_app.store.settings.IOSSettingsStore
@@ -49,6 +52,18 @@ fun MainViewController() = ComposeUIViewController {
     val forumRepository = remember { IOSForumRepository(cookieStore, yamiboClient, diskCacheFactory) }
     val threadRepository = remember { IOSThreadRepository(cookieStore, yamiboClient, diskCacheFactory) }
     val favoriteRepository = remember { IOSLocalFavoriteRepository(dbFactory) }
+    val remoteFavoriteRepository = remember { IOSFavoriteRepository(cookieStore, yamiboClient) }
+    val favoriteSyncDatabase = remember { Database(dbFactory.createDriver()) }
+    val favoriteSyncRepository = remember {
+        FavoriteSyncRepositoryImpl(
+            db = favoriteSyncDatabase,
+            authRepository = authRepository,
+            favoriteRepository = remoteFavoriteRepository,
+            localFavoriteRepository = favoriteRepository,
+            threadRepository = threadRepository,
+        )
+    }
+    val favoriteSyncRunner = remember { FavoriteSyncRunner(favoriteSyncRepository) }
     val novelCacheRepository = remember { IOSNovelThreadCacheRepository(diskCacheFactory) }
     val readHistoryRepository = remember { IOSReadHistoryRepository(dbFactory) }
     val themeRepository = remember { IOSThemeRepository() }
@@ -65,6 +80,9 @@ fun MainViewController() = ComposeUIViewController {
         LocalForumRepository provides forumRepository,
         LocalThreadRepository provides threadRepository,
         LocalFavoriteRepository provides favoriteRepository,
+        LocalRemoteFavoriteRepository provides remoteFavoriteRepository,
+        LocalFavoriteSyncRepository provides favoriteSyncRepository,
+        LocalFavoriteSyncRunner provides favoriteSyncRunner,
         LocalNovelThreadCacheRepository provides novelCacheRepository,
         LocalReadHistoryRepository provides readHistoryRepository,
         LocalThemeRepository provides themeRepository,
