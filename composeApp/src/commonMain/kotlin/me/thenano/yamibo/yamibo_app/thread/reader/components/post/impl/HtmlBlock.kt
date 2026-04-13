@@ -17,6 +17,7 @@ sealed class HtmlBlock {
     data class Locked(val cost: Int, val contentBlocks: List<HtmlBlock>, override val anchorId: String = "") : HtmlBlock()
     data class Quote(val contentBlocks: List<HtmlBlock>, override val anchorId: String = "") : HtmlBlock()
     data class Code(val codeText: String, override val anchorId: String = "") : HtmlBlock()
+    data class Hr(override val anchorId: String = "") : HtmlBlock()
 
     /** Table: rows of cells, each cell containing parsed HtmlBlocks */
     data class Table(val rows: List<TableRow>, override val anchorId: String = "") : HtmlBlock()

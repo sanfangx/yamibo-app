@@ -108,7 +108,7 @@ private const val PAGE_SIZE = 20
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ReadHistoryPage() {
+fun ReadHistoryPage(reTapToken: Int = 0) {
     val colors = YamiboTheme.colors
     val appSettingsRepository = LocalAppSettingsRepository.current
     val readHistoryRepo = LocalReadHistoryRepository.current
@@ -139,6 +139,39 @@ fun ReadHistoryPage() {
     var pendingFavoriteRemovalSelection by remember { mutableStateOf<FavoriteLocationSelection?>(null) }
     var showFavoriteRemovalConfirm by remember { mutableStateOf(false) }
     var showFavoriteMultiPathDialog by remember { mutableStateOf(false) }
+
+    /** Re-tap History tab → open the topmost item's reader */
+    LaunchedEffect(reTapToken) {
+        if (reTapToken == 0) return@LaunchedEffect
+        val topItem = (state as? HistoryState.Success)?.items?.firstOrNull() ?: return@LaunchedEffect
+        when (topItem) {
+            is ThreadReadingHistory -> navigator.navigate(
+                IThreadReaderScreen(
+                    tid = topItem.threadId,
+                    title = topItem.threadName,
+                    threadType = topItem.threadType,
+                    authorId = topItem.authorId,
+                    initialPage = topItem.page
+                )
+            )
+            is ReadHistoryRepository.TagMangaReadingHistory -> navigator.navigate(
+                IImageReaderScreen(
+                    tid = topItem.threadId,
+                    postId = null,
+                    fid = null,
+                    threadTitle = topItem.threadTitle,
+                    authorId = null,
+                    imageList = emptyList(),
+                    tagId = topItem.tagId,
+                    tagName = topItem.tagName,
+                    tagPage = topItem.tagPage,
+                    tagThreads = emptyList(),
+                    initialPage = topItem.threadImagePageIndex + 1
+                )
+            )
+            else -> {}
+        }
+    }
 
     suspend fun loadPage(page: Int) {
         state = HistoryState.Loading

@@ -9,6 +9,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.fleeksoft.ksoup.Ksoup
 import com.fleeksoft.ksoup.nodes.Document
@@ -26,8 +27,8 @@ object HtmlParser {
 
     /** Parses raw HTML string into a list of HtmlBlock for Compose to render */
     fun parseHtml(html: String): List<HtmlBlock> {
-        // Strip raw newlines from HTML to prevent false double-newlines
-        val cleanHtml = html.replace("\r", "").replace("\n", "")
+        // Strip raw newlines and convert &nbsp; to four-per-em space (1/4 em width)
+        val cleanHtml = html.replace("\r", "").replace("\n", "").replace("&nbsp;", "\u2005")
         val document: Document = Ksoup.parseBodyFragment(cleanHtml)
         
         val blocks = mutableListOf<HtmlBlock>()
@@ -40,11 +41,6 @@ object HtmlParser {
         fun commitText() {
             if (globalBuilder.length > lastCommitIndex) {
                 var textStr = globalBuilder.toAnnotatedString().subSequence(lastCommitIndex, globalBuilder.length)
-                
-                // Trim trailing newlines manually to avoid overblown spacing
-                while (textStr.isNotEmpty() && textStr.lastOrNull() == '\n') {
-                    textStr = textStr.subSequence(0, textStr.length - 1)
-                }
                 
                 if (textStr.isNotEmpty()) {
                     val aid = hashId("t", textStr.text, blockCounter++)
@@ -64,11 +60,12 @@ object HtmlParser {
                     val tag = node.tagName().lowercase()
                     when (tag) {
                         "br" -> {
-                            val str = globalBuilder.toAnnotatedString()
-                            // Avoid adding more than 2 consecutive newlines
-                            if (!str.endsWith("\n\n")) {
-                                globalBuilder.append("\n")
-                            }
+                            globalBuilder.append("\n")
+                        }
+                        "hr" -> {
+                            commitText()
+                            val aid = hashId("hr", blockCounter.toString(), blockCounter++)
+                            blocks.add(HtmlBlock.Hr(anchorId = aid))
                         }
                         "img" -> {
                             commitText()
@@ -281,17 +278,21 @@ object HtmlParser {
         }
     }
 
+    /** Standard HTML base font size in sp (font size="3") */
+    private const val HTML_BASE_FONT_SIZE_SP = 16f
+
     private fun fontSizeToSp(size: String?): TextUnit {
-        return when (size) {
-            "1" -> 12.sp
-            "2" -> 14.sp
-            "3" -> 16.sp // Standard base
-            "4" -> 22.sp
-            "5" -> 28.sp
-            "6" -> 36.sp
-            "7" -> 48.sp // Huge
-            else -> 16.sp
+        val absoluteSp = when (size) {
+            "1" -> 12f
+            "2" -> 14f
+            "3" -> 16f // Standard base
+            "4" -> 22f
+            "5" -> 28f
+            "6" -> 36f
+            "7" -> 48f // Huge
+            else -> 16f
         }
+        return (absoluteSp / HTML_BASE_FONT_SIZE_SP).em
     }
 
     private fun parseStylesFromStyleAttr(styleAttr: String, spanStyle: SpanStyle): SpanStyle {
@@ -306,6 +307,22 @@ object HtmlParser {
         val bgMatch = Regex("background-color:\\s*([^;\\s]+)").find(styleAttr)
         bgMatch?.groupValues?.get(1)?.trim()?.let { bgStr ->
             parseColor(bgStr)?.let { current = current.copy(background = it) }
+        }
+
+        // Support font-size: Npx / Npt / Nem
+        val fontSizeMatch = Regex("font-size:\\s*([\\d.]+)\\s*(px|pt|em)").find(styleAttr)
+        fontSizeMatch?.let { match ->
+            val value = match.groupValues[1].toFloatOrNull()
+            val unit = match.groupValues[2]
+            if (value != null) {
+                val emValue = when (unit) {
+                    "px" -> value / HTML_BASE_FONT_SIZE_SP
+                    "pt" -> (value * 4f / 3f) / HTML_BASE_FONT_SIZE_SP // 1pt ≈ 1.333px
+                    "em" -> value
+                    else -> null
+                }
+                emValue?.let { current = current.copy(fontSize = it.em) }
+            }
         }
         return current
     }

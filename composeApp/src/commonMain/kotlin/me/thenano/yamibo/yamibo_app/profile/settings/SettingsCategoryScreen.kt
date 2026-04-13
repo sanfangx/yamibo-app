@@ -381,12 +381,6 @@ private fun StorageContent(snackbarHostState: SnackbarHostState) {
                 fontWeight = FontWeight.Medium,
                 color = colors.textDark,
             )
-            Spacer(Modifier.height(2.dp))
-            Text(
-                text = "目前快取大小：$cacheSizeText",
-                fontSize = 13.sp,
-                color = colors.textDark.copy(alpha = 0.6f),
-            )
         }
         Switch(
             checked = clearOnLaunch,
@@ -404,7 +398,7 @@ private fun StorageContent(snackbarHostState: SnackbarHostState) {
 
     SettingsActionRow(
         title = "立即清除所有快取",
-        subtitle = "清除圖片、頁面與其他暫存資料，釋放目前已使用的儲存空間。",
+        subtitle = "清除圖片、頁面與其他暫存資料，釋放目前已使用的儲存空間。\n目前快取大小：$cacheSizeText",
         onClick = {
             coroutineScope.launch {
                 diskCacheFactory.clearAllCache()

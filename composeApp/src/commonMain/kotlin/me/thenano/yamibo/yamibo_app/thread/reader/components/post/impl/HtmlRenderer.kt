@@ -263,6 +263,14 @@ private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
             )
         }
 
+        is HtmlBlock.Hr -> {
+            HorizontalDivider(
+                modifier = Modifier.padding(vertical = 8.dp),
+                thickness = 1.dp,
+                color = colors.brownPrimary.copy(alpha = 0.3f)
+            )
+        }
+
         is HtmlBlock.Collapse -> {
             var expanded by remember { mutableStateOf(false) }
             Card(

@@ -50,6 +50,7 @@ fun MainScreen(initialTab: MainTab = MainTab.Home) {
     val colors = YamiboTheme.colors
     val navigator = LocalNavigator.current
     var currentTab by rememberSaveable { mutableStateOf(initialTab) }
+    var reTapHistoryToken by remember { mutableIntStateOf(0) }
 
     DisposableEffect(currentTab) {
         val handler = {
@@ -72,7 +73,11 @@ fun MainScreen(initialTab: MainTab = MainTab.Home) {
                 tabs = MainTab.entries.map { BottomNavItem(it.title, it.icon) },
                 currentTab = BottomNavItem(currentTab.title, currentTab.icon),
                 onTabSelected = { selected ->
-                    currentTab = MainTab.entries.first { it.title == selected.title }
+                    val newTab = MainTab.entries.first { it.title == selected.title }
+                    if (newTab == MainTab.History && currentTab == MainTab.History) {
+                        reTapHistoryToken++
+                    }
+                    currentTab = newTab
                 }
             )
         }
@@ -89,7 +94,7 @@ fun MainScreen(initialTab: MainTab = MainTab.Home) {
             ) { tab ->
                 when (tab) {
                     MainTab.Home -> HomeScreenContent()
-                    MainTab.History -> ReadHistoryPage()
+                    MainTab.History -> ReadHistoryPage(reTapHistoryToken)
                     MainTab.Message -> PlaceholderScreen("Message")
                     MainTab.Favorite -> FavoritePage()
                     MainTab.Profile -> ProfilePage()
