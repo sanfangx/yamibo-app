@@ -35,6 +35,7 @@ import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
@@ -82,6 +83,7 @@ import me.thenano.yamibo.yamibo_app.favorite.hasRemoteFavoriteForTarget
 import me.thenano.yamibo.yamibo_app.favorite.removeFavoriteWithSync
 import me.thenano.yamibo.yamibo_app.favorite.saveFavorite
 import me.thenano.yamibo.yamibo_app.favorite.supportsRemoteWebsiteSync
+import me.thenano.yamibo.yamibo_app.favorite.syncExistingFavoriteIfRequested
 import me.thenano.yamibo.yamibo_app.forum.components.PageNavigation
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository
@@ -256,7 +258,42 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
         snackbarHostState.showSnackbar(message)
     }
 
+    suspend fun completeSavedFavoriteSync(target: FavoriteTargetPayload, syncToRemote: Boolean) {
+        val syncingSnackbarJob = if (syncToRemote) {
+            scope.launch {
+                snackbarHostState.showSnackbar(
+                    message = "正在同步到百合會...",
+                    duration = SnackbarDuration.Indefinite,
+                )
+            }
+        } else {
+            null
+        }
+        val syncResult = withContext(Dispatchers.Default) {
+            syncExistingFavoriteIfRequested(favoriteRepository, favoriteSyncRepository, target, syncToRemote)
+        }
+        syncingSnackbarJob?.cancel()
+        snackbarHostState.currentSnackbarData?.dismiss()
+        favoriteRefreshToken += 1
+        val message = when {
+            syncResult == null -> "已加入本地收藏，預設存入未分類"
+            syncResult.success -> "已加入本地收藏，${syncResult.message ?: "已同步到百合會。"}"
+            else -> "已加入本地收藏，但同步到百合會失敗：${syncResult.message ?: "請稍後再試"}"
+        }
+        snackbarHostState.showSnackbar(message)
+    }
+
     suspend fun completeFavoriteRemoval(target: FavoriteTargetPayload, removeRemote: Boolean) {
+        val syncingSnackbarJob = if (removeRemote) {
+            scope.launch {
+                snackbarHostState.showSnackbar(
+                    message = "正在從百合會移除收藏...",
+                    duration = SnackbarDuration.Indefinite,
+                )
+            }
+        } else {
+            null
+        }
         val removeResult = withContext(Dispatchers.Default) {
             removeFavoriteWithSync(
                 favoriteRepository = favoriteRepository,
@@ -265,6 +302,8 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
                 removeRemote = removeRemote,
             )
         }
+        syncingSnackbarJob?.cancel()
+        snackbarHostState.currentSnackbarData?.dismiss()
         favoriteRefreshToken += 1
         snackbarHostState.showSnackbar(
             if (removeResult.success) pendingFavoriteRemovalSuccessMessage else removeResult.message ?: "移除收藏失敗",
@@ -308,6 +347,8 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
         }
 
         if (target.supportsRemoteWebsiteSync() && appSettingsRepository.favoriteAddSyncPromptEnabled.getValue()) {
+            favoriteRepository.saveFavorite(target)
+            favoriteRefreshToken += 1
             pendingFavoriteRemovalTarget = target
             showFavoriteAddSyncConfirm = true
         } else {
@@ -570,12 +611,37 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
                             categoryIds = selectedCategories.toList(),
                             collectionIds = selectedCollections.toList()
                         )
+                        favoriteDialogTarget = null
+                        favoriteRefreshToken += 1
+                        if (target.supportsRemoteWebsiteSync() && appSettingsRepository.favoriteAddSyncPromptEnabled.getValue()) {
+                            pendingFavoriteRemovalTarget = target
+                            showFavoriteAddSyncConfirm = true
+                        } else {
+                            completeSavedFavoriteSync(
+                                target = target,
+                                syncToRemote = target.supportsRemoteWebsiteSync() && appSettingsRepository.favoriteAddSyncDefault.getValue(),
+                            )
+                        }
+                    } else if (selectedCategories.isEmpty() && selectedCollections.isEmpty()) {
+                        favoriteDialogTarget = null
+                        pendingFavoriteRemovalTarget = target
+                        pendingFavoriteRemovalSelection = favoriteRepository.getFavoriteLocationSelection(target)
+                        pendingFavoriteRemovalSuccessMessage = "已從所有位置移除收藏"
+                        if (appSettingsRepository.skipFavoriteRemovalConfirm.getValue()) {
+                            if ((pendingFavoriteRemovalSelection?.paths?.size ?: 0) > 1) {
+                                showFavoriteMultiPathDialog = true
+                            } else {
+                                maybePromptRemoteRemoval(target)
+                            }
+                        } else {
+                            showFavoriteRemovalConfirm = true
+                        }
                     } else {
                         favoriteRepository.setItemLocations(existing.id, selectedCategories, selectedCollections)
+                        favoriteDialogTarget = null
+                        favoriteRefreshToken += 1
+                        snackbarHostState.showSnackbar("收藏位置已更新")
                     }
-                    favoriteDialogTarget = null
-                    favoriteRefreshToken += 1
-                    snackbarHostState.showSnackbar("收藏位置已更新")
                 }
             }
         )
@@ -608,8 +674,12 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
     if (showFavoriteAddSyncConfirm) {
         FavoriteAddSyncConfirmDialog(
             onDismiss = {
+                val target = pendingFavoriteRemovalTarget
                 showFavoriteAddSyncConfirm = false
                 pendingFavoriteRemovalTarget = null
+                if (target != null) {
+                    scope.launch { completeSavedFavoriteSync(target, syncToRemote = false) }
+                }
             },
             onConfirm = { rememberChoice, syncRemote ->
                 val target = pendingFavoriteRemovalTarget ?: return@FavoriteAddSyncConfirmDialog
@@ -619,7 +689,7 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
                     appSettingsRepository.favoriteAddSyncDefault.setValue(syncRemote)
                 }
                 pendingFavoriteRemovalTarget = null
-                scope.launch { completeFavoriteAdd(target, syncRemote) }
+                scope.launch { completeSavedFavoriteSync(target, syncRemote) }
             },
         )
     }

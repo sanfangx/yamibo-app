@@ -56,6 +56,7 @@ import me.thenano.yamibo.yamibo_app.profile.settings.components.ThemeSelectorCon
 import me.thenano.yamibo.yamibo_app.repository.FavoriteSyncRepository.FavoriteSyncState
 import me.thenano.yamibo.yamibo_app.repository.settings.AppSettingsRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.FavoriteSortMode
+import me.thenano.yamibo.yamibo_app.repository.settings.SignInMode
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.util.state
 
@@ -71,6 +72,7 @@ internal fun SettingsCategoryScreen(category: String) {
         "manga_reader" -> "漫畫閱讀器"
         "favorite" -> "收藏"
         "storage" -> "儲存空間"
+        "sign" -> "簽到"
         else -> "設定"
     }
 
@@ -116,6 +118,7 @@ internal fun SettingsCategoryScreen(category: String) {
                 "manga_reader" -> MangaReaderContent()
                 "favorite" -> FavoriteSettingsContent()
                 "storage" -> StorageContent(snackbarHostState)
+                "sign" -> SignSettingsContent()
             }
         }
     }
@@ -500,6 +503,43 @@ private fun StorageContent(snackbarHostState: SnackbarHostState) {
                 snackbarHostState.showSnackbar("已清除所有快取")
             }
         },
+    )
+}
+
+@Composable
+private fun SignSettingsContent() {
+    val colors = YamiboTheme.colors
+    val appSettingsRepository = LocalAppSettingsRepository.current
+    val signMode = appSettingsRepository.signInMode.state()
+    val allowRepair = appSettingsRepository.signInAllowRepair.state()
+
+    SectionLabel("簽到模式")
+    Text(
+        text = "簽到行為",
+        fontSize = 16.sp,
+        fontWeight = FontWeight.Medium,
+        color = colors.textDark,
+        modifier = Modifier.padding(horizontal = 4.dp),
+    )
+    Spacer(Modifier.height(6.dp))
+    SettingsChipRow(
+        options = AppSettingsRepository.signInModeOptions,
+        selectedValue = signMode,
+        onSelect = { appSettingsRepository.signInMode.setValue(it) },
+        modifier = Modifier.padding(horizontal = 4.dp),
+    )
+
+    Spacer(Modifier.height(24.dp))
+
+    SectionLabel("補簽")
+    SettingsToggleRow(
+        title = "自動進行補簽",
+        subtitle = when (signMode) {
+            SignInMode.FULL_MANUAL -> "手動模式下只保存這個偏好；半自動模式才會真的自動補簽。"
+            SignInMode.SEMI_AUTOMATIC -> "完成 Cloudflare 驗證後，程式會在簽到成功後一路補到不能再補。"
+        },
+        checked = allowRepair,
+        onCheckedChange = { appSettingsRepository.signInAllowRepair.setValue(it) },
     )
 }
 

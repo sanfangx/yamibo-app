@@ -75,6 +75,20 @@ internal suspend fun addFavoriteAndMaybeSync(
     syncToRemote: Boolean,
 ): FavoriteSyncActionResult? {
     favoriteRepository.saveFavorite(target)
+    return syncExistingFavoriteIfRequested(
+        favoriteRepository = favoriteRepository,
+        favoriteSyncRepository = favoriteSyncRepository,
+        target = target,
+        syncToRemote = syncToRemote,
+    )
+}
+
+internal suspend fun syncExistingFavoriteIfRequested(
+    favoriteRepository: LocalFavoriteRepository,
+    favoriteSyncRepository: FavoriteSyncRepository,
+    target: FavoriteTargetPayload,
+    syncToRemote: Boolean,
+): FavoriteSyncActionResult? {
     if (!syncToRemote || !target.supportsRemoteWebsiteSync()) return null
     val item = favoriteRepository.findFavoriteItem(target)
         ?: return FavoriteSyncActionResult(false, "已加入本地收藏，但找不到同步目標。")

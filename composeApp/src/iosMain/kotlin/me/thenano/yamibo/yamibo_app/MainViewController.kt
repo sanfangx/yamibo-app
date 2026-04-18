@@ -16,6 +16,7 @@ import me.thenano.yamibo.yamibo_app.repository.IOSThemeRepository
 import me.thenano.yamibo.yamibo_app.repository.IOSThreadRepository
 import me.thenano.yamibo.yamibo_app.repository.IOSNovelThreadCacheRepository
 import me.thenano.yamibo.yamibo_app.repository.IOSReadHistoryRepository
+import me.thenano.yamibo.yamibo_app.repository.IOSSignRepository
 import me.thenano.yamibo.yamibo_app.repository.IOSTagRepository
 import me.thenano.yamibo.yamibo_app.db.DatabaseFactory
 import me.thenano.yamibo.yamibo_app.repository.favorite.FavoriteSyncRepositoryImpl
@@ -33,6 +34,10 @@ fun MainViewController() = ComposeUIViewController {
     /** Store Logic */
     val cookieStore = remember { IOSCookieStore() }
     val userStore = remember { IOSUserStore() }
+    val settingsStore = remember { IOSSettingsStore() }
+    val appSettingsRepository = remember { AppSettingsRepository(settingsStore) }
+    val novelReaderSettingsRepository = remember { NovelReaderSettingsRepository(settingsStore) }
+    val mangaReaderSettingsRepository = remember { MangaReaderSettingsRepository(settingsStore) }
 
     /** Repository Logic */
     val yamiboClient = remember { YamiboClient() }
@@ -66,12 +71,9 @@ fun MainViewController() = ComposeUIViewController {
     val favoriteSyncRunner = remember { FavoriteSyncRunner(favoriteSyncRepository) }
     val novelCacheRepository = remember { IOSNovelThreadCacheRepository(diskCacheFactory) }
     val readHistoryRepository = remember { IOSReadHistoryRepository(dbFactory) }
+    val signRepository = remember { IOSSignRepository(dbFactory, authRepository, appSettingsRepository) }
     val themeRepository = remember { IOSThemeRepository() }
     val tagRepository = remember { IOSTagRepository(cookieStore, yamiboClient, diskCacheFactory) }
-    val settingsStore = remember { IOSSettingsStore() }
-    val appSettingsRepository = remember { AppSettingsRepository(settingsStore) }
-    val novelReaderSettingsRepository = remember { NovelReaderSettingsRepository(settingsStore) }
-    val mangaReaderSettingsRepository = remember { MangaReaderSettingsRepository(settingsStore) }
 
     /** Provide Repositories */
     CompositionLocalProvider(
@@ -85,6 +87,7 @@ fun MainViewController() = ComposeUIViewController {
         LocalFavoriteSyncRunner provides favoriteSyncRunner,
         LocalNovelThreadCacheRepository provides novelCacheRepository,
         LocalReadHistoryRepository provides readHistoryRepository,
+        LocalSignRepository provides signRepository,
         LocalThemeRepository provides themeRepository,
         LocalTagRepository provides tagRepository,
         LocalAppSettingsRepository provides appSettingsRepository,

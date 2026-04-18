@@ -25,6 +25,7 @@ import me.thenano.yamibo.yamibo_app.repository.AndroidThemeRepository
 import me.thenano.yamibo.yamibo_app.repository.AndroidThreadRepository
 import me.thenano.yamibo.yamibo_app.repository.AndroidNovelThreadCacheRepository
 import me.thenano.yamibo.yamibo_app.repository.AndroidReadHistoryRepository
+import me.thenano.yamibo.yamibo_app.repository.AndroidSignRepository
 import me.thenano.yamibo.yamibo_app.repository.AndroidTagRepository
 import me.thenano.yamibo.yamibo_app.db.DatabaseFactory
 import me.thenano.yamibo.yamibo_app.repository.favorite.FavoriteSyncRepositoryImpl
@@ -65,6 +66,10 @@ class MainActivity : ComponentActivity() {
             /** Store Logic */
             val cookieStore = remember { AndroidCookieStore(context) }
             val userStore = remember { AndroidUserStore(context) }
+            val settingsStore = remember { AndroidSettingsStore(context) }
+            val appSettingsRepository = remember { AppSettingsRepository(settingsStore) }
+            val novelReaderSettingsRepository = remember { NovelReaderSettingsRepository(settingsStore) }
+            val mangaReaderSettingsRepository = remember { MangaReaderSettingsRepository(settingsStore) }
 
             /** Repository Logic */
             val yamiboClient = remember { YamiboClient(timeoutMillis = 60_000L) }
@@ -96,12 +101,9 @@ class MainActivity : ComponentActivity() {
             val favoriteSyncRunner = remember { FavoriteSyncRunner(favoriteSyncRepository) }
             val novelCacheRepository = remember { AndroidNovelThreadCacheRepository(diskCacheFactory) }
             val readHistoryRepository = remember { AndroidReadHistoryRepository(dbFactory) }
+            val signRepository = remember { AndroidSignRepository(dbFactory, authRepository, appSettingsRepository) }
             val themeRepository = remember { AndroidThemeRepository() }
             val tagRepository = remember { AndroidTagRepository(cookieStore, yamiboClient, diskCacheFactory) }
-            val settingsStore = remember { AndroidSettingsStore(context) }
-            val appSettingsRepository = remember { AppSettingsRepository(settingsStore) }
-            val novelReaderSettingsRepository = remember { NovelReaderSettingsRepository(settingsStore) }
-            val mangaReaderSettingsRepository = remember { MangaReaderSettingsRepository(settingsStore) }
 
             /** Provide Repositories */
             CompositionLocalProvider(
@@ -115,6 +117,7 @@ class MainActivity : ComponentActivity() {
                 LocalFavoriteSyncRunner provides favoriteSyncRunner,
                 LocalNovelThreadCacheRepository provides novelCacheRepository,
                 LocalReadHistoryRepository provides readHistoryRepository,
+                LocalSignRepository provides signRepository,
                 LocalThemeRepository provides themeRepository,
                 LocalTagRepository provides tagRepository,
                 LocalAppSettingsRepository provides appSettingsRepository,

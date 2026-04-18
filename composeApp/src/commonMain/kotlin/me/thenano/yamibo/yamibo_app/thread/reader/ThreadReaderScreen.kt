@@ -60,6 +60,7 @@ import me.thenano.yamibo.yamibo_app.favorite.hasRemoteFavoriteForTarget
 import me.thenano.yamibo.yamibo_app.favorite.removeFavoriteWithSync
 import me.thenano.yamibo.yamibo_app.favorite.saveFavorite
 import me.thenano.yamibo.yamibo_app.favorite.supportsRemoteWebsiteSync
+import me.thenano.yamibo.yamibo_app.favorite.syncExistingFavoriteIfRequested
 import me.thenano.yamibo.yamibo_app.favorite.syncFavoriteMetadata
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
@@ -213,7 +214,42 @@ internal fun ThreadReaderScreen(
         snackbarHostState.showSnackbar(message)
     }
 
+    suspend fun completeSavedFavoriteSync(syncToRemote: Boolean) {
+        val syncingSnackbarJob = if (syncToRemote) {
+            scope.launch {
+                snackbarHostState.showSnackbar(
+                    message = "正在同步到百合會...",
+                    duration = SnackbarDuration.Indefinite,
+                )
+            }
+        } else {
+            null
+        }
+        val syncResult = withContext(Dispatchers.Default) {
+            syncExistingFavoriteIfRequested(favoriteRepository, favoriteSyncRepository, favoriteTarget(), syncToRemote)
+        }
+        syncingSnackbarJob?.cancel()
+        snackbarHostState.currentSnackbarData?.dismiss()
+        favoriteRefreshToken += 1
+        val message = when {
+            syncResult == null -> "已加入本地收藏"
+            syncResult.success -> "已加入本地收藏，${syncResult.message ?: "已同步到百合會。"}"
+            else -> "已加入本地收藏，但同步到百合會失敗：${syncResult.message ?: "請稍後再試"}"
+        }
+        snackbarHostState.showSnackbar(message)
+    }
+
     suspend fun completeFavoriteRemoval(removeRemote: Boolean) {
+        val syncingSnackbarJob = if (removeRemote) {
+            scope.launch {
+                snackbarHostState.showSnackbar(
+                    message = "正在從百合會移除收藏...",
+                    duration = SnackbarDuration.Indefinite,
+                )
+            }
+        } else {
+            null
+        }
         val result = withContext(Dispatchers.Default) {
             removeFavoriteWithSync(
                 favoriteRepository = favoriteRepository,
@@ -222,6 +258,8 @@ internal fun ThreadReaderScreen(
                 removeRemote = removeRemote,
             )
         }
+        syncingSnackbarJob?.cancel()
+        snackbarHostState.currentSnackbarData?.dismiss()
         favoriteRefreshToken += 1
         snackbarHostState.showSnackbar(
             if (result.success) pendingFavoriteRemovalSuccessMessage else result.message ?: "取消收藏失敗",
@@ -264,6 +302,8 @@ internal fun ThreadReaderScreen(
         }
 
         if (target.supportsRemoteWebsiteSync() && appSettingsRepository.favoriteAddSyncPromptEnabled.getValue()) {
+            favoriteRepository.saveFavorite(target)
+            favoriteRefreshToken += 1
             showFavoriteAddSyncConfirm = true
         } else {
             completeFavoriteAdd(
@@ -425,7 +465,7 @@ internal fun ThreadReaderScreen(
             if (cached != null) {
                 loadedPostsByPage[page] = cached.posts
                 rebuildPosts()
-                if (threadInfo == null) threadInfo = cached.thread
+                threadInfo = cached.thread
                 totalPages = cached.pageNav?.totalPages ?: 1
                 loadedPages = loadedPages + page
                 if (page == initialPage || page == 1) state = ReaderState.Success
@@ -439,7 +479,7 @@ internal fun ThreadReaderScreen(
             rebuildPosts()
             totalPages = result.value.pageNav?.totalPages ?: 1
             loadedPages = loadedPages + page
-            if (threadInfo == null) threadInfo = result.value.thread
+            threadInfo = result.value.thread
             if (page == initialPage || page == 1) state = ReaderState.Success
         }
 
@@ -856,7 +896,7 @@ internal fun ThreadReaderScreen(
                 // Overlay menu
                 ReaderOverlayMenu(
                     visible = showMenu,
-                    title = title,
+                    title = threadInfo?.title ?: title,
                     snackbarHostState = snackbarHostState,
                     isFavorited = isFavorited,
                     onBack = { navigator.pop() },
@@ -971,12 +1011,34 @@ internal fun ThreadReaderScreen(
                             categoryIds = selectedCategories.toList(),
                             collectionIds = selectedCollections.toList()
                         )
+                        showFavoriteDialog = false
+                        favoriteRefreshToken += 1
+                        if (target.supportsRemoteWebsiteSync() && appSettingsRepository.favoriteAddSyncPromptEnabled.getValue()) {
+                            showFavoriteAddSyncConfirm = true
+                        } else {
+                            completeSavedFavoriteSync(
+                                syncToRemote = target.supportsRemoteWebsiteSync() && appSettingsRepository.favoriteAddSyncDefault.getValue(),
+                            )
+                        }
+                    } else if (selectedCategories.isEmpty() && selectedCollections.isEmpty()) {
+                        showFavoriteDialog = false
+                        pendingFavoriteRemovalSelection = favoriteRepository.getFavoriteLocationSelection(target)
+                        pendingFavoriteRemovalSuccessMessage = "已取消所有收藏"
+                        if (appSettingsRepository.skipFavoriteRemovalConfirm.getValue()) {
+                            if ((pendingFavoriteRemovalSelection?.paths?.size ?: 0) > 1) {
+                                showFavoriteMultiPathDialog = true
+                            } else {
+                                maybePromptRemoteRemoval()
+                            }
+                        } else {
+                            showFavoriteRemovalConfirm = true
+                        }
                     } else {
                         favoriteRepository.setItemLocations(existing.id, selectedCategories, selectedCollections)
+                        showFavoriteDialog = false
+                        favoriteRefreshToken += 1
+                        snackbarHostState.showSnackbar("已更新收藏路徑")
                     }
-                    showFavoriteDialog = false
-                    favoriteRefreshToken += 1
-                    snackbarHostState.showSnackbar("已更新收藏路徑")
                 }
             }
         )
@@ -1006,14 +1068,17 @@ internal fun ThreadReaderScreen(
 
     if (showFavoriteAddSyncConfirm) {
         FavoriteAddSyncConfirmDialog(
-            onDismiss = { showFavoriteAddSyncConfirm = false },
+            onDismiss = {
+                showFavoriteAddSyncConfirm = false
+                scope.launch { completeSavedFavoriteSync(syncToRemote = false) }
+            },
             onConfirm = { rememberChoice, syncRemote ->
                 showFavoriteAddSyncConfirm = false
                 if (rememberChoice) {
                     appSettingsRepository.favoriteAddSyncPromptEnabled.setValue(false)
                     appSettingsRepository.favoriteAddSyncDefault.setValue(syncRemote)
                 }
-                scope.launch { completeFavoriteAdd(syncRemote) }
+                scope.launch { completeSavedFavoriteSync(syncRemote) }
             },
         )
     }

@@ -100,6 +100,14 @@ internal fun SettingsScreen() {
                 subtitle = "緩存空間與啟動時清理設定",
                 onClick = { navigator.navigate(ISettingsCategoryScreen("storage")) },
             )
+            SettingsDivider()
+
+            SettingsItem(
+                icon = YamiboIcons.EditOrSign,
+                title = "簽到設定",
+                subtitle = "每日簽到模式與補簽偏好",
+                onClick = { navigator.navigate(ISettingsCategoryScreen("sign")) },
+            )
         }
     }
 }

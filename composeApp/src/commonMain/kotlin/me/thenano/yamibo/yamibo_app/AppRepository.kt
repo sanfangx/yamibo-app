@@ -8,6 +8,7 @@ import me.thenano.yamibo.yamibo_app.repository.ForumRepository
 import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository as LocalFavoriteRepositoryType
 import me.thenano.yamibo.yamibo_app.repository.NovelPrePostCommentsCacheRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
+import me.thenano.yamibo.yamibo_app.repository.SignRepository
 import me.thenano.yamibo.yamibo_app.repository.TagRepository
 import me.thenano.yamibo.yamibo_app.repository.ThemeRepository
 import me.thenano.yamibo.yamibo_app.repository.ThreadRepository
@@ -45,6 +46,9 @@ val LocalNovelThreadCacheRepository =
 
 val LocalReadHistoryRepository =
     compositionLocalOf<ReadHistoryRepository> { error("LocalReadHistoryRepository not provided") }
+
+val LocalSignRepository =
+    compositionLocalOf<SignRepository> { error("LocalSignRepository not provided") }
 
 val LocalTagRepository =
     compositionLocalOf<TagRepository> { error("LocalTagRepository not provided") }

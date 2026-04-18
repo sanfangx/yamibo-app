@@ -64,6 +64,11 @@ enum class FavoriteSortMode(val label: String) {
     LAST_READ("最後一次閱讀"),
 }
 
+enum class SignInMode(val label: String) {
+    SEMI_AUTOMATIC("半自動簽到"),
+    FULL_MANUAL("全手動簽到"),
+}
+
 class AppSettingsRepository(store: SettingsStore) : SettingsRegistry(store, prefix = "appsettings") {
 
     val themeMode by enumSetting(
@@ -126,10 +131,31 @@ class AppSettingsRepository(store: SettingsStore) : SettingsRegistry(store, pref
         default = true,
     )
 
+    val signInMode by enumSetting(
+        name = "簽到模式",
+        default = SignInMode.SEMI_AUTOMATIC,
+    )
+
+    val signInAllowRepair by boolSetting(
+        name = "簽到時自動補簽",
+        default = false,
+    )
+
+    val signPageHtmlCache by stringSetting(
+        name = "簽到頁快取HTML",
+        default = "",
+    )
+
+    val signPageHtmlCacheUpdatedAt by stringSetting(
+        name = "簽到頁快取更新時間",
+        default = "",
+    )
+
     companion object {
         val themeModeOptions = AppThemeMode.entries.map { it to it.label }
         val themeSchemeOptions = AppThemeScheme.entries.map { it to it.label }
         val favoriteGridModeOptions = FavoriteGridMode.entries.map { it to it.label }
         val favoriteSortModeOptions = FavoriteSortMode.entries.map { it to it.label }
+        val signInModeOptions = SignInMode.entries.map { it to it.label }
     }
 }

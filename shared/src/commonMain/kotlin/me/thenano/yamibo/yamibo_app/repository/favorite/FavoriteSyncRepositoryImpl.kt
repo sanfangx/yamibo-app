@@ -356,7 +356,7 @@ class FavoriteSyncRepositoryImpl(
                         .getFavoritePaths(existingItem.id)
                         .firstOrNull()
                         ?: category.name
-                    duplicateSyncedPathCounts[path] = duplicateSyncedPathCounts.getOrDefault(path, 0) + 1
+                    duplicateSyncedPathCounts[path] = (duplicateSyncedPathCounts[path] ?: 0) + 1
                     current = updateSnapshot(
                         current.copy(importedCount = current.importedCount + 1),
                         warnings = warnings,

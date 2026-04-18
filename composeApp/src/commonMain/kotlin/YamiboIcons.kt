@@ -165,6 +165,72 @@ object YamiboIcons {
             }
         }.build()
 
+    val EditOrSign: ImageVector =
+        ImageVector.Builder(
+            name = "EditOrSign",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 1000f,
+            viewportHeight = 1000f
+        ).apply {
+            path(fill = SolidColor(Color.Black)) {
+                moveTo(888f, 37f)
+                quadToRelative(-10f, -9f, -22.5f, -9f)
+                reflectiveQuadTo(844f, 37f)
+                lineToRelative(-63f, 63f)
+                lineToRelative(125f, 125f)
+                lineToRelative(63f, -63f)
+                quadToRelative(9f, -9f, 9f, -21.5f)
+                reflectiveQuadToRelative(-9f, -21.5f)
+                close()
+                moveTo(438f, 700f)
+                quadToRelative(-4f, 0f, -7f, 3f)
+                reflectiveQuadToRelative(-6f, 3f)
+                lineToRelative(-150f, 50f)
+                horizontalLineToRelative(-12f)
+                quadToRelative(-8f, 0f, -11f, -7f)
+                quadToRelative(-2f, -4f, -2f, -12f)
+                lineToRelative(50f, -150f)
+                quadToRelative(0f, -4f, 3f, -8f)
+                lineToRelative(3f, -4f)
+                lineToRelative(432f, -425f)
+                lineToRelative(125f, 125f)
+                close()
+                moveTo(63f, 156f)
+                quadToRelative(0f, -25f, 13f, -46.5f)
+                reflectiveQuadTo(110f, 75f)
+                reflectiveQuadToRelative(46f, -13f)
+                horizontalLineToRelative(407f)
+                quadToRelative(13f, 0f, 22f, 9f)
+                reflectiveQuadToRelative(9f, 22.5f)
+                reflectiveQuadToRelative(-8.5f, 22.5f)
+                reflectiveQuadToRelative(-22.5f, 9f)
+                lineTo(156f, 125f)
+                quadToRelative(-14f, 0f, -22.5f, 8.5f)
+                reflectiveQuadTo(125f, 156f)
+                verticalLineToRelative(688f)
+                quadToRelative(0f, 14f, 8.5f, 22.5f)
+                reflectiveQuadTo(156f, 875f)
+                horizontalLineToRelative(688f)
+                quadToRelative(14f, 0f, 22.5f, -8.5f)
+                reflectiveQuadTo(875f, 844f)
+                lineTo(875f, 469f)
+                quadToRelative(0f, -14f, 8.5f, -23f)
+                reflectiveQuadToRelative(22.5f, -9f)
+                reflectiveQuadToRelative(23f, 9f)
+                reflectiveQuadToRelative(9f, 23f)
+                verticalLineToRelative(375f)
+                quadToRelative(0f, 25f, -13f, 46.5f)
+                reflectiveQuadTo(890.5f, 925f)
+                reflectiveQuadTo(844f, 938f)
+                lineTo(156f, 938f)
+                quadToRelative(-25f, 0f, -46f, -13f)
+                reflectiveQuadToRelative(-34f, -34.5f)
+                reflectiveQuadTo(63f, 844f)
+                close()
+            }
+        }.build()
+
     val Search: ImageVector =
         ImageVector.Builder(
             name = "Search",

@@ -435,12 +435,30 @@ internal fun TagDetailScreen(
                             categoryIds = selectedCategories.toList(),
                             collectionIds = selectedCollections.toList()
                         )
+                        showFavoriteDialog = false
+                        favoriteRefreshToken += 1
+                        snackbarHostState.showSnackbar("已加入收藏")
+                    } else if (selectedCategories.isEmpty() && selectedCollections.isEmpty()) {
+                        showFavoriteDialog = false
+                        pendingFavoriteRemovalSelection = favoriteRepository.getFavoriteLocationSelection(target)
+                        if (appSettingsRepo.skipFavoriteRemovalConfirm.getValue()) {
+                            if ((pendingFavoriteRemovalSelection?.paths?.size ?: 0) > 1) {
+                                showFavoriteMultiPathDialog = true
+                            } else {
+                                withContext(Dispatchers.Default) { removeFavoriteWithSync(favoriteRepository, favoriteSyncRepository, target) }
+                                favoriteRefreshToken += 1
+                                snackbarHostState.showSnackbar("已從所有位置移除收藏")
+                                pendingFavoriteRemovalSelection = null
+                            }
+                        } else {
+                            showFavoriteRemovalConfirm = true
+                        }
                     } else {
                         favoriteRepository.setItemLocations(existing.id, selectedCategories, selectedCollections)
+                        showFavoriteDialog = false
+                        favoriteRefreshToken += 1
+                        snackbarHostState.showSnackbar("收藏位置已更新")
                     }
-                    showFavoriteDialog = false
-                    favoriteRefreshToken += 1
-                    snackbarHostState.showSnackbar("收藏位置已更新")
                 }
             }
         )

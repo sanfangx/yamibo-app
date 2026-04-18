@@ -2,6 +2,7 @@ package me.thenano.yamibo.yamibo_app.favorite.sync
 
 import YamiboIcons
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -10,6 +11,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -326,12 +328,23 @@ private fun SyncMessageBlock(
     tint: Color,
     maxHeight: Dp,
 ) {
+    val scrollState = rememberScrollState()
+    val density = LocalDensity.current
     val lines = remember(message) {
         message
             .lineSequence()
             .map { it.trim() }
             .filter { it.isNotBlank() }
             .toList()
+    }
+    val viewportPx = with(density) { maxHeight.roundToPx() }.toFloat().coerceAtLeast(1f)
+    val totalScrollablePx = scrollState.maxValue.toFloat()
+    val totalContentPx = viewportPx + totalScrollablePx
+    val thumbHeightFraction = if (totalContentPx <= 0f) 1f else (viewportPx / totalContentPx).coerceIn(0.18f, 1f)
+    val thumbOffsetFraction = if (totalScrollablePx <= 0f) 0f else (scrollState.value.toFloat() / totalScrollablePx).coerceIn(0f, 1f)
+
+    LaunchedEffect(message, lines.size, scrollState.maxValue) {
+        scrollState.scrollTo(scrollState.maxValue)
     }
 
     Surface(
@@ -342,21 +355,43 @@ private fun SyncMessageBlock(
         Column(modifier = Modifier.padding(12.dp)) {
             Text(text = title, color = tint, fontWeight = FontWeight.Bold, fontSize = 13.sp)
             Spacer(Modifier.height(4.dp))
-            Column(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(max = maxHeight)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                lines.forEach { line ->
-                    Text(
-                        text = line,
-                        color = tint,
-                        fontSize = 13.sp,
-                        lineHeight = 18.sp,
-                        maxLines = 4,
-                        overflow = TextOverflow.Ellipsis,
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(end = 10.dp)
+                        .verticalScroll(scrollState),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    lines.forEach { line ->
+                        Text(
+                            text = line,
+                            color = tint,
+                            fontSize = 13.sp,
+                            lineHeight = 18.sp,
+                            maxLines = 4,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .fillMaxHeight()
+                        .width(6.dp)
+                        .background(tint.copy(alpha = 0.12f), androidx.compose.foundation.shape.RoundedCornerShape(999.dp))
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight(thumbHeightFraction)
+                            .offset(y = maxHeight * ((1f - thumbHeightFraction) * thumbOffsetFraction))
+                            .background(tint.copy(alpha = 0.55f), androidx.compose.foundation.shape.RoundedCornerShape(999.dp))
                     )
                 }
             }
