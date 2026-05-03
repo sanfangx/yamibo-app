@@ -1,7 +1,9 @@
 package me.thenano.yamibo.yamibo_app
 
 import androidx.compose.runtime.compositionLocalOf
+import me.thenano.yamibo.yamibo_app.core.cache.DiskCacheFactory
 import me.thenano.yamibo.yamibo_app.repository.AuthRepository
+import me.thenano.yamibo.yamibo_app.repository.BlogRepository
 import me.thenano.yamibo.yamibo_app.repository.FavoriteRepository
 import me.thenano.yamibo.yamibo_app.repository.FavoriteSyncRepository
 import me.thenano.yamibo.yamibo_app.repository.ForumRepository
@@ -30,6 +32,9 @@ val LocalThreadRepository =
 
 val LocalUserSpaceRepository =
     compositionLocalOf<UserSpaceRepository> { error("LocalUserSpaceRepository not provided") }
+
+val LocalBlogRepository =
+    compositionLocalOf<BlogRepository> { error("LocalBlogRepository not provided") }
 
 val LocalFavoriteRepository =
     compositionLocalOf<LocalFavoriteRepositoryType> { error("LocalFavoriteRepository not provided") }
@@ -71,4 +76,4 @@ val LocalMangaReaderSettingsRepository =
     compositionLocalOf<MangaReaderSettingsRepository> { error("LocalMangaReaderSettingsRepository not provided") }
 
 val LocalDiskCacheFactory =
-    compositionLocalOf<me.thenano.yamibo.yamibo_app.core.cache.DiskCacheFactory> { error("LocalDiskCacheFactory not provided") }
+    compositionLocalOf<DiskCacheFactory> { error("LocalDiskCacheFactory not provided") }

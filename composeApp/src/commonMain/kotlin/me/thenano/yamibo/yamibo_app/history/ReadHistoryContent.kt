@@ -26,6 +26,10 @@ import me.thenano.yamibo.yamibo_app.LocalFavoriteRepository
 import me.thenano.yamibo.yamibo_app.favorite.FavoriteLocationSelection
 import me.thenano.yamibo.yamibo_app.favorite.FavoriteTargetPayload
 import me.thenano.yamibo.yamibo_app.favorite.getFavoriteLocationSelection
+import me.thenano.yamibo.yamibo_app.history.components.PageMode
+import me.thenano.yamibo.yamibo_app.history.components.ReadHistoryCard
+import me.thenano.yamibo.yamibo_app.history.components.TagMangaHistoryCard
+import me.thenano.yamibo.yamibo_app.history.components.formatTime
 import me.thenano.yamibo.yamibo_app.navigation.ComposableNavigator
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository.ThreadReadingHistory

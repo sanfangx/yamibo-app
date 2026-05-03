@@ -23,7 +23,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -31,6 +33,7 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
 import androidx.compose.foundation.lazy.staggeredgrid.items
@@ -42,8 +45,8 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -326,100 +329,103 @@ internal fun FavoriteGridLayout(
     onToggleItem: (Long) -> Unit,
     onEnterSelectItem: (Long) -> Unit,
 ) {
-    key(scrollResetKey) {
-        val contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 88.dp)
-        val listState = rememberLazyListState()
-        val gridState = rememberLazyGridState()
-        val staggeredGridState = rememberLazyStaggeredGridState()
-        when (favoriteGridMode) {
-            FavoriteGridMode.FIXED_GRID -> {
-                Box(Modifier.fillMaxSize()) {
-                    LazyVerticalGrid(
-                        state = gridState,
-                        columns = GridCells.Fixed(3),
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = contentPadding,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
-                    ) {
-                        items(entries, key = { it.key }, span = { GridItemSpan(1) }) { entry ->
-                            FavoriteGridEntryCard(
-                                entry,
-                                favoriteGridMode,
-                                selecting,
-                                selectedItemIds,
-                                selectedCollectionIds,
-                                lastReadMap,
-                                onOpenCollection,
-                                onToggleCollection,
-                                onEnterSelectCollection,
-                                onOpenItem,
-                                onToggleItem,
-                                onEnterSelectItem
-                            )
-                        }
+    val stateKey = scrollResetKey ?: "default"
+    val listStates = remember { mutableStateMapOf<Any, LazyListState>() }
+    val gridStates = remember { mutableStateMapOf<Any, LazyGridState>() }
+    val staggeredGridStates = remember { mutableStateMapOf<Any, LazyStaggeredGridState>() }
+    val contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 88.dp)
+    val listState = listStates.getOrPut(stateKey) { LazyListState() }
+    val gridState = gridStates.getOrPut(stateKey) { LazyGridState() }
+    val staggeredGridState = staggeredGridStates.getOrPut(stateKey) { LazyStaggeredGridState() }
+
+    when (favoriteGridMode) {
+        FavoriteGridMode.FIXED_GRID -> {
+            Box(Modifier.fillMaxSize()) {
+                LazyVerticalGrid(
+                    state = gridState,
+                    columns = GridCells.Fixed(3),
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = contentPadding,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    items(entries, key = { it.key }, span = { GridItemSpan(1) }) { entry ->
+                        FavoriteGridEntryCard(
+                            entry,
+                            favoriteGridMode,
+                            selecting,
+                            selectedItemIds,
+                            selectedCollectionIds,
+                            lastReadMap,
+                            onOpenCollection,
+                            onToggleCollection,
+                            onEnterSelectCollection,
+                            onOpenItem,
+                            onToggleItem,
+                            onEnterSelectItem
+                        )
                     }
-                    FavoriteGridScrollbar(state = gridState, totalItems = entries.size, modifier = Modifier.align(Alignment.CenterEnd))
                 }
+                FavoriteGridScrollbar(state = gridState, totalItems = entries.size, modifier = Modifier.align(Alignment.CenterEnd))
             }
-            FavoriteGridMode.STAGGERED -> {
-                Box(Modifier.fillMaxSize()) {
-                    LazyVerticalStaggeredGrid(
-                        state = staggeredGridState,
-                        columns = StaggeredGridCells.Fixed(3),
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = contentPadding,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalItemSpacing = 10.dp,
-                    ) {
-                        items(entries, key = { it.key }, span = { StaggeredGridItemSpan.SingleLane }) { entry ->
-                            FavoriteGridEntryCard(
-                                entry,
-                                favoriteGridMode,
-                                selecting,
-                                selectedItemIds,
-                                selectedCollectionIds,
-                                lastReadMap,
-                                onOpenCollection,
-                                onToggleCollection,
-                                onEnterSelectCollection,
-                                onOpenItem,
-                                onToggleItem,
-                                onEnterSelectItem
-                            )
-                        }
+        }
+        FavoriteGridMode.STAGGERED -> {
+            Box(Modifier.fillMaxSize()) {
+                LazyVerticalStaggeredGrid(
+                    state = staggeredGridState,
+                    columns = StaggeredGridCells.Fixed(3),
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = contentPadding,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalItemSpacing = 10.dp,
+                ) {
+                    items(entries, key = { it.key }, span = { StaggeredGridItemSpan.SingleLane }) { entry ->
+                        FavoriteGridEntryCard(
+                            entry,
+                            favoriteGridMode,
+                            selecting,
+                            selectedItemIds,
+                            selectedCollectionIds,
+                            lastReadMap,
+                            onOpenCollection,
+                            onToggleCollection,
+                            onEnterSelectCollection,
+                            onOpenItem,
+                            onToggleItem,
+                            onEnterSelectItem
+                        )
                     }
-                    FavoriteStaggeredScrollbar(state = staggeredGridState, totalItems = entries.size, modifier = Modifier.align(Alignment.CenterEnd))
                 }
+                FavoriteStaggeredScrollbar(state = staggeredGridState, totalItems = entries.size, modifier = Modifier.align(Alignment.CenterEnd))
             }
-            FavoriteGridMode.ROW_CARD,
-            FavoriteGridMode.ROW_CARD_TEXT -> {
-                Box(Modifier.fillMaxSize()) {
-                    LazyColumn(
-                        state = listState,
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = contentPadding,
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
-                    ) {
-                        items(entries, key = { it.key }) { entry ->
-                            FavoriteGridEntryCard(
-                                entry,
-                                favoriteGridMode,
-                                selecting,
-                                selectedItemIds,
-                                selectedCollectionIds,
-                                lastReadMap,
-                                onOpenCollection,
-                                onToggleCollection,
-                                onEnterSelectCollection,
-                                onOpenItem,
-                                onToggleItem,
-                                onEnterSelectItem
-                            )
-                        }
+        }
+        FavoriteGridMode.ROW_CARD,
+        FavoriteGridMode.ROW_CARD_TEXT -> {
+            Box(Modifier.fillMaxSize()) {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = contentPadding,
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    items(entries, key = { it.key }) { entry ->
+                        FavoriteGridEntryCard(
+                            entry,
+                            favoriteGridMode,
+                            selecting,
+                            selectedItemIds,
+                            selectedCollectionIds,
+                            lastReadMap,
+                            onOpenCollection,
+                            onToggleCollection,
+                            onEnterSelectCollection,
+                            onOpenItem,
+                            onToggleItem,
+                            onEnterSelectItem
+                        )
                     }
-                    FavoriteListScrollbar(state = listState, totalItems = entries.size, modifier = Modifier.align(Alignment.CenterEnd))
                 }
+                FavoriteListScrollbar(state = listState, totalItems = entries.size, modifier = Modifier.align(Alignment.CenterEnd))
             }
         }
     }

@@ -19,6 +19,9 @@ import me.thenano.yamibo.yamibo_app.thread.reader.ICommentReaderScreen
 import me.thenano.yamibo.yamibo_app.thread.reader.IImageReaderScreen
 import me.thenano.yamibo.yamibo_app.thread.reader.IThreadReaderScreen
 import me.thenano.yamibo.yamibo_app.thread.reader.components.tag.ITagListScreen
+import me.thenano.yamibo.yamibo_app.userspace.IUserSpaceScreen
+import me.thenano.yamibo.yamibo_app.userspace.blog.IBlogReaderScreen
+import me.thenano.yamibo.yamibo_app.userspace.notification.IPrivateMessageScreen
 import kotlin.reflect.KClass
 
 @Serializable
@@ -143,6 +146,9 @@ internal object RestorableScreenRegistry {
         IFavoriteSyncProgressScreen.Decoder,
         ITagDetailScreen.Decoder,
         ITagListScreen.Decoder,
+        IUserSpaceScreen.Decoder,
+        IBlogReaderScreen.Decoder,
+        IPrivateMessageScreen.Decoder,
     ).associateBy { it.type }
 
     fun decode(

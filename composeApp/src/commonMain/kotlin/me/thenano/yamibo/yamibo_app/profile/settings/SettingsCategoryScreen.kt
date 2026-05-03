@@ -1,15 +1,21 @@
 package me.thenano.yamibo.yamibo_app.profile.settings
 
 import YamiboIcons
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
@@ -31,6 +37,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -38,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
+import me.thenano.yamibo.yamibo_app.core.cache.CacheStorageBreakdown
 import me.thenano.yamibo.yamibo_app.LocalAppSettingsRepository
 import me.thenano.yamibo.yamibo_app.LocalDiskCacheFactory
 import me.thenano.yamibo.yamibo_app.LocalFavoriteSyncRunner
@@ -471,14 +479,15 @@ private fun StorageContent(snackbarHostState: SnackbarHostState) {
 
     val clearOnLaunch = appSettingsRepo.clearCacheOnAppLaunch.state()
     var cacheSizeText by remember { mutableStateOf("正在計算中...") }
+    var cacheBreakdown by remember { mutableStateOf(CacheStorageBreakdown(rootPath = "", usages = emptyList())) }
+
+    suspend fun refreshCacheUsage() {
+        cacheBreakdown = diskCacheFactory.getCacheStorageBreakdown()
+        cacheSizeText = formatStorageSize(cacheBreakdown.usages.sumOf { it.bytes })
+    }
 
     LaunchedEffect(Unit) {
-        val size = diskCacheFactory.getTotalCacheSizeBytes() ?: 0L
-        cacheSizeText = if (size > 1024 * 1024) {
-            "${(size / (1024f * 1024f) * 100).roundToInt() / 100f} MB"
-        } else {
-            "${(size / 1024f * 100).roundToInt() / 100f} kB"
-        }
+        refreshCacheUsage()
     }
 
     Row(
@@ -490,7 +499,7 @@ private fun StorageContent(snackbarHostState: SnackbarHostState) {
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = "App 啟動時清除快取",
+                text = "App 啟動時清除緩存",
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Medium,
                 color = colors.textDark,
@@ -510,17 +519,106 @@ private fun StorageContent(snackbarHostState: SnackbarHostState) {
 
     Spacer(Modifier.height(24.dp))
 
+    if (cacheBreakdown.usages.isNotEmpty()) {
+        StorageUsageOverview(cacheBreakdown)
+        Spacer(Modifier.height(18.dp))
+    }
+
     SettingsActionRow(
-        title = "立即清除所有快取",
-        subtitle = "清除圖片、頁面與其他暫存資料，釋放目前已使用的儲存空間。\n目前快取大小：$cacheSizeText",
+        title = "立即清除所有緩存",
+        subtitle = "清除圖片、頁面與其他暫存資料，釋放目前已使用的儲存空間。\n目前緩存大小：$cacheSizeText",
         onClick = {
             coroutineScope.launch {
                 diskCacheFactory.clearAllCache()
                 cacheSizeText = "0 kB"
-                snackbarHostState.showSnackbar("已清除所有快取")
+                cacheBreakdown = cacheBreakdown.copy(usages = emptyList())
+                snackbarHostState.showSnackbar("已清除所有緩存")
             }
         },
     )
+}
+
+@Composable
+private fun StorageUsageOverview(breakdown: CacheStorageBreakdown) {
+    val colors = YamiboTheme.colors
+    val usageColors = mapOf(
+        "images" to Color(0xFF5C8DD6),
+        "pages" to Color(0xFFB66D32),
+        "userspace" to Color(0xFF7D63B8),
+        "other" to Color(0xFF8A7D70),
+    )
+    val totalBytes = breakdown.usages.sumOf { it.bytes }.coerceAtLeast(1L)
+
+    Text(
+        text = "儲存空間使用情形",
+        fontSize = 16.sp,
+        fontWeight = FontWeight.SemiBold,
+        color = colors.brownDeep,
+        modifier = Modifier.padding(horizontal = 4.dp),
+    )
+    Spacer(Modifier.height(8.dp))
+    Text(
+        text = breakdown.rootPath,
+        fontSize = 12.sp,
+        color = colors.textDark.copy(alpha = 0.62f),
+        maxLines = 2,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier.padding(horizontal = 4.dp),
+    )
+    Spacer(Modifier.height(10.dp))
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(10.dp)
+            .clip(RoundedCornerShape(50))
+            .background(colors.brownLight.copy(alpha = 0.32f)),
+    ) {
+        breakdown.usages.forEach { item ->
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .weight((item.bytes.toFloat() / totalBytes.toFloat()).coerceAtLeast(0.01f))
+                    .background(usageColors[item.key] ?: colors.brownPrimary),
+            )
+        }
+    }
+    Spacer(Modifier.height(12.dp))
+    breakdown.usages.forEach { item ->
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(9.dp)
+                    .clip(CircleShape)
+                    .background(usageColors[item.key] ?: colors.brownPrimary),
+            )
+            Text(
+                text = item.label,
+                color = colors.textDark,
+                fontSize = 13.sp,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = 8.dp),
+            )
+            Text(
+                text = formatStorageSize(item.bytes),
+                color = colors.textDark.copy(alpha = 0.62f),
+                fontSize = 12.sp,
+            )
+        }
+    }
+}
+
+private fun formatStorageSize(size: Long): String {
+    return when {
+        size >= 1024L * 1024L * 1024L -> "${(size / (1024f * 1024f * 1024f) * 100).roundToInt() / 100f} GB"
+        size >= 1024L * 1024L -> "${(size / (1024f * 1024f) * 100).roundToInt() / 100f} MB"
+        else -> "${(size / 1024f * 100).roundToInt() / 100f} kB"
+    }
 }
 
 @Composable

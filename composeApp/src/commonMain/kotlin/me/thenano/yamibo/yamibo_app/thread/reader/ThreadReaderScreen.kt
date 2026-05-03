@@ -354,16 +354,24 @@ internal fun ThreadReaderScreen(
         return authRepo.currentUser()?.formHash
     }
 
-    val handleVote: (List<PollOptionId>) -> Unit = { optionIds ->
+    var refreshThreadAfterVote: (suspend () -> Unit)? = null
+
+    val handleVote: suspend (List<PollOptionId>) -> Boolean = { optionIds ->
         val formHash = getFormHash()
         val fId = threadInfo?.forum?.fid
         if (formHash == null || fId == null) {
-            scope.launch { snackbarHostState.showSnackbar("獲取登入資訊失敗，請重新登入") }
+            snackbarHostState.showSnackbar("獲取登入資訊失敗，請重新登入")
+            false
         } else {
-            scope.launch {
-                when (val res = threadRepository.votePoll(fId, tid, optionIds, formHash)) {
-                    is YamiboResult.Success -> snackbarHostState.showSnackbar("投票成功")
-                    else -> snackbarHostState.showSnackbar("投票失敗: ${res.message()}")
+            when (val res = threadRepository.votePoll(fId, tid, optionIds, formHash)) {
+                is YamiboResult.Success -> {
+                    snackbarHostState.showSnackbar("投票成功，正在刷新頁面...")
+                    refreshThreadAfterVote?.invoke()
+                    true
+                }
+                else -> {
+                    snackbarHostState.showSnackbar("投票失敗: ${res.message()}")
+                    false
                 }
             }
         }
@@ -817,6 +825,13 @@ internal fun ThreadReaderScreen(
         return loadSucceeded
     }
 
+    refreshThreadAfterVote = {
+        val pagesToRefresh = loadedPages.ifEmpty { setOf(currentPageFetching) }.toList()
+        pagesToRefresh.forEach { page ->
+            loadPage(page, forceRefresh = true)
+        }
+    }
+
     suspend fun fallbackNearestPost(targetPidLong: Long, fallbackPage: Int) {
         if (posts.isEmpty() || state is ReaderState.Error) return
         var targetPage = fallbackPage
@@ -1161,6 +1176,8 @@ internal fun ThreadReaderScreen(
                                         PostRenderer(
                                             post = post,
                                             threadTitle = if (post.floor == 1) title else null,
+                                            totalViews = threadInfo?.totalViews.takeIf { post.floor == 1 },
+                                            totalReplies = threadInfo?.totalReplies.takeIf { post.floor == 1 },
                                             onVote = { optionIds -> handleVote(optionIds) },
                                             onRate = { score, reason -> handleRate(post.pid, score, reason) },
                                             onComment = { message -> handleComment(post.pid, message) },
@@ -1199,6 +1216,8 @@ internal fun ThreadReaderScreen(
                                         PostRenderer(
                                             post = post,
                                             threadTitle = if (post.floor == 1) title else null,
+                                            totalViews = threadInfo?.totalViews.takeIf { post.floor == 1 },
+                                            totalReplies = threadInfo?.totalReplies.takeIf { post.floor == 1 },
                                             bodyBlocks = emptyList(),
                                             showFooter = false,
                                             onImageSuccess = { imageUrl -> handlePostImageSuccess(post, imageUrl) },

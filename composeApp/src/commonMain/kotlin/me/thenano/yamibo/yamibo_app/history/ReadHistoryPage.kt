@@ -1,43 +1,28 @@
-﻿package me.thenano.yamibo.yamibo_app.history
+package me.thenano.yamibo.yamibo_app.history
 
-import YamiboIcons
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LocalTextStyle
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Snackbar
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -47,19 +32,17 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.github.littlesurvival.YamiboForum
 import io.github.littlesurvival.dto.model.PageNav
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -86,17 +69,22 @@ import me.thenano.yamibo.yamibo_app.favorite.saveFavorite
 import me.thenano.yamibo.yamibo_app.favorite.supportsRemoteWebsiteSync
 import me.thenano.yamibo.yamibo_app.favorite.syncExistingFavoriteIfRequested
 import me.thenano.yamibo.yamibo_app.forum.components.PageNavigation
+import me.thenano.yamibo.yamibo_app.components.YamiboActionChip
+import me.thenano.yamibo.yamibo_app.history.components.HistoryState
+import me.thenano.yamibo.yamibo_app.history.components.NormalTopBar
+import me.thenano.yamibo.yamibo_app.history.components.PageMode
+import me.thenano.yamibo.yamibo_app.history.components.SearchTopBar
+import me.thenano.yamibo.yamibo_app.history.components.SelectTopBar
+import me.thenano.yamibo.yamibo_app.history.components.groupByDate
+import me.thenano.yamibo.yamibo_app.history.components.itemKey
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository.ThreadReadingHistory
 import me.thenano.yamibo.yamibo_app.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
-import me.thenano.yamibo.yamibo_app.thread.detail.novel.INovelThreadDetailScreen
-import me.thenano.yamibo.yamibo_app.thread.detail.tag.ITagDetailScreen
 import me.thenano.yamibo.yamibo_app.thread.reader.IImageReaderScreen
 import me.thenano.yamibo.yamibo_app.thread.reader.IThreadReaderScreen
-import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
 import kotlin.math.ceil
 
 private const val PAGE_SIZE = 20
@@ -118,6 +106,9 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
     var mode by remember { mutableStateOf(PageMode.Normal) }
     var searchQuery by remember { mutableStateOf("") }
     var selectedItems by remember { mutableStateOf(setOf<ReadHistoryRepository.AnyReadingHistory>()) }
+    var selectedFilter by remember { mutableStateOf<ReadHistoryRepository.HistoryFilter>(ReadHistoryRepository.HistoryFilter.All) }
+    var filterCounts by remember { mutableStateOf<List<ReadHistoryRepository.HistoryFilterCount>>(emptyList()) }
+    var showFilterDialog by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
 
     var favoriteDialogTarget by remember { mutableStateOf<FavoriteTargetPayload?>(null) }
@@ -171,16 +162,49 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
         }
     }
 
+    suspend fun refreshFilterCounts() {
+        filterCounts = withContext(Dispatchers.Default) {
+            val actualCounts = readHistoryRepo.getCombinedHistoryFilterCounts()
+            val countByFilter = actualCounts.associateBy { it.filter }
+            buildList {
+                add(countByFilter[ReadHistoryRepository.HistoryFilter.All]
+                    ?: ReadHistoryRepository.HistoryFilterCount(
+                        ReadHistoryRepository.HistoryFilter.All,
+                        "全部",
+                        readHistoryRepo.getCombinedHistoryCount(),
+                    ))
+                val forumCounts = YamiboForum.entries.map { forum ->
+                    val filter = ReadHistoryRepository.HistoryFilter.Forum(forum.forumId)
+                    ReadHistoryRepository.HistoryFilterCount(
+                        filter = filter,
+                        label = forum.forumName,
+                        count = countByFilter[filter]?.count ?: 0L,
+                    )
+                }
+                addAll(forumCounts.sortedByDescending { it.count })
+                add(
+                    countByFilter[ReadHistoryRepository.HistoryFilter.Tag]?.copy(label = "Tag")
+                        ?: ReadHistoryRepository.HistoryFilterCount(
+                            ReadHistoryRepository.HistoryFilter.Tag,
+                            "Tag",
+                            0L,
+                        )
+                )
+            }
+        }
+    }
+
     suspend fun loadPage(page: Int) {
         state = HistoryState.Loading
         try {
-            val count = readHistoryRepo.getCombinedHistoryCount()
+            refreshFilterCounts()
+            val count = readHistoryRepo.getCombinedHistoryCountByFilter(selectedFilter)
             if (count == 0L) {
                 state = HistoryState.Empty
                 return
             }
             state = HistoryState.Success(
-                items = readHistoryRepo.getCombinedHistoryPage(page, PAGE_SIZE),
+                items = readHistoryRepo.getCombinedHistoryPageByFilter(selectedFilter, page, PAGE_SIZE),
                 totalCount = count,
                 currentPage = page
             )
@@ -389,70 +413,68 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
             .fillMaxSize()
             .background(colors.creamBackground)
     ) {
-        Surface(
-            modifier = Modifier.fillMaxWidth().statusBarsPadding(),
-            color = colors.creamBackground,
-            shadowElevation = 2.dp
-        ) {
-            AnimatedContent(
-                targetState = mode,
-                transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(150)) },
-                label = "history_top_bar"
-            ) { currentMode ->
-                when (currentMode) {
-                    PageMode.Normal -> NormalTopBar(
-                        onSearch = { mode = PageMode.Search },
-                        onMultiSelect = {
+        AnimatedContent(
+            modifier = Modifier.fillMaxWidth(),
+            targetState = mode,
+            transitionSpec = {
+                (fadeIn(animationSpec = spring(stiffness = 500f)) + slideInVertically { -it / 4 }) togetherWith
+                    (fadeOut(animationSpec = spring(stiffness = 700f)) + slideOutVertically { -it / 4 })
+            },
+            label = "history_top_bar"
+        ) { currentMode ->
+            when (currentMode) {
+                PageMode.Normal -> NormalTopBar(
+                    onSearch = { mode = PageMode.Search },
+                    onMultiSelect = {
+                        selectedItems = emptySet()
+                        mode = PageMode.Select
+                    }
+                )
+
+                PageMode.Search -> SearchTopBar(
+                    query = searchQuery,
+                    onQueryChange = { searchQuery = it },
+                    onSearch = { scope.launch { doSearch(searchQuery) } },
+                    onBack = {
+                        searchQuery = ""
+                        mode = PageMode.Normal
+                        scope.launch { loadPage(1) }
+                    },
+                    focusRequester = focusRequester
+                )
+
+                PageMode.Select -> SelectTopBar(
+                    onSelectAll = {
+                        val current = state as? HistoryState.Success ?: return@SelectTopBar
+                        selectedItems = current.items.toSet()
+                    },
+                    onClearAll = {
+                        scope.launch {
+                            readHistoryRepo.deleteAllCombinedHistory()
                             selectedItems = emptySet()
-                            mode = PageMode.Select
-                        }
-                    )
-
-                    PageMode.Search -> SearchTopBar(
-                        query = searchQuery,
-                        onQueryChange = { searchQuery = it },
-                        onSearch = { scope.launch { doSearch(searchQuery) } },
-                        onBack = {
-                            searchQuery = ""
                             mode = PageMode.Normal
-                            scope.launch { loadPage(1) }
-                        },
-                        focusRequester = focusRequester
-                    )
-
-                    PageMode.Select -> SelectTopBar(
-                        onSelectAll = {
-                            val current = state as? HistoryState.Success ?: return@SelectTopBar
-                            selectedItems = current.items.toSet()
-                        },
-                        onClearAll = {
+                            state = HistoryState.Empty
+                            snackbarHostState.showSnackbar("已刷新閱讀歷史紀錄")
+                        }
+                    },
+                    onCancel = {
+                        selectedItems = emptySet()
+                        mode = PageMode.Normal
+                    },
+                    onDeleteSelected = {
+                        if (selectedItems.isNotEmpty()) {
                             scope.launch {
-                                readHistoryRepo.deleteAllCombinedHistory()
+                                val deletedAmount = selectedItems.size
+                                readHistoryRepo.deleteCombinedHistoryBatch(selectedItems.toList())
                                 selectedItems = emptySet()
                                 mode = PageMode.Normal
-                                state = HistoryState.Empty
-                                snackbarHostState.showSnackbar("已刷新閱讀歷史紀錄")
+                                loadPage(1)
+                                snackbarHostState.showSnackbar("已刪除 $deletedAmount 項紀錄")
                             }
-                        },
-                        onCancel = {
-                            selectedItems = emptySet()
-                            mode = PageMode.Normal
-                        },
-                        onDeleteSelected = {
-                            if (selectedItems.isNotEmpty()) {
-                                scope.launch {
-                                    val deletedAmount = selectedItems.size
-                                    readHistoryRepo.deleteCombinedHistoryBatch(selectedItems.toList())
-                                    selectedItems = emptySet()
-                                    mode = PageMode.Normal
-                                    loadPage(1)
-                                    snackbarHostState.showSnackbar("已刪除 $deletedAmount 項紀錄")
-                                }
-                            }
-                        },
-                        selectedCount = selectedItems.size
-                    )
-                }
+                        }
+                    },
+                    selectedCount = selectedItems.size
+                )
             }
         }
 
@@ -467,15 +489,25 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(top = 8.dp, bottom = 8.dp)
                     ) {
-                        groupByDate(current.items).forEach { (dateLabel, entries) ->
+                        groupByDate(current.items).forEachIndexed { index, (dateLabel, entries) ->
                             item(key = "header_$dateLabel") {
-                                Text(
-                                    text = dateLabel,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = colors.textDark.copy(alpha = 0.5f),
+                                Row(
                                     modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp)
-                                )
+                                        .fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Text(
+                                        text = dateLabel,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = colors.textDark.copy(alpha = 0.5f),
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                    if (index == 0 && mode == PageMode.Normal) {
+                                        val filterLabel = filterCounts.firstOrNull { it.filter == selectedFilter }?.label ?: "全部"
+                                        YamiboActionChip("篩選: $filterLabel", onClick = { showFilterDialog = true })
+                                    }
+                                }
                             }
                             items(entries, key = { itemKey(it) }) { history ->
                                 when (history) {
@@ -484,7 +516,8 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
                                         pageMode = mode,
                                         selectedItems = selectedItems,
                                         onToggleSelection = {
-                                            selectedItems = if (history in selectedItems) selectedItems - history else selectedItems + history
+                                            selectedItems =
+                                                if (history in selectedItems) selectedItems - history else selectedItems + history
                                         },
                                         onDelete = {
                                             scope.launch {
@@ -493,8 +526,22 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
                                                 snackbarHostState.showSnackbar("已刪除這筆紀錄")
                                             }
                                         },
-                                        onFavorite = { scope.launch { toggleFavoriteQuickWithFeedback(threadPayload(history)) } },
-                                        onFavoriteLongPress = { scope.launch { openFavoriteDialogWithSelection(threadPayload(history)) } },
+                                        onFavorite = {
+                                            scope.launch {
+                                                toggleFavoriteQuickWithFeedback(
+                                                    threadPayload(
+                                                        history
+                                                    )
+                                                )
+                                            }
+                                        },
+                                        onFavoriteLongPress = {
+                                            scope.launch {
+                                                openFavoriteDialogWithSelection(
+                                                    threadPayload(history)
+                                                )
+                                            }
+                                        },
                                         favoriteRefreshToken = favoriteRefreshToken,
                                         navigator = navigator
                                     )
@@ -503,7 +550,8 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
                                         pageMode = mode,
                                         selectedItems = selectedItems,
                                         onToggleSelection = {
-                                            selectedItems = if (history in selectedItems) selectedItems - history else selectedItems + history
+                                            selectedItems =
+                                                if (history in selectedItems) selectedItems - history else selectedItems + history
                                         },
                                         onDelete = {
                                             scope.launch {
@@ -514,7 +562,7 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
                                         },
                                         onFavorite = {
                                             scope.launch {
-                                            toggleFavoriteQuickWithFeedback(
+                                                toggleFavoriteQuickWithFeedback(
                                                     FavoriteTargetPayload.TagManga(
                                                         tagId = history.tagId,
                                                         tagName = history.tagName,
@@ -711,6 +759,79 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
                 }
             },
         )
+    }
+
+    if (showFilterDialog) {
+        ReadHistoryFilterDialog(
+            options = filterCounts,
+            selected = selectedFilter,
+            onDismiss = { showFilterDialog = false },
+            onSelect = { filter ->
+                selectedFilter = filter
+                currentPage = 1
+                showFilterDialog = false
+                scope.launch { loadPage(1) }
+            },
+        )
+    }
+}
+
+@Composable
+private fun ReadHistoryFilterDialog(
+    options: List<ReadHistoryRepository.HistoryFilterCount>,
+    selected: ReadHistoryRepository.HistoryFilter,
+    onDismiss: () -> Unit,
+    onSelect: (ReadHistoryRepository.HistoryFilter) -> Unit,
+) {
+    val colors = YamiboTheme.colors
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text("篩選類別", color = colors.brownDeep, fontWeight = FontWeight.Bold)
+        },
+        text = {
+            LazyColumn {
+                items(options, key = { historyFilterKey(it.filter) }) { option ->
+                    Surface(
+                        onClick = { onSelect(option.filter) },
+                        color = if (option.filter == selected) colors.brownPrimary.copy(alpha = 0.16f) else colors.creamSurface,
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            RadioButton(
+                                selected = option.filter == selected,
+                                onClick = { onSelect(option.filter) },
+                                colors = RadioButtonDefaults.colors(selectedColor = colors.brownDeep),
+                            )
+                            Text(
+                                text = "${option.label} (${option.count})",
+                                color = colors.textDark,
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            YamiboActionChip("關閉", onDismiss)
+        },
+        containerColor = colors.creamSurface,
+    )
+}
+
+private fun historyFilterKey(filter: ReadHistoryRepository.HistoryFilter): String {
+    return when (filter) {
+        ReadHistoryRepository.HistoryFilter.All -> "all"
+        is ReadHistoryRepository.HistoryFilter.Forum -> "forum:${filter.forumId.value}"
+        ReadHistoryRepository.HistoryFilter.Tag -> "tag"
     }
 }
 

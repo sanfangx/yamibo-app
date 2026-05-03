@@ -22,6 +22,9 @@ import androidx.compose.ui.unit.sp
 import me.thenano.yamibo.yamibo_app.favorite.FavoriteDialogButton
 import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.FavoriteCategory
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.components.YamiboActionChip
+import me.thenano.yamibo.yamibo_app.components.YamiboMainTabIconAction
+import me.thenano.yamibo.yamibo_app.components.YamiboMainTabTopBar
 
 @Composable
 fun HeaderRow(title: String, actions: List<Pair<String, () -> Unit>>) {
@@ -46,32 +49,12 @@ fun FavoriteHeaderMenuRow(
     onManageCategory: () -> Unit,
     onSyncFavorites: () -> Unit,
 ) {
-    val colors = YamiboTheme.colors
     var showMenu by remember { mutableStateOf(false) }
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .statusBarsPadding()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
+    YamiboMainTabTopBar(
+        title = title,
     ) {
-        Text(
-            text = title,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
-            color = colors.brownDeep,
-            modifier = Modifier.weight(1f),
-        )
-        IconButton(onClick = onSearch, modifier = Modifier.size(36.dp)) {
-            Icon(
-                imageVector = YamiboIcons.Search,
-                contentDescription = "搜尋收藏",
-                modifier = Modifier.size(30.dp).offset(y = 5.dp),
-                tint = colors.brownDeep,
-            )
-        }
-        Spacer(Modifier.width(4.dp))
+        YamiboMainTabIconAction(YamiboIcons.Search, "搜尋收藏", onSearch, iconSize = 28, iconOffsetY = 4)
         RowScopeMenuBox(
             showMenu = showMenu,
             onShowMenu = { showMenu = true },
@@ -94,14 +77,7 @@ private fun RowScopeMenuBox(
 ) {
     val colors = YamiboTheme.colors
     Box {
-        IconButton(onClick = onShowMenu, modifier = Modifier.size(36.dp)) {
-            Icon(
-                imageVector = YamiboIcons.ThreeDots,
-                contentDescription = "收藏選單",
-                modifier = Modifier.size(30.dp),
-                tint = colors.brownDeep,
-            )
-        }
+        YamiboMainTabIconAction(YamiboIcons.ThreeDots, "收藏選單", iconSize = 25, onClick = onShowMenu)
         DropdownMenu(
             expanded = showMenu,
             onDismissRequest = onDismissMenu,
@@ -291,19 +267,5 @@ fun FavoriteSyncCategoryDialog(
 
 @Composable
 fun ActionChip(text: String, onClick: () -> Unit) {
-    val colors = YamiboTheme.colors
-    Surface(
-        onClick = onClick,
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp),
-        color = colors.brownPrimary.copy(alpha = 0.12f),
-        border = BorderStroke(1.dp, colors.brownPrimary.copy(alpha = 0.12f)),
-    ) {
-        Text(
-            text,
-            color = colors.brownDeep,
-            fontSize = if (text == YamiboIcons.Back) 18.sp else 12.sp,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
-        )
-    }
+    YamiboActionChip(text = text, onClick = onClick)
 }

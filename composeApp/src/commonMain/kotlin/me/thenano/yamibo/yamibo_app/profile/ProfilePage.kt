@@ -159,15 +159,15 @@ fun ProfilePage() {
                         SignInMode.SEMI_AUTOMATIC -> {
                             isSigning = true
                             signButtonTitle = "正在簽到..."
+                            val allowRepair = appSettingsRepository.signInAllowRepair.getValue()
                             navigator.navigate(
                                 ISignWebView(
                                     semiAutomatic = true,
-                                    allowRepair = appSettingsRepository.signInAllowRepair.getValue(),
-                                    onSemiAutoCompleted = { result ->
+                                    onCfCleared = {
                                         coroutineScope.launch {
                                             var snackbarMessage: String?
                                             /** This when maps semi-automatic sign results into the ProfilePage sign button snackbar/title update flow. */
-                                            when (result) {
+                                            when (val result = signRepository.runAutoSign(allowRepair)) {
                                                 is YamiboResult.Success -> {
                                                     signRefreshKey += 1
                                                     snackbarMessage = result.value.message

@@ -21,6 +21,23 @@ LIMIT ? OFFSET ?;
 countAll:
 SELECT COUNT(*) FROM ReadingHistory;
 
+getPageByForumId:
+SELECT * FROM ReadingHistory
+WHERE forumId = ?
+ORDER BY lastVisitTime DESC
+LIMIT ? OFFSET ?;
+
+countByForumId:
+SELECT COUNT(*) FROM ReadingHistory
+WHERE forumId = ?;
+
+getForumCounts:
+SELECT forumId, forumName, COUNT(*) AS count
+FROM ReadingHistory
+WHERE forumId IS NOT NULL
+GROUP BY forumId, forumName
+ORDER BY count DESC;
+
 deleteByThreadKey:
 DELETE FROM ReadingHistory
 WHERE threadId = ? AND threadType = ? AND authorId = ?;

@@ -19,16 +19,26 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.littlesurvival.dto.model.ForumSummary
+import io.github.littlesurvival.dto.page.FilterType
+import io.github.littlesurvival.dto.page.OrderType
 import io.github.littlesurvival.dto.page.PinnedItem
 import io.github.littlesurvival.dto.value.ForumId
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 
 /** Forum stats bar (today/theme/rank with red accent) */
 @Composable
-fun ForumStatsBar(forum: ForumSummary) {
+fun ForumStatsBar(
+    forum: ForumSummary,
+    selectedOrderType: OrderType? = null,
+    selectedFilterType: FilterType? = null,
+    showOrder: Boolean = false,
+    showFilter: Boolean = false,
+    onOrderClick: () -> Unit = {},
+    onFilterClick: () -> Unit = {},
+) {
     val colors = YamiboTheme.colors
     val hasStats = forum.todayCount != null || forum.themeCount != null || forum.rank != null
-    if (!hasStats) return
+    if (!hasStats && !showOrder && !showFilter) return
 
     Row(
         modifier =
@@ -42,11 +52,25 @@ fun ForumStatsBar(forum: ForumSummary) {
                     )
                 )
                 .padding(horizontal = 16.dp, vertical = 10.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        forum.todayCount?.let { count -> StatChip(label = "今日", value = "$count") }
-        forum.themeCount?.let { count -> StatChip(label = "主題", value = "$count") }
-        forum.rank?.let { rank -> StatChip(label = "排名", value = "$rank") }
+        Row(
+            modifier = Modifier.weight(1f),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            forum.todayCount?.let { count -> StatChip(label = "今日", value = "$count") }
+            forum.themeCount?.let { count -> StatChip(label = "主題", value = "$count") }
+            forum.rank?.let { rank -> StatChip(label = "排名", value = "$rank") }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (showOrder) {
+                ForumFilterChip("排序: ${selectedOrderType?.name ?: "全部"}", onOrderClick)
+            }
+            if (showFilter) {
+                ForumFilterChip("分類: ${selectedFilterType?.name ?: "全部"}", onFilterClick)
+            }
+        }
     }
 }
 
@@ -68,6 +92,22 @@ private fun StatChip(label: String, value: String) {
                 fontWeight = FontWeight.Bold
             )
         }
+    }
+}
+
+@Composable
+private fun ForumFilterChip(text: String, onClick: () -> Unit) {
+    val colors = YamiboTheme.colors
+    Surface(onClick = onClick, shape = RoundedCornerShape(12.dp), color = colors.creamSurface) {
+        Text(
+            text = text,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+            color = colors.brownDeep,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 

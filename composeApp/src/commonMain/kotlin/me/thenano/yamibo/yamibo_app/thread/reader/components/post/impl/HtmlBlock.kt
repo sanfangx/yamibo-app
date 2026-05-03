@@ -10,9 +10,21 @@ sealed class HtmlBlock {
     data class Text(
         val annotatedString: AnnotatedString,
         val textAlign: TextAlign = TextAlign.Start,
+        val rubies: List<RubyText> = emptyList(),
         override val anchorId: String = ""
     ) : HtmlBlock()
-    data class Image(val url: String, val alt: String? = null, val linkAddress: String? = null, override val anchorId: String = "") : HtmlBlock()
+    data class RubyText(
+        val id: String,
+        val baseText: String,
+        val rubyText: String,
+    )
+    data class Image(
+        val url: String,
+        val alt: String? = null,
+        val linkAddress: String? = null,
+        val isEmoticon: Boolean = false,
+        override val anchorId: String = "",
+    ) : HtmlBlock()
     data class Attachment(
         val url: String,
         val iconUrl: String?,

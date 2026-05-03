@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.history
+package me.thenano.yamibo.yamibo_app.history.components
 
 import YamiboIcons
 import androidx.compose.animation.core.animateFloatAsState

@@ -172,7 +172,7 @@ fun SearchModal(
                         modifier = Modifier.weight(1f).focusRequester(focusRequester),
                         placeholder = {
                             Text(
-                                text = "搜尋主題...",
+                                text = "搜尋帖子...",
                                 color = Color.White.copy(alpha = 0.5f),
                                 fontSize = 15.sp
                             )
@@ -249,7 +249,7 @@ private fun SearchIdleContent() {
             )
             Spacer(Modifier.height(12.dp))
             Text(
-                text = "輸入關鍵字搜尋主題",
+                text = "輸入關鍵字或網址搜尋帖子",
                 color = colors.brownPrimary.copy(alpha = 0.6f),
                 fontSize = 15.sp
             )

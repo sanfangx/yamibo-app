@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.history
+package me.thenano.yamibo.yamibo_app.history.components
 
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository.ThreadReadingHistory

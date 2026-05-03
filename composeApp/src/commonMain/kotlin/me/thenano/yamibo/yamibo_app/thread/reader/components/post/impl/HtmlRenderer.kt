@@ -9,6 +9,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.selection.DisableSelection
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.*
@@ -28,11 +29,14 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.Placeholder
+import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import io.github.littlesurvival.dto.value.ThreadId
@@ -183,7 +187,7 @@ private fun HtmlBlockRenderer(
                     newBuilder.addStyle(style, range.start, range.end)
                 }
                 input.paragraphStyles.forEach { newBuilder.addStyle(it.item, it.start, it.end) }
-                input.getStringAnnotations("URL", 0, input.length).forEach { 
+                input.getStringAnnotations(0, input.length).forEach {
                     newBuilder.addStringAnnotation(it.tag, it.item, it.start, it.end) 
                 }
                 newBuilder.toAnnotatedString()
@@ -196,6 +200,41 @@ private fun HtmlBlockRenderer(
             var showLongPressMenu by remember { mutableStateOf<Pair<String, String>?>(null) }
             val layoutResult = remember { mutableStateOf<TextLayoutResult?>(null) }
             val adjustedAnnotatedString = adjustAnnotatedString(block.annotatedString)
+            val inlineContent = remember(block.rubies, fontSize, colors.htmlTextDark) {
+                block.rubies.associate { ruby ->
+                    val widthEm = maxOf(
+                        ruby.baseText.length.toFloat(),
+                        ruby.rubyText.length * 0.75f,
+                    ).coerceAtLeast(1f)
+                    ruby.id to InlineTextContent(
+                        placeholder = Placeholder(
+                            width = widthEm.em,
+                            height = 1.75.em,
+                            placeholderVerticalAlign = PlaceholderVerticalAlign.TextTop,
+                        ),
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                        ) {
+                            Text(
+                                text = ruby.rubyText,
+                                color = colors.htmlTextDark,
+                                fontSize = (fontSize * 0.75f).sp,
+                                lineHeight = (fontSize * 0.75f).sp,
+                                maxLines = 1,
+                            )
+                            Text(
+                                text = ruby.baseText,
+                                color = colors.htmlTextDark,
+                                fontSize = fontSize.sp,
+                                lineHeight = fontSize.sp,
+                                maxLines = 1,
+                            )
+                        }
+                    }
+                }
+            }
             val hasLinks = remember(adjustedAnnotatedString) {
                 adjustedAnnotatedString.getStringAnnotations("URL", 0, adjustedAnnotatedString.length).isNotEmpty()
             }
@@ -268,6 +307,7 @@ private fun HtmlBlockRenderer(
                     textAlign = block.textAlign
                 ),
                 modifier = textModifier,
+                inlineContent = inlineContent,
                 onTextLayout = { layoutResult.value = it }
             )
 
@@ -343,26 +383,37 @@ private fun HtmlBlockRenderer(
 
         is HtmlBlock.Image -> {
             val url = if (block.url.startsWith("http")) block.url else "https://bbs.yamibo.com/${block.url}"
-            ImageViewer(
-                url = url,
-                contentDescription = block.alt,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 1.dp),
-                contentScale = ContentScale.FillWidth,
-                enableContextMenu = true,
-                isDarkTheme = false,
-                enableCrossfade = false,
-                onSuccess = onImageSuccess,
-                onError = onImageError,
-                blockedErrorMessage = imageErrorMessageFor?.invoke(url),
-                externalRetryKey = imageRetryKeyFor?.invoke(url) ?: 0,
-                onReload = { onImageReload?.invoke(url) },
-                cachedHeightPx = imageCachedHeightFor?.invoke(url),
-                placeholderAspectRatio = imagePlaceholderAspectRatioFor?.invoke(url),
-                onRenderedHeightChanged = { heightPx -> onImageHeightChanged?.invoke(url, heightPx) },
-                onRenderedAspectRatioChanged = { ratio -> onImageAspectRatioChanged?.invoke(url, ratio) },
-            )
+            if (block.isEmoticon) {
+                AsyncImage(
+                    model = rememberImageRequest(url, enableCrossfade = false),
+                    contentDescription = block.alt,
+                    modifier = Modifier
+                        .padding(vertical = 2.dp)
+                        .size(40.dp),
+                    contentScale = ContentScale.Fit,
+                )
+            } else {
+                ImageViewer(
+                    url = url,
+                    contentDescription = block.alt,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 1.dp),
+                    contentScale = ContentScale.FillWidth,
+                    enableContextMenu = true,
+                    isDarkTheme = false,
+                    enableCrossfade = false,
+                    onSuccess = onImageSuccess,
+                    onError = onImageError,
+                    blockedErrorMessage = imageErrorMessageFor?.invoke(url),
+                    externalRetryKey = imageRetryKeyFor?.invoke(url) ?: 0,
+                    onReload = { onImageReload?.invoke(url) },
+                    cachedHeightPx = imageCachedHeightFor?.invoke(url),
+                    placeholderAspectRatio = imagePlaceholderAspectRatioFor?.invoke(url),
+                    onRenderedHeightChanged = { heightPx -> onImageHeightChanged?.invoke(url, heightPx) },
+                    onRenderedAspectRatioChanged = { ratio -> onImageAspectRatioChanged?.invoke(url, ratio) },
+                )
+            }
         }
 
         is HtmlBlock.Attachment -> {

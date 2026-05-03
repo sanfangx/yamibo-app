@@ -7,7 +7,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -15,17 +14,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil3.compose.SubcomposeAsyncImage
-import me.thenano.yamibo.yamibo_app.util.rememberImageRequest
 import io.github.littlesurvival.dto.model.ThreadSummary
 import io.github.littlesurvival.dto.model.User
+import me.thenano.yamibo.yamibo_app.components.UserAvatar
+import me.thenano.yamibo.yamibo_app.components.YamiboStatBadge
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 
 /** Thread Card */
@@ -66,7 +63,6 @@ fun ThreadCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 thread.author?.let { user ->
-                    val avatarUrl = user.avatarUrl
                     Box(
                         modifier = Modifier.clickable(
                             enabled = onAuthorClick != null,
@@ -74,26 +70,7 @@ fun ThreadCard(
                             indication = null,
                         ) { onAuthorClick?.invoke(user) }
                     ) {
-                        if (!avatarUrl.isNullOrEmpty()) {
-                            SubcomposeAsyncImage(
-                                model = rememberImageRequest(url = avatarUrl),
-                                contentDescription = "Avatar",
-                                modifier = Modifier.size(28.dp).clip(CircleShape),
-                                contentScale = ContentScale.Crop,
-                                error = {
-                                    Icon(imageVector = YamiboIcons.PersonFill, contentDescription = null, modifier = Modifier.size(28.dp), tint = colors.textDark.copy(alpha = 0.5f))
-                                },
-                                loading = {
-                                    CircularProgressIndicator(
-                                        color = colors.brownPrimary,
-                                        modifier = Modifier.padding(6.dp),
-                                        strokeWidth = 1.5.dp
-                                    )
-                                }
-                            )
-                        } else {
-                            Icon(imageVector = YamiboIcons.PersonFill, contentDescription = null, modifier = Modifier.size(28.dp), tint = colors.textDark.copy(alpha = 0.5f))
-                        }
+                        UserAvatar(user.avatarUrl, size = 28, contentDescription = "Avatar")
                     }
                     Spacer(Modifier.width(8.dp))
                     Text(
@@ -117,13 +94,26 @@ fun ThreadCard(
             Spacer(Modifier.height(6.dp))
 
             /** title */
-            Text(
-                text = thread.title,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = colors.textDark,
-                lineHeight = 22.sp
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (thread.hasPoll) {
+                    Text(
+                        text = "📊",
+                        fontSize = 15.sp,
+                        modifier = Modifier.padding(end = 6.dp),
+                    )
+                }
+                Text(
+                    text = thread.title,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = colors.textDark,
+                    lineHeight = 22.sp,
+                    modifier = Modifier.weight(1f),
+                )
+            }
 
             /** description preview */
             if (!thread.description.isNullOrBlank()) {
@@ -144,11 +134,11 @@ fun ThreadCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 thread.viewCount?.let { views ->
-                    StatBadge(icon = YamiboIcons.Views, value = "$views")
+                    YamiboStatBadge(icon = YamiboIcons.Views, value = "$views")
                     Spacer(Modifier.width(12.dp))
                 }
                 thread.replyCount?.let { replies ->
-                    StatBadge(icon = YamiboIcons.Comment, value = "$replies")
+                    YamiboStatBadge(icon = YamiboIcons.Comment, value = "$replies")
                 }
                 Spacer(Modifier.weight(1f))
                 thread.tag?.let { tag ->
@@ -173,25 +163,5 @@ fun ThreadCard(
 /** Stat badge (views/replies) */
 @Composable
 fun StatBadge(icon: ImageVector, value: String) {
-    val colors = YamiboTheme.colors
-    Surface(shape = RoundedCornerShape(12.dp), color = colors.orangeAccent.copy(alpha = 0.15f)) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = colors.brownDeep,
-                modifier = Modifier.size(14.dp)
-            )
-            Spacer(Modifier.width(4.dp))
-            Text(
-                text = value,
-                fontSize = 11.sp,
-                color = colors.brownDeep,
-                fontWeight = FontWeight.Medium
-            )
-        }
-    }
+    YamiboStatBadge(icon = icon, value = value)
 }

@@ -131,6 +131,11 @@ class AppSettingsRepository(store: SettingsStore) : SettingsRegistry(store, pref
         default = true,
     )
 
+    val favoriteLastCategoryId by intSetting(
+        name = "收藏最後打開類別",
+        default = 0,
+    )
+
     val signInMode by enumSetting(
         name = "簽到模式",
         default = SignInMode.SEMI_AUTOMATIC,
@@ -142,12 +147,12 @@ class AppSettingsRepository(store: SettingsStore) : SettingsRegistry(store, pref
     )
 
     val signPageHtmlCache by stringSetting(
-        name = "簽到頁快取HTML",
+        name = "簽到頁緩存HTML",
         default = "",
     )
 
     val signPageHtmlCacheUpdatedAt by stringSetting(
-        name = "簽到頁快取更新時間",
+        name = "簽到頁緩存更新時間",
         default = "",
     )
 

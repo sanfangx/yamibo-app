@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
@@ -43,7 +44,7 @@ fun PostRenderer(
     post: Post,
     modifier: Modifier = Modifier,
     threadTitle: String? = null,
-    onVote: ((List<PollOptionId>) -> Unit)? = null,
+    onVote: (suspend (List<PollOptionId>) -> Boolean)? = null,
     onRate: ((Int, String) -> Unit)? = null,
     onComment: ((String) -> Unit)? = null,
     onReply: (() -> Unit)? = null,
@@ -62,6 +63,8 @@ fun PostRenderer(
     showHeader: Boolean = true,
     showFooter: Boolean = true,
     verticalPadding: Dp = 8.dp,
+    totalViews: Int? = null,
+    totalReplies: Int? = null,
 ) {
     DebugRecomposeProbe("PostRenderer", "${post.pid.value}#${post.floor}")
 
@@ -135,9 +138,22 @@ fun PostRenderer(
                         color = YamiboTheme.colors.textDark,
                         modifier = Modifier.padding(bottom = 12.dp)
                     )
+                    if (totalViews != null || totalReplies != null) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                            horizontalArrangement = Arrangement.End,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            totalViews?.let {
+                                ThreadReaderStatBadge(icon = YamiboIcons.Views, value = it.toString())
+                            }
+                            if (totalViews != null && totalReplies != null) Spacer(Modifier.width(10.dp))
+                            totalReplies?.let {
+                                ThreadReaderStatBadge(icon = YamiboIcons.Comment, value = it.toString())
+                            }
+                        }
+                    }
                 }
-
-                HorizontalDivider(Modifier, thickness = 0.5.dp, color = colors.brownLight.copy(alpha = 0.5f))
 
                 // Author Header
                 Row(
@@ -407,6 +423,31 @@ fun PostRenderer(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun ThreadReaderStatBadge(icon: ImageVector, value: String) {
+    val colors = YamiboTheme.colors
+    Surface(shape = RoundedCornerShape(12.dp), color = colors.orangeAccent.copy(alpha = 0.15f)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = colors.brownDeep,
+                modifier = Modifier.size(14.dp)
+            )
+            Spacer(Modifier.width(4.dp))
+            Text(
+                text = value,
+                fontSize = 11.sp,
+                color = colors.brownDeep,
+                fontWeight = FontWeight.Medium
+            )
         }
     }
 }

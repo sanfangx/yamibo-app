@@ -245,6 +245,65 @@ class IOSReadHistoryRepository(dbFactory: DatabaseFactory) : ReadHistoryReposito
         return queries.countAll().executeAsOne() + mangaTagQueries.countAll().executeAsOne()
     }
 
+    override suspend fun getCombinedHistoryPageByFilter(
+        filter: ReadHistoryRepository.HistoryFilter,
+        page: Int,
+        pageSize: Int
+    ): List<ReadHistoryRepository.AnyReadingHistory> {
+        val offset = (page - 1).coerceAtLeast(0) * pageSize
+        return when (filter) {
+            ReadHistoryRepository.HistoryFilter.All -> getCombinedHistoryPage(page, pageSize)
+            is ReadHistoryRepository.HistoryFilter.Forum -> queries.getPageByForumId(
+                filter.forumId.value.toLong(),
+                pageSize.toLong(),
+                offset.toLong(),
+            ).executeAsList().map { it.toHistory() }
+            ReadHistoryRepository.HistoryFilter.Tag -> mangaTagQueries.getPage(
+                pageSize.toLong(),
+                offset.toLong(),
+            ).executeAsList().map { it.toHistory() }
+        }
+    }
+
+    override suspend fun getCombinedHistoryCountByFilter(filter: ReadHistoryRepository.HistoryFilter): Long {
+        return when (filter) {
+            ReadHistoryRepository.HistoryFilter.All -> getCombinedHistoryCount()
+            is ReadHistoryRepository.HistoryFilter.Forum -> queries.countByForumId(filter.forumId.value.toLong()).executeAsOne()
+            ReadHistoryRepository.HistoryFilter.Tag -> mangaTagQueries.countAll().executeAsOne()
+        }
+    }
+
+    override suspend fun getCombinedHistoryFilterCounts(): List<ReadHistoryRepository.HistoryFilterCount> {
+        val forumCounts = queries.getForumCounts().executeAsList().mapNotNull { row ->
+            val forumId = row.forumId ?: return@mapNotNull null
+            ReadHistoryRepository.HistoryFilterCount(
+                filter = ReadHistoryRepository.HistoryFilter.Forum(ForumId(forumId.toInt())),
+                label = row.forumName?.takeIf { it.isNotBlank() } ?: "Forum ${forumId}",
+                count = row.count,
+            )
+        }
+        val tagCount = mangaTagQueries.countAll().executeAsOne()
+        return buildList {
+            add(
+                ReadHistoryRepository.HistoryFilterCount(
+                    filter = ReadHistoryRepository.HistoryFilter.All,
+                    label = "全部",
+                    count = getCombinedHistoryCount(),
+                )
+            )
+            addAll(forumCounts)
+            if (tagCount > 0L) {
+                add(
+                    ReadHistoryRepository.HistoryFilterCount(
+                        filter = ReadHistoryRepository.HistoryFilter.Tag,
+                        label = "Tag",
+                        count = tagCount,
+                    )
+                )
+            }
+        }
+    }
+
     override suspend fun searchCombinedHistory(
         query: String,
         page: Int,

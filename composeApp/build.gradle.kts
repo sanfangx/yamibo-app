@@ -35,6 +35,7 @@ kotlin {
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
             implementation(libs.coil3.compose)
+            implementation(libs.coil3.gif)
             implementation(libs.coil3.network.ktor3)
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.yamibo.api)

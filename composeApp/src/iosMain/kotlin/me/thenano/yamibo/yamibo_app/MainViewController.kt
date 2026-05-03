@@ -17,6 +17,8 @@ import me.thenano.yamibo.yamibo_app.repository.favorite.FavoriteSyncRepositoryIm
 import me.thenano.yamibo.yamibo_app.repository.settings.AppSettingsRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.MangaReaderSettingsRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.NovelReaderSettingsRepository
+import me.thenano.yamibo.yamibo_app.repository.userspace.BlogRepositoryImpl
+import me.thenano.yamibo.yamibo_app.repository.userspace.UserSpaceRepositoryImpl
 import me.thenano.yamibo.yamibo_app.store.IOSCookieStore
 import me.thenano.yamibo.yamibo_app.store.IOSUserStore
 import me.thenano.yamibo.yamibo_app.store.settings.IOSSettingsStore
@@ -51,6 +53,7 @@ fun MainViewController() = ComposeUIViewController {
     val forumRepository = remember { IOSForumRepository(cookieStore, yamiboClient, diskCacheFactory) }
     val threadRepository = remember { IOSThreadRepository(cookieStore, yamiboClient, diskCacheFactory) }
     val userSpaceRepository = remember { UserSpaceRepositoryImpl(cookieStore, yamiboClient, diskCacheFactory) }
+    val blogRepository = remember { BlogRepositoryImpl(cookieStore, yamiboClient, diskCacheFactory) }
     val favoriteRepository = remember { IOSLocalFavoriteRepository(dbFactory) }
     val remoteFavoriteRepository = remember { IOSFavoriteRepository(cookieStore, yamiboClient) }
     val favoriteSyncDatabase = remember { Database(dbFactory.createDriver()) }
@@ -79,6 +82,7 @@ fun MainViewController() = ComposeUIViewController {
         LocalForumRepository provides forumRepository,
         LocalThreadRepository provides threadRepository,
         LocalUserSpaceRepository provides userSpaceRepository,
+        LocalBlogRepository provides blogRepository,
         LocalFavoriteRepository provides favoriteRepository,
         LocalRemoteFavoriteRepository provides remoteFavoriteRepository,
         LocalFavoriteSyncRepository provides favoriteSyncRepository,

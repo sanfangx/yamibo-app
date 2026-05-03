@@ -1,4 +1,4 @@
-﻿package me.thenano.yamibo.yamibo_app.favorite
+package me.thenano.yamibo.yamibo_app.favorite
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -175,7 +175,13 @@ fun FavoritePage() {
         val snapshot = withContext(Dispatchers.Default) {
             favoriteRepository.ensureDefaults()
             val categories = favoriteRepository.getCategories()
-            val selectedCategoryId = preferredCategoryId ?: currentSelectedCategoryId ?: categories.firstOrNull()?.id ?: 0L
+            val savedCategoryId = appSettingsRepository.favoriteLastCategoryId.getValue().toLong()
+            val selectedCategoryId = listOfNotNull(
+                preferredCategoryId,
+                currentSelectedCategoryId,
+                savedCategoryId.takeIf { saved -> categories.any { it.id == saved } },
+                categories.firstOrNull()?.id,
+            ).firstOrNull() ?: 0L
             val content = if (selectedCategoryId == 0L) {
                 FavoriteCategoryContent(emptyList(), emptyList())
             } else {
@@ -439,6 +445,7 @@ fun FavoritePage() {
                     }
                 },
                 onSelectCategory = { categoryId ->
+                    appSettingsRepository.favoriteLastCategoryId.setValue(categoryId.toInt())
                     openedCollectionId = null
                     selectedItemIds = emptySet()
                     selectedCollectionIds = emptySet()

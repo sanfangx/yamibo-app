@@ -18,6 +18,18 @@ interface ReadHistoryRepository {
         val lastVisitTime: Long
     }
 
+    sealed interface HistoryFilter {
+        data object All : HistoryFilter
+        data class Forum(val forumId: ForumId) : HistoryFilter
+        data object Tag : HistoryFilter
+    }
+
+    data class HistoryFilterCount(
+        val filter: HistoryFilter,
+        val label: String,
+        val count: Long,
+    )
+
     enum class ThreadEntryType {
         Normal,
         Novel;
@@ -100,6 +112,16 @@ interface ReadHistoryRepository {
 
     /** Total number of combined history entries */
     suspend fun getCombinedHistoryCount(): Long
+
+    suspend fun getCombinedHistoryPageByFilter(
+        filter: HistoryFilter,
+        page: Int,
+        pageSize: Int = 20,
+    ): List<AnyReadingHistory>
+
+    suspend fun getCombinedHistoryCountByFilter(filter: HistoryFilter): Long
+
+    suspend fun getCombinedHistoryFilterCounts(): List<HistoryFilterCount>
 
     /** Search combined history entries by title/tag (newest first) */
     suspend fun searchCombinedHistory(query: String, page: Int, pageSize: Int = 20): List<AnyReadingHistory>

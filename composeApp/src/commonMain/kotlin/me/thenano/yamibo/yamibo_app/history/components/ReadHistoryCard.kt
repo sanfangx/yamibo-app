@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.history
+package me.thenano.yamibo.yamibo_app.history.components
 
 import YamiboIcons
 import androidx.compose.animation.core.animateFloatAsState
@@ -43,6 +43,7 @@ import me.thenano.yamibo.yamibo_app.favorite.FavoriteActionButton
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository.ThreadReadingHistory
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.util.rememberImageRequest
+import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
 
 @Composable
 fun ReadHistoryCard(
@@ -244,7 +245,7 @@ fun ReadHistoryCard(
 }
 
 private fun formatHistoryRelativeTime(timestamp: Long): String {
-    val elapsed = (me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis() - timestamp).coerceAtLeast(0L)
+    val elapsed = (currentTimeMillis() - timestamp).coerceAtLeast(0L)
     val minutes = elapsed / 1000L / 60L
     val hours = minutes / 60L
     val days = hours / 24L

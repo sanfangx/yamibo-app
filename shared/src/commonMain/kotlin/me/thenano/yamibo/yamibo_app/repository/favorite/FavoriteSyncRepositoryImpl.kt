@@ -346,6 +346,11 @@ class FavoriteSyncRepositoryImpl(
                 interruptRun(current, "同步已取消。")
                 return
             }
+            appendLog(
+                logs,
+                "[${current.importedCount + current.failedCount + 1}/${remoteItems.size}] 已載入 #${remoteItem.threadId.value} ${remoteItem.title}"
+            )
+            current = updateSnapshot(current, warnings = warnings, logs = logs)
 
             val existingItem =
                 itemQueries.findAnyThreadByTargetId(remoteItem.threadId.value.toLong()).executeAsOneOrNull()

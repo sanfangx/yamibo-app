@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.littlesurvival.YamiboForum
@@ -26,7 +27,9 @@ import io.github.littlesurvival.YamiboRoute
 import io.github.littlesurvival.core.YamiboResult
 import io.github.littlesurvival.dto.model.ThreadSummary
 import io.github.littlesurvival.dto.model.User
+import io.github.littlesurvival.dto.page.FilterType
 import io.github.littlesurvival.dto.page.ForumPage
+import io.github.littlesurvival.dto.page.OrderType
 import io.github.littlesurvival.dto.page.PinnedItem
 import io.github.littlesurvival.dto.value.ForumId
 import kotlinx.coroutines.launch
@@ -65,16 +68,25 @@ fun ForumPageScreen(fid: ForumId, name: String) {
     var currentPage by remember { mutableIntStateOf(1) }
     var isRefreshing by remember { mutableStateOf(false) }
     var showSearch by remember { mutableStateOf(false) }
+    var selectedOrderType by remember { mutableStateOf<OrderType?>(null) }
+    var selectedFilterType by remember { mutableStateOf<FilterType?>(null) }
+    var showOrderDialog by remember { mutableStateOf(false) }
+    var showFilterDialog by remember { mutableStateOf(false) }
 
-    suspend fun loadPage(page: Int) {
-        val cached = forumRepository.getCachedForumPage(fid, page)
+    suspend fun loadPage(
+        page: Int,
+        filterType: FilterType? = selectedFilterType,
+        orderType: OrderType? = selectedOrderType,
+        preferCache: Boolean = true,
+    ) {
+        val cached = if (preferCache) forumRepository.getCachedForumPage(fid, page, filterType, orderType) else null
         if (cached != null) {
             currentPage = cached.pageNav?.currentPage ?: page
             state = ForumState.Success(cached)
             return
         }
 
-        val result = forumRepository.fetchForum(fid, page)
+        val result = forumRepository.fetchForum(fid, page, filterType, orderType)
         state =
             when (result) {
                 is YamiboResult.Success -> {
@@ -87,7 +99,7 @@ fun ForumPageScreen(fid: ForumId, name: String) {
     }
 
     LaunchedEffect(fid) {
-        val cached = forumRepository.getCachedForumPage(fid)
+        val cached = forumRepository.getCachedForumPage(fid, filterType = selectedFilterType, orderType = selectedOrderType)
         if (cached != null) {
             currentPage = cached.pageNav?.currentPage ?: 1
             state = ForumState.Success(cached)
@@ -181,14 +193,15 @@ fun ForumPageScreen(fid: ForumId, name: String) {
                             isRefreshing = true
                             scope.launch {
                                 when (val result =
-                                    forumRepository.fetchForum(fid, currentPage)
+                                    forumRepository.fetchForum(fid, currentPage, selectedFilterType, selectedOrderType)
                                 ) {
                                     is YamiboResult.Success -> {
-                                        forumRepository.clearCachedForum(fid)
                                         forumRepository.setCachedForumPage(
                                             fid,
                                             currentPage,
-                                            result.value
+                                            result.value,
+                                            selectedFilterType,
+                                            selectedOrderType,
                                         )
                                         state = ForumState.Success(result.value)
                                     }
@@ -208,6 +221,10 @@ fun ForumPageScreen(fid: ForumId, name: String) {
                     ) {
                         ForumContent(
                             forumPage = current.page,
+                            selectedOrderType = selectedOrderType,
+                            selectedFilterType = selectedFilterType,
+                            onShowOrderDialog = { showOrderDialog = true },
+                            onShowFilterDialog = { showFilterDialog = true },
                             onPageChange = { page ->
                                 state = ForumState.Loading
                                 scope.launch { loadPage(page) }
@@ -308,6 +325,34 @@ fun ForumPageScreen(fid: ForumId, name: String) {
                     )
                 }
             }
+        )
+    }
+
+    val currentForumPage = (state as? ForumState.Success)?.page
+    if (showOrderDialog && currentForumPage != null) {
+        ForumOrderDialog(
+            options = currentForumPage.orderType.orEmpty(),
+            selected = selectedOrderType,
+            onDismiss = { showOrderDialog = false },
+            onSelect = { orderType ->
+                showOrderDialog = false
+                selectedOrderType = orderType
+                state = ForumState.Loading
+                scope.launch { loadPage(currentPage, selectedFilterType, orderType) }
+            },
+        )
+    }
+    if (showFilterDialog && currentForumPage != null) {
+        ForumFilterTypeDialog(
+            options = currentForumPage.filterTypes.orEmpty(),
+            selected = selectedFilterType,
+            onDismiss = { showFilterDialog = false },
+            onSelect = { filterType ->
+                showFilterDialog = false
+                selectedFilterType = filterType
+                state = ForumState.Loading
+                scope.launch { loadPage(currentPage, filterType, selectedOrderType) }
+            },
         )
     }
 }
@@ -433,6 +478,10 @@ private fun ForumTopBar(
 @Composable
 private fun ForumContent(
     forumPage: ForumPage,
+    selectedOrderType: OrderType?,
+    selectedFilterType: FilterType?,
+    onShowOrderDialog: () -> Unit,
+    onShowFilterDialog: () -> Unit,
     onPageChange: (Int) -> Unit,
     onSubForumClick: (ForumId, String) -> Unit,
     onPinnedItemClick: (PinnedItem) -> Unit,
@@ -441,7 +490,17 @@ private fun ForumContent(
 ) {
     LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
         /** forum stats bar */
-        item { ForumStatsBar(forum = forumPage.forum) }
+        item {
+            ForumStatsBar(
+                forum = forumPage.forum,
+                selectedOrderType = selectedOrderType,
+                selectedFilterType = selectedFilterType,
+                showOrder = !forumPage.orderType.isNullOrEmpty(),
+                showFilter = !forumPage.filterTypes.isNullOrEmpty(),
+                onOrderClick = onShowOrderDialog,
+                onFilterClick = onShowFilterDialog,
+            )
+        }
 
         /** sub forums */
         if (forumPage.subForums.isNotEmpty()) {
@@ -465,6 +524,111 @@ private fun ForumContent(
         /** page navigation */
         if (forumPage.pageNav != null) {
             item { PageNavigation(pageNav = forumPage.pageNav!!, onPageChange = onPageChange) }
+        }
+    }
+}
+
+@Composable
+private fun ForumOrderDialog(
+    options: List<OrderType>,
+    selected: OrderType?,
+    onDismiss: () -> Unit,
+    onSelect: (OrderType?) -> Unit,
+) {
+    ForumOptionDialog(
+        title = "排序",
+        defaultLabel = "全部",
+        options = options,
+        selected = selected,
+        optionLabel = { it.name },
+        onDismiss = onDismiss,
+        onSelect = onSelect,
+    )
+}
+
+@Composable
+private fun ForumFilterTypeDialog(
+    options: List<FilterType>,
+    selected: FilterType?,
+    onDismiss: () -> Unit,
+    onSelect: (FilterType?) -> Unit,
+) {
+    ForumOptionDialog(
+        title = "分類",
+        defaultLabel = "全部",
+        options = options,
+        selected = selected,
+        optionLabel = { it.name },
+        onDismiss = onDismiss,
+        onSelect = onSelect,
+    )
+}
+
+@Composable
+private fun <T> ForumOptionDialog(
+    title: String,
+    defaultLabel: String,
+    options: List<T>,
+    selected: T?,
+    optionLabel: (T) -> String,
+    onDismiss: () -> Unit,
+    onSelect: (T?) -> Unit,
+) {
+    val colors = YamiboTheme.colors
+    val visibleOptions = options
+        .distinctBy(optionLabel)
+        .filterNot { optionLabel(it) == defaultLabel }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(title, color = colors.brownDeep, fontWeight = FontWeight.Bold)
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                ForumOptionRow(
+                    label = defaultLabel,
+                    selected = selected == null,
+                    onClick = { onSelect(null) },
+                )
+                visibleOptions.forEach { option ->
+                    ForumOptionRow(
+                        label = optionLabel(option),
+                        selected = selected == option,
+                        onClick = { onSelect(option) },
+                    )
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {},
+        containerColor = colors.creamSurface,
+    )
+}
+
+@Composable
+private fun ForumOptionRow(label: String, selected: Boolean, onClick: () -> Unit) {
+    val colors = YamiboTheme.colors
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(12.dp),
+        color = if (selected) colors.brownPrimary.copy(alpha = 0.12f) else Color.Transparent,
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = label,
+                color = colors.textDark,
+                fontSize = 14.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            if (selected) {
+                Text("✓", color = colors.brownDeep, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            }
         }
     }
 }

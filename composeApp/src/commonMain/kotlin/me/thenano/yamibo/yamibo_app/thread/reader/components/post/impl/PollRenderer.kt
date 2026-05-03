@@ -15,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -27,18 +28,22 @@ import io.github.littlesurvival.dto.page.Poll
 import io.github.littlesurvival.dto.page.PollStatus
 import io.github.littlesurvival.dto.page.PollType
 import io.github.littlesurvival.dto.value.PollOptionId
+import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 
 @Composable
 fun PollRenderer(
     poll: Poll,
     modifier: Modifier = Modifier,
-    onVote: ((List<PollOptionId>) -> Unit)? = null
+    onVote: (suspend (List<PollOptionId>) -> Boolean)? = null
 ) {
     val colors = YamiboTheme.colors
+    val scope = rememberCoroutineScope()
     var selectedOptions by remember { mutableStateOf(setOf<PollOptionId>()) }
+    var isSubmitting by remember { mutableStateOf(false) }
     val isNotVoted = poll.status == PollStatus.NotVoted
     val isMultipleChoice = poll.type == PollType.MultipleChoice
+    val showVoteStats = poll.option.any { it.percentage != null }
 
     Surface(
         modifier = modifier.fillMaxWidth().padding(vertical = 8.dp),
@@ -74,7 +79,7 @@ fun PollRenderer(
             }
 
             // Options
-            poll.option.forEachIndexed { index, option ->
+            poll.option.forEach { option ->
                 val progress = (option.percentage ?: 0f) / 100f
                 Column(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
                     Row(
@@ -106,40 +111,42 @@ fun PollRenderer(
                         }
 
                         Text(
-                            text = "${index + 1}. ${option.optionName}",
+                            text = option.optionName,
                             color = colors.textDark,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Medium
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(4.dp))
+                    if (showVoteStats) {
+                        Spacer(modifier = Modifier.height(4.dp))
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        LinearProgressIndicator(
-                            progress = { progress },
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(8.dp)
-                                .clip(RoundedCornerShape(4.dp)),
-                            color = colors.brownPrimary,
-                            trackColor = colors.creamBackground,
-                            strokeCap = StrokeCap.Round
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            LinearProgressIndicator(
+                                progress = { progress },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(8.dp)
+                                    .clip(RoundedCornerShape(4.dp)),
+                                color = colors.brownPrimary,
+                                trackColor = colors.creamBackground,
+                                strokeCap = StrokeCap.Round
+                            )
 
-                        Spacer(modifier = Modifier.width(12.dp))
+                            Spacer(modifier = Modifier.width(12.dp))
 
-                        // Label
-                        val percentageScaled = ((option.percentage ?: 0f) * 100).toInt() / 100f
-                        Text(
-                            text = "${percentageScaled}% (${option.totalVoted ?: 0})",
-                            color = colors.textDark.copy(alpha = 0.7f),
-                            fontSize = 12.sp,
-                            modifier = Modifier.widthIn(min = 60.dp)
-                        )
+                            // Label
+                            val percentageScaled = ((option.percentage ?: 0f) * 100).toInt() / 100f
+                            Text(
+                                text = "${percentageScaled}% (${option.totalVoted ?: 0})",
+                                color = colors.textDark.copy(alpha = 0.7f),
+                                fontSize = 12.sp,
+                                modifier = Modifier.widthIn(min = 60.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -148,15 +155,23 @@ fun PollRenderer(
             if (isNotVoted && onVote != null) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(
-                    onClick = { onVote(selectedOptions.toList()) },
-                    enabled = selectedOptions.isNotEmpty(),
+                    onClick = {
+                        isSubmitting = true
+                        val optionIds = selectedOptions.toList()
+                        scope.launch {
+                            if (!onVote(optionIds)) {
+                                isSubmitting = false
+                            }
+                        }
+                    },
+                    enabled = selectedOptions.isNotEmpty() && !isSubmitting,
                     modifier = Modifier.align(Alignment.End),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = colors.brownPrimary,
                         disabledContainerColor = colors.brownLight.copy(alpha = 0.5f)
                     )
                 ) {
-                    Text(text = "提交投票", color = colors.creamBackground)
+                    Text(text = if (isSubmitting) "提交中..." else "提交投票", color = colors.creamBackground)
                 }
             }
         }

@@ -2,6 +2,7 @@ package me.thenano.yamibo.yamibo_app.repository
 
 import io.github.littlesurvival.YamiboRoute
 import io.github.littlesurvival.core.YamiboResult
+import io.github.littlesurvival.dto.page.PrivateMessagePage
 import io.github.littlesurvival.dto.page.ProfilePage
 import io.github.littlesurvival.dto.page.UserSpaceBlogPage
 import io.github.littlesurvival.dto.page.UserSpaceFriendPage
@@ -9,6 +10,8 @@ import io.github.littlesurvival.dto.page.UserSpaceNoticePage
 import io.github.littlesurvival.dto.page.UserSpacePrivateMessagePage
 import io.github.littlesurvival.dto.page.UserSpaceThreadPage
 import io.github.littlesurvival.dto.page.UserSpaceThreadReplyPage
+import io.github.littlesurvival.dto.value.FormHash
+import io.github.littlesurvival.dto.value.PrivateMessageId
 import io.github.littlesurvival.dto.value.UserId
 
 interface UserSpaceRepository {
@@ -40,6 +43,13 @@ interface UserSpaceRepository {
         page: Int = 1
     ): YamiboResult<UserSpaceFriendPage>
     suspend fun fetchPrivateMessages(page: Int = 1): YamiboResult<UserSpacePrivateMessagePage>
+    suspend fun fetchPrivateMessagePage(toUser: UserId, page: Int? = null): YamiboResult<PrivateMessagePage>
+    suspend fun sendPrivateMessage(
+        privateMessageId: PrivateMessageId,
+        toUser: UserId,
+        message: String,
+        formHash: FormHash,
+    ): YamiboResult<String>
     suspend fun fetchNotices(page: Int = 1): YamiboResult<UserSpaceNoticePage>
 
     fun getCachedProfile(userId: UserId? = null): ProfilePage?
@@ -50,10 +60,12 @@ interface UserSpaceRepository {
     fun getCachedViewAllBlogs(type: YamiboRoute.UserSpace.Blog.ViewAllType, page: Int = 1): UserSpaceBlogPage?
     fun getCachedFriends(type: YamiboRoute.UserSpace.FriendPageType, page: Int = 1): UserSpaceFriendPage?
     fun getCachedPrivateMessages(page: Int = 1): UserSpacePrivateMessagePage?
+    fun getCachedPrivateMessagePage(toUser: UserId, page: Int? = null): PrivateMessagePage?
     fun getCachedNotices(page: Int = 1): UserSpaceNoticePage?
 
     fun clearUserPages(userId: UserId?)
     fun clearFriendPages(type: YamiboRoute.UserSpace.FriendPageType? = null)
     fun clearMessagePages()
+    fun clearPrivateMessagePages(toUser: UserId)
     fun clearNoticePages()
 }

@@ -14,6 +14,17 @@ import okio.SYSTEM
 import okio.buffer
 import okio.use
 
+data class CacheStorageUsage(
+    val key: String,
+    val label: String,
+    val bytes: Long,
+)
+
+data class CacheStorageBreakdown(
+    val rootPath: String,
+    val usages: List<CacheStorageUsage>,
+)
+
 class DiskCacheFactory(
     dbFactory: DatabaseFactory,
     val json: Json = Json { ignoreUnknownKeys = true },
@@ -55,7 +66,48 @@ class DiskCacheFactory(
 
     /** Returns total size of the cache directory in bytes */
     suspend fun getTotalCacheSizeBytes(): Long? = withContext(Dispatchers.IO) {
-        calculateSize(rootCacheDir)
+        getCacheStorageBreakdown().usages.sumOf { it.bytes }
+    }
+
+    suspend fun getCacheStorageBreakdown(): CacheStorageBreakdown = withContext(Dispatchers.IO) {
+        val grouped = linkedMapOf(
+            "images" to CacheStorageUsage("images", "圖片", 0L),
+            "pages" to CacheStorageUsage("pages", "帖子/論壇頁面", 0L),
+            "userspace" to CacheStorageUsage("userspace", "用戶空間/日志", 0L),
+            "other" to CacheStorageUsage("other", "其他", 0L),
+        )
+
+        fun addUsage(key: String, bytes: Long) {
+            if (bytes <= 0L) return
+            val current = grouped[key] ?: grouped.getValue("other")
+            grouped[current.key] = current.copy(bytes = current.bytes + bytes)
+        }
+
+        if (fileSystem.exists(rootCacheDir)) {
+            fileSystem.list(rootCacheDir).forEach { child ->
+                val key = child.name
+                addUsage(cacheNamespaceGroup(key), calculateSize(child) ?: 0L)
+            }
+        }
+
+        val cacheRoot = cacheDirPath.toPath()
+        val coilDirs = listOf("image_cache", "coil_image_cache", "coil3_disk_cache")
+        (coilDirs + listOf("images"))
+            .map { cacheRoot / it }
+            .filter { fileSystem.exists(it) }
+            .forEach { addUsage("images", calculateSize(it) ?: 0L) }
+
+        if (fileSystem.exists(cacheRoot)) {
+            val knownTopLevel = (coilDirs + listOf("images", "yamibo_cache")).toSet()
+            fileSystem.list(cacheRoot)
+                .filter { it.name !in knownTopLevel }
+                .forEach { addUsage("other", calculateSize(it) ?: 0L) }
+        }
+
+        CacheStorageBreakdown(
+            rootPath = cacheDirPath,
+            usages = grouped.values.filter { it.bytes > 0L },
+        )
     }
 
     private fun calculateSize(path: okio.Path): Long? {
@@ -78,6 +130,18 @@ class DiskCacheFactory(
             }
         } catch (_: Exception) {
             null
+        }
+    }
+
+    private fun cacheNamespaceGroup(namespace: String): String {
+        return when (namespace) {
+            "forum_page",
+            "thread_page",
+            "tag_page",
+            "novel_thread_cache" -> "pages"
+            "user_space",
+            "blog_page" -> "userspace"
+            else -> "other"
         }
     }
 

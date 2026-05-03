@@ -98,6 +98,7 @@ fun MainScreen(initialTab: MainTab = MainTab.Home) {
     Scaffold(
         modifier = Modifier.fillMaxSize().navigationBarsPadding(),
         containerColor = colors.creamBackground,
+        contentWindowInsets = WindowInsets(0.dp),
         bottomBar = {
             MainScreenBottomBar(
                 tabs = MainTab.entries.map { BottomNavItem(it.title, it.icon) },
@@ -128,6 +129,7 @@ fun MainScreen(initialTab: MainTab = MainTab.Home) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
+                        .then(if (selected) Modifier else Modifier.size(0.dp))
                         .zIndex(if (selected) 1f else 0f)
                         .graphicsLayer {
                             this.alpha = alpha

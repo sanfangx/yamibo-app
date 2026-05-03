@@ -33,6 +33,8 @@ import me.thenano.yamibo.yamibo_app.repository.favorite.FavoriteSyncRepositoryIm
 import me.thenano.yamibo.yamibo_app.repository.settings.AppSettingsRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.MangaReaderSettingsRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.NovelReaderSettingsRepository
+import me.thenano.yamibo.yamibo_app.repository.userspace.BlogRepositoryImpl
+import me.thenano.yamibo.yamibo_app.repository.userspace.UserSpaceRepositoryImpl
 import me.thenano.yamibo.yamibo_app.store.AndroidCookieStore
 import me.thenano.yamibo.yamibo_app.store.AndroidUserStore
 import me.thenano.yamibo.yamibo_app.store.settings.AndroidSettingsStore
@@ -104,6 +106,7 @@ class MainActivity : ComponentActivity() {
             val forumRepository = remember { AndroidForumRepository(cookieStore, yamiboClient, diskCacheFactory) }
             val threadRepository = remember { AndroidThreadRepository(cookieStore, yamiboClient, diskCacheFactory) }
             val userSpaceRepository = remember { UserSpaceRepositoryImpl(cookieStore, yamiboClient, diskCacheFactory) }
+            val blogRepository = remember { BlogRepositoryImpl(cookieStore, yamiboClient, diskCacheFactory) }
             val favoriteRepository = remember { AndroidLocalFavoriteRepository(dbFactory) }
             val remoteFavoriteRepository = remember { AndroidFavoriteRepository(cookieStore, yamiboClient) }
             val favoriteSyncDatabase = remember { Database(dbFactory.createDriver()) }
@@ -133,6 +136,7 @@ class MainActivity : ComponentActivity() {
                 LocalForumRepository provides forumRepository,
                 LocalThreadRepository provides threadRepository,
                 LocalUserSpaceRepository provides userSpaceRepository,
+                LocalBlogRepository provides blogRepository,
                 LocalFavoriteRepository provides favoriteRepository,
                 LocalRemoteFavoriteRepository provides remoteFavoriteRepository,
                 LocalFavoriteSyncRepository provides favoriteSyncRepository,

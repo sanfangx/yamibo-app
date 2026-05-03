@@ -1,5 +1,6 @@
 package me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl
 
+import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -26,6 +27,11 @@ object HtmlParser {
         val statInfo: String?,
     )
 
+    private data class PendingRuby(
+        val start: Int,
+        val ruby: HtmlBlock.RubyText,
+    )
+
     /** Generate a stable content-hash based ID */
     private fun hashId(type: String, content: String, index: Int): String {
         val raw = "${type}_${index}_${content.take(64)}"
@@ -43,7 +49,9 @@ object HtmlParser {
         var lastCommitIndex = 0
         var currentLinkHref: String? = null
         var blockCounter = 0
+        var rubyCounter = 0
         var currentAlign = TextAlign.Start
+        val pendingRubies = mutableListOf<PendingRuby>()
 
         fun commitText() {
             if (globalBuilder.length > lastCommitIndex) {
@@ -51,7 +59,10 @@ object HtmlParser {
                 
                 if (textStr.isNotEmpty()) {
                     val aid = hashId("t", textStr.text, blockCounter++)
-                    blocks.add(HtmlBlock.Text(textStr, currentAlign, anchorId = aid))
+                    val rubies = pendingRubies
+                        .filter { it.start in lastCommitIndex until globalBuilder.length }
+                        .map { it.ruby }
+                    blocks.add(HtmlBlock.Text(textStr, currentAlign, rubies = rubies, anchorId = aid))
                 }
                 lastCommitIndex = globalBuilder.length
             }
@@ -83,7 +94,11 @@ object HtmlParser {
                             val alt = node.attr("alt").takeIf { it.isNotBlank() }
                             if (src.isNotBlank()) {
                                 val aid = hashId("i", src, blockCounter++)
-                                blocks.add(HtmlBlock.Image(src, alt, currentLinkHref, anchorId = aid))
+                                val normalizedSrc = src.lowercase()
+                                val isEmoticon = normalizedSrc.contains("/static/image/smiley/") ||
+                                    normalizedSrc.contains("static/image/smiley/") ||
+                                    normalizedSrc.contains("/smiley/")
+                                blocks.add(HtmlBlock.Image(src, alt, currentLinkHref, isEmoticon = isEmoticon, anchorId = aid))
                             }
                         }
                         "div" -> {
@@ -219,6 +234,31 @@ object HtmlParser {
                         "i", "em" -> globalBuilder.withStyle(SpanStyle(fontStyle = FontStyle.Italic)) { node.childNodes().forEach { parseNode(it, parentAlign) } }
                         "u" -> globalBuilder.withStyle(SpanStyle(textDecoration = TextDecoration.Underline)) { node.childNodes().forEach { parseNode(it, parentAlign) } }
                         "s", "strike" -> globalBuilder.withStyle(SpanStyle(textDecoration = TextDecoration.LineThrough)) { node.childNodes().forEach { parseNode(it, parentAlign) } }
+                        "ruby" -> {
+                            val rtNodes = node.children().filter { it.tagName().equals("rt", ignoreCase = true) }
+                            val rubyText = rtNodes.joinToString(separator = "") { it.text() }.trim()
+                            val baseText = node.childNodes()
+                                .filterNot { it is Element && it.tagName().equals("rt", ignoreCase = true) }
+                                .joinToString(separator = "") {
+                                    when (it) {
+                                        is TextNode -> it.text()
+                                        is Element -> it.text()
+                                        else -> ""
+                                    }
+                                }
+                                .trim()
+                            if (baseText.isNotBlank() && rubyText.isNotBlank()) {
+                                val start = globalBuilder.length
+                                val id = "ruby_${rubyCounter++}_${hashId("ruby", "$baseText|$rubyText", rubyCounter)}"
+                                pendingRubies.add(PendingRuby(start, HtmlBlock.RubyText(id, baseText, rubyText)))
+                                globalBuilder.appendInlineContent(id, baseText)
+                            } else {
+                                node.childNodes().forEach { parseNode(it, parentAlign) }
+                            }
+                        }
+                        "rt" -> {
+                            // Handled by the parent <ruby>; ignore standalone rt to avoid duplicate text.
+                        }
                         "a" -> {
                             val href = node.attr("href")
                             val prevLink = currentLinkHref
@@ -298,9 +338,10 @@ object HtmlParser {
 
     private fun parseColor(color: String?): Color? {
         if (color.isNullOrBlank()) return null
+        val normalized = color.trim().trim('"', '\'')
         return try {
-            if (color.startsWith("#")) {
-                val hex = color.removePrefix("#")
+            if (normalized.startsWith("#")) {
+                val hex = normalized.removePrefix("#")
                 if (hex.length == 3) {
                     val r = hex[0].toString().repeat(2).toInt(16)
                     val g = hex[1].toString().repeat(2).toInt(16)
@@ -309,8 +350,10 @@ object HtmlParser {
                 } else {
                     Color(hex.toLong(16) or 0xFF000000)
                 }
+            } else if (normalized.startsWith("rgb", ignoreCase = true)) {
+                parseRgbColor(normalized)
             } else {
-                when (color.lowercase()) {
+                when (normalized.lowercase()) {
                     "red" -> Color.Red
                     "blue" -> Color.Blue
                     "green" -> Color.Green
@@ -318,6 +361,14 @@ object HtmlParser {
                     "black" -> Color.Black
                     "white" -> Color.White
                     "grey", "gray" -> Color.Gray
+                    "darkgreen" -> Color(0xFF006400)
+                    "darkblue" -> Color(0xFF00008B)
+                    "darkred" -> Color(0xFF8B0000)
+                    "darkorange" -> Color(0xFFFF8C00)
+                    "darkgray", "darkgrey" -> Color(0xFFA9A9A9)
+                    "lightgray", "lightgrey" -> Color(0xFFD3D3D3)
+                    "lightblue" -> Color(0xFFADD8E6)
+                    "lightgreen" -> Color(0xFF90EE90)
                     "pink" -> Color(0xFFFFC0CB)
                     "orange" -> Color(0xFFFFA500)
                     "purple" -> Color(0xFF800080)
@@ -330,6 +381,35 @@ object HtmlParser {
             }
         } catch (_: Exception) {
             null
+        }
+    }
+
+    private fun parseRgbColor(color: String): Color? {
+        val values = color.substringAfter("(", missingDelimiterValue = "")
+            .substringBeforeLast(")", missingDelimiterValue = "")
+            .split(",")
+            .map { it.trim() }
+        if (values.size < 3) return null
+        val red = parseRgbChannel(values[0]) ?: return null
+        val green = parseRgbChannel(values[1]) ?: return null
+        val blue = parseRgbChannel(values[2]) ?: return null
+        val alpha = values.getOrNull(3)?.let { parseAlphaChannel(it) } ?: 1f
+        return Color(red, green, blue, alpha)
+    }
+
+    private fun parseRgbChannel(value: String): Float? {
+        return if (value.endsWith("%")) {
+            value.removeSuffix("%").toFloatOrNull()?.let { (it / 100f).coerceIn(0f, 1f) }
+        } else {
+            value.toFloatOrNull()?.let { (it / 255f).coerceIn(0f, 1f) }
+        }
+    }
+
+    private fun parseAlphaChannel(value: String): Float? {
+        return if (value.endsWith("%")) {
+            value.removeSuffix("%").toFloatOrNull()?.let { (it / 100f).coerceIn(0f, 1f) }
+        } else {
+            value.toFloatOrNull()?.coerceIn(0f, 1f)
         }
     }
 
@@ -352,20 +432,16 @@ object HtmlParser {
 
     private fun parseStylesFromStyleAttr(styleAttr: String, spanStyle: SpanStyle): SpanStyle {
         var current = spanStyle
-        // Support color: #xxxxxx or color: name
-        val colorMatch = Regex("color:\\s*([^;\\s]+)").find(styleAttr)
-        colorMatch?.groupValues?.get(1)?.trim()?.let { colorStr ->
-             parseColor(colorStr)?.let { current = current.copy(color = it) }
+        val declarations = parseStyleDeclarations(styleAttr)
+        declarations["color"]?.let { colorStr ->
+            parseColor(colorStr)?.let { current = current.copy(color = it) }
         }
-        
-        // Support background-color: #xxxxxx or background-color: name
-        val bgMatch = Regex("background-color:\\s*([^;\\s]+)").find(styleAttr)
-        bgMatch?.groupValues?.get(1)?.trim()?.let { bgStr ->
+        declarations["background-color"]?.let { bgStr ->
             parseColor(bgStr)?.let { current = current.copy(background = it) }
         }
 
         // Support font-size: Npx / Npt / Nem
-        val fontSizeMatch = Regex("font-size:\\s*([\\d.]+)\\s*(px|pt|em)").find(styleAttr)
+        val fontSizeMatch = declarations["font-size"]?.let { Regex("^([\\d.]+)\\s*(px|pt|em)$").find(it) }
         fontSizeMatch?.let { match ->
             val value = match.groupValues[1].toFloatOrNull()
             val unit = match.groupValues[2]
@@ -380,5 +456,17 @@ object HtmlParser {
             }
         }
         return current
+    }
+
+    private fun parseStyleDeclarations(styleAttr: String): Map<String, String> {
+        return styleAttr.split(";")
+            .mapNotNull { declaration ->
+                val separatorIndex = declaration.indexOf(':')
+                if (separatorIndex <= 0) return@mapNotNull null
+                val key = declaration.substring(0, separatorIndex).trim().lowercase()
+                val value = declaration.substring(separatorIndex + 1).trim()
+                if (key.isEmpty() || value.isEmpty()) null else key to value
+            }
+            .toMap()
     }
 }

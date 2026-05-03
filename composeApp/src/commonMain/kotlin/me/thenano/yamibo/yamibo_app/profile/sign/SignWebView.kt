@@ -13,13 +13,11 @@ import me.thenano.yamibo.yamibo_app.LocalAuthRepository
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.navigation.Navigatable
 import me.thenano.yamibo.yamibo_app.LocalSignRepository
-import me.thenano.yamibo.yamibo_app.repository.SignRepository
 import me.thenano.yamibo.yamibo_app.webview.PlatformWebViewScreen
 
 internal class ISignWebView(
     private val semiAutomatic: Boolean,
-    private val allowRepair: Boolean = false,
-    private val onSemiAutoCompleted: (YamiboResult<SignRepository.ActionResult>) -> Unit = {},
+    private val onCfCleared: () -> Unit = {},
     private val onResultObserved: () -> Unit = {},
     private val onMaintenanceObserved: () -> Unit = {},
 ) : Navigatable {
@@ -29,8 +27,7 @@ internal class ISignWebView(
     override fun Content() {
         SignWebViewScreen(
             semiAutomatic = semiAutomatic,
-            allowRepair = allowRepair,
-            onSemiAutoCompleted = onSemiAutoCompleted,
+            onCfCleared = onCfCleared,
             onResultObserved = onResultObserved,
             onMaintenanceObserved = onMaintenanceObserved,
         )
@@ -40,8 +37,7 @@ internal class ISignWebView(
 @Composable
 private fun SignWebViewScreen(
     semiAutomatic: Boolean,
-    allowRepair: Boolean,
-    onSemiAutoCompleted: (YamiboResult<SignRepository.ActionResult>) -> Unit,
+    onCfCleared: () -> Unit,
     onResultObserved: () -> Unit,
     onMaintenanceObserved: () -> Unit,
 ) {
@@ -58,26 +54,13 @@ private fun SignWebViewScreen(
         authRepository.syncCookieFromWebView()
         autoSignChecking = true
         scope.launch {
-            /** This when confirms the current WebView page is really past Cloudflare before auto-sign starts. */
-            when (val pageInfoResult = signRepository.fetchPageInfo()) {
+            /** This when confirms the current WebView page is really past Cloudflare before exiting. */
+            when (signRepository.fetchPageInfo()) {
                 is YamiboResult.Success -> {
                     autoSignStarted = true
                     autoSignChecking = false
-                    /** This when feeds the semi-automatic WebView flow back into the caller callbacks/navigation. */
-                    when (val result = signRepository.runAutoSign(allowRepair)) {
-                        is YamiboResult.Success -> {
-                            onSemiAutoCompleted(result)
-                            navigator.pop()
-                        }
-                        is YamiboResult.Maintenance -> {
-                            onMaintenanceObserved()
-                            navigator.pop()
-                        }
-                        else -> {
-                            onSemiAutoCompleted(result)
-                            navigator.pop()
-                        }
-                    }
+                    navigator.pop()
+                    onCfCleared()
                 }
                 is YamiboResult.Maintenance -> {
                     autoSignChecking = false

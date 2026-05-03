@@ -1,8 +1,9 @@
-package me.thenano.yamibo.yamibo_app.repository
+package me.thenano.yamibo.yamibo_app.repository.userspace
 
 import io.github.littlesurvival.YamiboClient
 import io.github.littlesurvival.YamiboRoute
 import io.github.littlesurvival.core.YamiboResult
+import io.github.littlesurvival.dto.page.PrivateMessagePage
 import io.github.littlesurvival.dto.page.ProfilePage
 import io.github.littlesurvival.dto.page.UserSpaceBlogPage
 import io.github.littlesurvival.dto.page.UserSpaceFriendPage
@@ -10,9 +11,12 @@ import io.github.littlesurvival.dto.page.UserSpaceNoticePage
 import io.github.littlesurvival.dto.page.UserSpacePrivateMessagePage
 import io.github.littlesurvival.dto.page.UserSpaceThreadPage
 import io.github.littlesurvival.dto.page.UserSpaceThreadReplyPage
+import io.github.littlesurvival.dto.value.FormHash
+import io.github.littlesurvival.dto.value.PrivateMessageId
 import io.github.littlesurvival.dto.value.UserId
 import kotlin.time.Duration.Companion.hours
 import me.thenano.yamibo.yamibo_app.core.cache.DiskCacheFactory
+import me.thenano.yamibo.yamibo_app.repository.UserSpaceRepository
 import me.thenano.yamibo.yamibo_app.store.auth.CookieStore
 
 class UserSpaceRepositoryImpl(
@@ -26,6 +30,7 @@ class UserSpaceRepositoryImpl(
     private val blogCache = diskCacheFactory.create<UserSpaceBlogPage>("userspace_blogs", maxSize = 30, expiration = 12.hours)
     private val friendCache = diskCacheFactory.create<UserSpaceFriendPage>("userspace_friends", maxSize = 20, expiration = 12.hours)
     private val messageCache = diskCacheFactory.create<UserSpacePrivateMessagePage>("userspace_messages", maxSize = 10, expiration = 2.hours)
+    private val privateMessageCache = diskCacheFactory.create<PrivateMessagePage>("userspace_private_message", maxSize = 30, expiration = 2.hours)
     private val noticeCache = diskCacheFactory.create<UserSpaceNoticePage>("userspace_notices", maxSize = 10, expiration = 2.hours)
 
     override suspend fun fetchProfile(userId: UserId?): YamiboResult<ProfilePage> {
@@ -100,6 +105,28 @@ class UserSpaceRepositoryImpl(
         return result
     }
 
+    override suspend fun fetchPrivateMessagePage(toUser: UserId, page: Int?): YamiboResult<PrivateMessagePage> {
+        yamiboClient.setCookie(cookieStore.load() ?: "")
+        val result = yamiboClient.fetchPrivateMessagePage(toUser, page)
+        if (result is YamiboResult.Success) {
+            privateMessageCache.set(privateMessageKey(toUser, page), result.value)
+            result.value.pageNav?.currentPage?.let { current ->
+                privateMessageCache.set(privateMessageKey(toUser, current), result.value)
+            }
+        }
+        return result
+    }
+
+    override suspend fun sendPrivateMessage(
+        privateMessageId: PrivateMessageId,
+        toUser: UserId,
+        message: String,
+        formHash: FormHash,
+    ): YamiboResult<String> {
+        yamiboClient.setCookie(cookieStore.load() ?: "")
+        return yamiboClient.fetchSendPrivateMessage(privateMessageId, toUser, message, formHash)
+    }
+
     override suspend fun fetchNotices(page: Int): YamiboResult<UserSpaceNoticePage> {
         yamiboClient.setCookie(cookieStore.load() ?: "")
         val result = yamiboClient.fetchUserSpaceNotices(page)
@@ -123,6 +150,8 @@ class UserSpaceRepositoryImpl(
     override fun getCachedFriends(type: YamiboRoute.UserSpace.FriendPageType, page: Int): UserSpaceFriendPage? =
         friendCache.get(UserSpaceRepository.TypedPageCacheKey(type.name, null, page).toCacheKey())
     override fun getCachedPrivateMessages(page: Int): UserSpacePrivateMessagePage? = messageCache.get(page.toString())
+    override fun getCachedPrivateMessagePage(toUser: UserId, page: Int?): PrivateMessagePage? =
+        privateMessageCache.get(privateMessageKey(toUser, page))
     override fun getCachedNotices(page: Int): UserSpaceNoticePage? = noticeCache.get(page.toString())
 
     override fun clearUserPages(userId: UserId?) {
@@ -145,9 +174,14 @@ class UserSpaceRepositoryImpl(
         messageCache.clear()
     }
 
+    override fun clearPrivateMessagePages(toUser: UserId) {
+        privateMessageCache.removeByPrefix("${toUser.value}_")
+    }
+
     override fun clearNoticePages() {
         noticeCache.clear()
     }
 
     private fun profileKey(userId: UserId?): String = userId?.value?.toString() ?: "self"
+    private fun privateMessageKey(toUser: UserId, page: Int?): String = "${toUser.value}_${page ?: "latest"}"
 }

@@ -1,13 +1,13 @@
-package me.thenano.yamibo.yamibo_app.history
+package me.thenano.yamibo.yamibo_app.history.components
 
 import YamiboIcons
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -30,38 +30,19 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.components.YamiboMainTabIconAction
+import me.thenano.yamibo.yamibo_app.components.YamiboMainTabTopBar
 
 @Composable
-internal fun NormalTopBar(onSearch: () -> Unit, onMultiSelect: () -> Unit) {
-    val colors = YamiboTheme.colors
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
+internal fun NormalTopBar(
+    onSearch: () -> Unit,
+    onMultiSelect: () -> Unit,
+) {
+    YamiboMainTabTopBar(
+        title = "閱讀歷史",
     ) {
-        Text(
-            text = "閱讀歷史",
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
-            color = colors.brownDeep,
-            modifier = Modifier.weight(1f),
-        )
-        IconButton(onClick = onSearch, modifier = Modifier.size(36.dp)) {
-            Icon(
-                imageVector = YamiboIcons.Search,
-                contentDescription = "搜尋",
-                modifier = Modifier.size(30.dp).offset(y = 5.dp),
-                tint = colors.brownDeep,
-            )
-        }
-        Spacer(Modifier.width(4.dp))
-        IconButton(onClick = onMultiSelect, modifier = Modifier.size(36.dp)) {
-            Icon(
-                imageVector = YamiboIcons.Trashcan,
-                contentDescription = "多選刪除",
-                modifier = Modifier.size(30.dp),
-                tint = colors.brownDeep,
-            )
-        }
+        YamiboMainTabIconAction(YamiboIcons.Search, "搜尋", onSearch, iconSize = 28, iconOffsetY = 4)
+        YamiboMainTabIconAction(YamiboIcons.Trashcan, "多選刪除", onMultiSelect)
     }
 }
 
@@ -75,7 +56,10 @@ internal fun SearchTopBar(
 ) {
     val colors = YamiboTheme.colors
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 6.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .statusBarsPadding()
+            .padding(horizontal = 4.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IconButton(onClick = onBack) { Text(YamiboIcons.Back, color = colors.brownDeep, fontSize = 18.sp) }
@@ -123,7 +107,10 @@ internal fun SelectTopBar(
 ) {
     val colors = YamiboTheme.colors
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .statusBarsPadding()
+            .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
