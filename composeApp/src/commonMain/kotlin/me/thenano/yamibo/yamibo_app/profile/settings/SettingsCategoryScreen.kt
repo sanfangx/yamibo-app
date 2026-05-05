@@ -3,6 +3,7 @@ package me.thenano.yamibo.yamibo_app.profile.settings
 import YamiboIcons
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -49,6 +50,7 @@ import me.thenano.yamibo.yamibo_app.core.cache.CacheStorageBreakdown
 import me.thenano.yamibo.yamibo_app.LocalAppSettingsRepository
 import me.thenano.yamibo.yamibo_app.LocalDiskCacheFactory
 import me.thenano.yamibo.yamibo_app.LocalFavoriteSyncRunner
+import me.thenano.yamibo.yamibo_app.LocalFavoriteUpdateRunner
 import me.thenano.yamibo.yamibo_app.favorite.IFavoriteCategoryManageScreen
 import me.thenano.yamibo.yamibo_app.favorite.sync.FavoriteSyncStatusCard
 import me.thenano.yamibo.yamibo_app.favorite.sync.IFavoriteSyncProgressScreen
@@ -60,11 +62,13 @@ import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelContentWidthSett
 import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelFontSizeSetting
 import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelLineSpacingSetting
 import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelReaderPreviewSetting
+import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelSystemBarsBackgroundSetting
 import me.thenano.yamibo.yamibo_app.profile.settings.components.SettingsChipRow
 import me.thenano.yamibo.yamibo_app.profile.settings.components.ThemeSelectorContent
 import me.thenano.yamibo.yamibo_app.repository.FavoriteSyncRepository.FavoriteSyncState
 import me.thenano.yamibo.yamibo_app.repository.settings.AppSettingsRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.FavoriteSortMode
+import me.thenano.yamibo.yamibo_app.repository.settings.FavoriteUpdateInterval
 import me.thenano.yamibo.yamibo_app.repository.settings.SignInMode
 import me.thenano.yamibo.yamibo_app.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
@@ -176,6 +180,10 @@ private fun NovelReaderContent() {
 
     SectionLabel("內容寬度")
     NovelContentWidthSetting()
+    Spacer(Modifier.height(24.dp))
+
+    SectionLabel("系統列")
+    NovelSystemBarsBackgroundSetting()
 }
 
 @Composable
@@ -194,6 +202,7 @@ private fun FavoriteSettingsContent(snackbarHostState: SnackbarHostState) {
     val navigator = LocalNavigator.current
     val appSettingsRepository = LocalAppSettingsRepository.current
     val favoriteSyncRunner = LocalFavoriteSyncRunner.current
+    val favoriteUpdateRunner = LocalFavoriteUpdateRunner.current
     val skipConfirm = appSettingsRepository.skipFavoriteRemovalConfirm.state()
     val addSyncPromptEnabled = appSettingsRepository.favoriteAddSyncPromptEnabled.state()
     val addSyncDefault = appSettingsRepository.favoriteAddSyncDefault.state()
@@ -202,6 +211,7 @@ private fun FavoriteSettingsContent(snackbarHostState: SnackbarHostState) {
     val gridMode = appSettingsRepository.favoriteGridMode.state()
     val sortMode = appSettingsRepository.favoriteSortMode.state()
     val sortDescending = appSettingsRepository.favoriteSortDescending.state()
+    val updateInterval = appSettingsRepository.favoriteUpdateInterval.state()
     val syncState by favoriteSyncRunner.state.collectAsState()
     val coroutineScope = rememberCoroutineScope()
 
@@ -263,7 +273,10 @@ private fun FavoriteSettingsContent(snackbarHostState: SnackbarHostState) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { appSettingsRepository.skipFavoriteRemovalConfirm.setValue(!skipConfirm) }
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+            ) { appSettingsRepository.skipFavoriteRemovalConfirm.setValue(!skipConfirm) }
             .padding(vertical = 16.dp, horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -300,6 +313,30 @@ private fun FavoriteSettingsContent(snackbarHostState: SnackbarHostState) {
         title = "通知與背景同步設定",
         subtitle = "檢查通知權限、電池最佳化與背景同步所需的系統設定。",
         onClick = { navigator.navigate(IBackgroundAccessSetupScreen()) },
+    )
+
+    Spacer(Modifier.height(18.dp))
+    Text(
+        text = "收藏更新檢查週期",
+        fontSize = 16.sp,
+        fontWeight = FontWeight.Medium,
+        color = colors.textDark,
+        modifier = Modifier.padding(horizontal = 4.dp),
+    )
+    Spacer(Modifier.height(6.dp))
+    SettingsChipRow(
+        options = AppSettingsRepository.favoriteUpdateIntervalOptions,
+        selectedValue = updateInterval,
+        onSelect = { interval ->
+            appSettingsRepository.favoriteUpdateInterval.setValue(interval)
+            coroutineScope.launch {
+                favoriteUpdateRunner.schedulePeriodicUpdate(interval)
+                if (interval == FavoriteUpdateInterval.SMART) {
+                    snackbarHostState.showSnackbar("智能更新策略尚未接入，暫停週期背景檢查。")
+                }
+            }
+        },
+        modifier = Modifier.padding(horizontal = 4.dp),
     )
 
     Spacer(Modifier.height(18.dp))
@@ -402,7 +439,10 @@ private fun SettingsToggleRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onCheckedChange(!checked) }
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+            ) { onCheckedChange(!checked) }
             .padding(vertical = 16.dp, horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -443,7 +483,11 @@ private fun SettingsActionRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick,
+            )
             .padding(vertical = 16.dp, horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -493,7 +537,10 @@ private fun StorageContent(snackbarHostState: SnackbarHostState) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { appSettingsRepo.clearCacheOnAppLaunch.setValue(!clearOnLaunch) }
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+            ) { appSettingsRepo.clearCacheOnAppLaunch.setValue(!clearOnLaunch) }
             .padding(vertical = 16.dp, horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

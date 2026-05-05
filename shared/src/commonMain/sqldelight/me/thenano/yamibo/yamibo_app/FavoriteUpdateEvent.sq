@@ -1,0 +1,28 @@
+insertEvent:
+INSERT INTO FavoriteUpdateEvent(
+    targetType, targetId, authorId, fid, forumName, title, latestPostTitle, mode, summary, detailIds,
+    coverUrl, detectedAt, readAt, dismissedAt, ambiguous
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+getActive:
+SELECT * FROM FavoriteUpdateEvent
+WHERE dismissedAt IS NULL
+ORDER BY detectedAt DESC, id DESC;
+
+countActive:
+SELECT COUNT(*) FROM FavoriteUpdateEvent
+WHERE dismissedAt IS NULL;
+
+markRead:
+UPDATE FavoriteUpdateEvent
+SET readAt = ?
+WHERE id = ?;
+
+dismiss:
+UPDATE FavoriteUpdateEvent
+SET dismissedAt = ?
+WHERE id = ?;
+
+deleteForTarget:
+DELETE FROM FavoriteUpdateEvent
+WHERE targetType = ? AND targetId = ? AND authorId = ?;

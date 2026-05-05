@@ -64,6 +64,15 @@ enum class FavoriteSortMode(val label: String) {
     LAST_READ("最後一次閱讀"),
 }
 
+enum class FavoriteUpdateInterval(val label: String, val hours: Long?, val smart: Boolean = false) {
+    HOURS_6("6 小時", 6L),
+    HOURS_12("12 小時", 12L),
+    HOURS_24("24 小時", 24L),
+    DAYS_3("3 天", 72L),
+    DAYS_7("7 天", 168L),
+    SMART("智能更新（TODO）", null, smart = true),
+}
+
 enum class SignInMode(val label: String) {
     SEMI_AUTOMATIC("半自動簽到"),
     FULL_MANUAL("全手動簽到"),
@@ -136,6 +145,11 @@ class AppSettingsRepository(store: SettingsStore) : SettingsRegistry(store, pref
         default = 0,
     )
 
+    val favoriteUpdateInterval by enumSetting(
+        name = "收藏更新檢查週期",
+        default = FavoriteUpdateInterval.HOURS_12,
+    )
+
     val signInMode by enumSetting(
         name = "簽到模式",
         default = SignInMode.SEMI_AUTOMATIC,
@@ -164,6 +178,7 @@ class AppSettingsRepository(store: SettingsStore) : SettingsRegistry(store, pref
         val themeSchemeOptions = AppThemeScheme.entries.map { it to it.label }
         val favoriteGridModeOptions = FavoriteGridMode.entries.map { it to it.label }
         val favoriteSortModeOptions = FavoriteSortMode.entries.map { it to it.label }
+        val favoriteUpdateIntervalOptions = FavoriteUpdateInterval.entries.map { it to it.label }
         val signInModeOptions = SignInMode.entries.map { it to it.label }
     }
 }

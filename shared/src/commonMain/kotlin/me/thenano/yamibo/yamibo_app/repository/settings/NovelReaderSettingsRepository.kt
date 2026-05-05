@@ -31,4 +31,10 @@ class NovelReaderSettingsRepository(store: SettingsStore) : SettingsRegistry(sto
         max = 1.0f,
         interval = 0.01f
     )
+
+    val keepSystemBarsBackground by boolSetting(
+        name = "保留系統列背景",
+        description = "在閱讀器頂部狀態列與底部導覽列後方繪製純色背景，避免透明系統列覆蓋閱讀內容。",
+        default = true,
+    )
 }

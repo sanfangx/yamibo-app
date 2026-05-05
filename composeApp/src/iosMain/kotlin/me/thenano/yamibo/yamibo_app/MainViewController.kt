@@ -9,11 +9,14 @@ import io.github.littlesurvival.YamiboClient
 import me.thenano.yamibo.yamibo_app.db.DatabaseFactory
 import me.thenano.yamibo.yamibo_app.favorite.sync.FavoriteSyncRunner
 import me.thenano.yamibo.yamibo_app.favorite.sync.IOSBackgroundTaskRepository
+import me.thenano.yamibo.yamibo_app.favorite.updates.FavoriteUpdateRunner
+import me.thenano.yamibo.yamibo_app.favorite.updates.IOSFavoriteUpdateScheduler
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.navigation.rememberRestorableNavigator
 import me.thenano.yamibo.yamibo_app.profile.settings.access.IOSBackgroundAccessRepository
 import me.thenano.yamibo.yamibo_app.repository.*
 import me.thenano.yamibo.yamibo_app.repository.favorite.FavoriteSyncRepositoryImpl
+import me.thenano.yamibo.yamibo_app.repository.favorite.FavoriteUpdateRepositoryImpl
 import me.thenano.yamibo.yamibo_app.repository.settings.AppSettingsRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.MangaReaderSettingsRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.NovelReaderSettingsRepository
@@ -54,6 +57,7 @@ fun MainViewController() = ComposeUIViewController {
     val threadRepository = remember { IOSThreadRepository(cookieStore, yamiboClient, diskCacheFactory) }
     val userSpaceRepository = remember { UserSpaceRepositoryImpl(cookieStore, yamiboClient, diskCacheFactory) }
     val blogRepository = remember { BlogRepositoryImpl(cookieStore, yamiboClient, diskCacheFactory) }
+    val tagRepository = remember { IOSTagRepository(cookieStore, yamiboClient, diskCacheFactory) }
     val favoriteRepository = remember { IOSLocalFavoriteRepository(dbFactory) }
     val remoteFavoriteRepository = remember { IOSFavoriteRepository(cookieStore, yamiboClient) }
     val favoriteSyncDatabase = remember { Database(dbFactory.createDriver()) }
@@ -66,14 +70,23 @@ fun MainViewController() = ComposeUIViewController {
             threadRepository = threadRepository,
         )
     }
+    val favoriteUpdateRepository = remember {
+        FavoriteUpdateRepositoryImpl(
+            db = favoriteSyncDatabase,
+            localFavoriteRepository = favoriteRepository,
+            threadRepository = threadRepository,
+            tagRepository = tagRepository,
+        )
+    }
     val backgroundTaskRepository = remember { IOSBackgroundTaskRepository(favoriteSyncRepository) }
     val favoriteSyncRunner = remember { FavoriteSyncRunner(favoriteSyncRepository, backgroundTaskRepository) }
+    val favoriteUpdateScheduler = remember { IOSFavoriteUpdateScheduler(favoriteUpdateRepository) }
+    val favoriteUpdateRunner = remember { FavoriteUpdateRunner(favoriteUpdateRepository, favoriteUpdateScheduler) }
     val backgroundAccessRepository = remember { IOSBackgroundAccessRepository() }
     val novelCacheRepository = remember { IOSNovelThreadCacheRepository(diskCacheFactory) }
     val readHistoryRepository = remember { IOSReadHistoryRepository(dbFactory) }
     val signRepository = remember { IOSSignRepository(dbFactory, authRepository, appSettingsRepository) }
     val themeRepository = remember { IOSThemeRepository() }
-    val tagRepository = remember { IOSTagRepository(cookieStore, yamiboClient, diskCacheFactory) }
 
     /** Provide Repositories */
     CompositionLocalProvider(
@@ -87,6 +100,8 @@ fun MainViewController() = ComposeUIViewController {
         LocalRemoteFavoriteRepository provides remoteFavoriteRepository,
         LocalFavoriteSyncRepository provides favoriteSyncRepository,
         LocalFavoriteSyncRunner provides favoriteSyncRunner,
+        LocalFavoriteUpdateRepository provides favoriteUpdateRepository,
+        LocalFavoriteUpdateRunner provides favoriteUpdateRunner,
         LocalBackgroundAccessRepository provides backgroundAccessRepository,
         LocalNovelThreadCacheRepository provides novelCacheRepository,
         LocalReadHistoryRepository provides readHistoryRepository,

@@ -1,0 +1,634 @@
+package me.thenano.yamibo.yamibo_app.repository.favorite
+
+import io.github.littlesurvival.YamiboForum
+import io.github.littlesurvival.core.YamiboResult
+import io.github.littlesurvival.dto.model.ThreadSummary
+import io.github.littlesurvival.dto.page.Post
+import io.github.littlesurvival.dto.page.TagPage
+import io.github.littlesurvival.dto.page.ThreadPage
+import io.github.littlesurvival.dto.value.TagId
+import io.github.littlesurvival.dto.value.ThreadId
+import io.github.littlesurvival.dto.value.UserId
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import me.thenano.yamibo.yamibo_app.Database
+import me.thenano.yamibo.yamibo_app.repository.FavoriteUpdateRepository
+import me.thenano.yamibo.yamibo_app.repository.FavoriteUpdateRepository.FidFilter
+import me.thenano.yamibo.yamibo_app.repository.FavoriteUpdateRepository.RunPhase
+import me.thenano.yamibo.yamibo_app.repository.FavoriteUpdateRepository.RunSnapshot
+import me.thenano.yamibo.yamibo_app.repository.FavoriteUpdateRepository.RunState
+import me.thenano.yamibo.yamibo_app.repository.FavoriteUpdateRepository.RunStatus
+import me.thenano.yamibo.yamibo_app.repository.FavoriteUpdateRepository.TargetMode
+import me.thenano.yamibo.yamibo_app.repository.FavoriteUpdateRepository.UpdateEvent
+import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository
+import me.thenano.yamibo.yamibo_app.repository.TagRepository
+import me.thenano.yamibo.yamibo_app.repository.ThreadRepository
+import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
+import me.thenano.yamibo.yamiboapp.FavoriteUpdateEvent
+import me.thenano.yamibo.yamiboapp.FavoriteUpdateFidFilter
+import me.thenano.yamibo.yamiboapp.FavoriteUpdateRun
+import me.thenano.yamibo.yamiboapp.FavoriteUpdateTrackedTarget
+import kotlin.math.max
+import kotlin.random.Random
+
+class FavoriteUpdateRepositoryImpl(
+    private val db: Database,
+    private val localFavoriteRepository: LocalFavoriteRepository,
+    private val threadRepository: ThreadRepository,
+    private val tagRepository: TagRepository,
+) : FavoriteUpdateRepository {
+    private val targetQueries = db.favoriteUpdateTrackedTargetQueries
+    private val eventQueries = db.favoriteUpdateEventQueries
+    private val runQueries = db.favoriteUpdateRunQueries
+    private val filterQueries = db.favoriteUpdateFidFilterQueries
+    private val interruptRequestedRunIds = linkedSetOf<String>()
+    private val stateFlow = MutableStateFlow<RunState>(RunState.Idle)
+
+    override val state: StateFlow<RunState> = stateFlow.asStateFlow()
+
+    init {
+        stateFlow.value = runQueries.getLatestRecoverable()
+            .executeAsOneOrNull()
+            ?.toSnapshot()
+            ?.toState()
+            ?: RunState.Idle
+    }
+
+    override suspend fun startRun(): String {
+        val now = currentTimeMillis()
+        val runId = "favorite-update-$now-${Random.nextInt(1000, 9999)}"
+        val snapshot = RunSnapshot(
+            runId = runId,
+            status = RunStatus.RUNNING,
+            phase = RunPhase.PREPARING,
+            startedAt = now,
+            updatedAt = now,
+            finishedAt = null,
+            totalCount = 0,
+            completedCount = 0,
+            skippedCount = 0,
+            failedCount = 0,
+            detectedCount = 0,
+            currentItem = "準備檢查收藏更新",
+            logMessage = null,
+            warningMessage = null,
+            errorMessage = null,
+        )
+        interruptRequestedRunIds.remove(runId)
+        persistSnapshot(snapshot)
+        stateFlow.value = RunState.Running(snapshot)
+        return runId
+    }
+
+    override suspend fun resumeInterruptedRun(): String? {
+        val latest = getLatestSnapshot() ?: return null
+        return when (latest.status) {
+            RunStatus.RUNNING -> latest.runId
+            RunStatus.INTERRUPTED -> {
+                interruptRequestedRunIds.remove(latest.runId)
+                updateSnapshot(
+                    latest.copy(
+                        status = RunStatus.RUNNING,
+                        phase = RunPhase.CHECKING,
+                        errorMessage = null,
+                        currentItem = latest.currentItem ?: "繼續檢查收藏更新",
+                    )
+                ).runId
+            }
+            else -> startRun()
+        }
+    }
+
+    override suspend fun interruptRun(runId: String) {
+        interruptRequestedRunIds += runId
+        val snapshot = runQueries.getByRunId(runId).executeAsOneOrNull()?.toSnapshot() ?: return
+        if (snapshot.status == RunStatus.RUNNING) {
+            interruptRun(snapshot, "更新檢查已取消")
+        }
+    }
+
+    override suspend fun markRunInterrupted(runId: String, reason: String) {
+        val snapshot = runQueries.getByRunId(runId).executeAsOneOrNull()?.toSnapshot() ?: return
+        if (snapshot.status == RunStatus.RUNNING) interruptRun(snapshot, reason)
+    }
+
+    override suspend fun getLatestSnapshot(): RunSnapshot? =
+        runQueries.getLatestRecoverable().executeAsOneOrNull()?.toSnapshot()
+
+    override suspend fun runUpdate(runId: String) {
+        interruptRequestedRunIds.remove(runId)
+        var current = runQueries.getByRunId(runId).executeAsOneOrNull()?.toSnapshot() ?: return
+        if (shouldStop(runId)) {
+            interruptRun(current, "更新檢查已取消")
+            return
+        }
+
+        val favorites = localFavoriteRepository.getAllFavoriteItems()
+            .filter { it.targetType != LocalFavoriteRepository.FavoriteTargetType.ThreadNormal || it.targetId > 0L }
+        refreshFidFilters(favorites)
+        val enabledFids = filterQueries.getEnabled().executeAsList().map { it.fid.toInt() }.toSet()
+        val targets = favorites.filter { item ->
+            val fid = item.forumId?.value
+            fid == null || enabledFids.isEmpty() || fid in enabledFids
+        }
+        val resumeFrom = current.completedCount.coerceIn(0, targets.size)
+        current = updateSnapshot(
+            current.copy(
+                phase = RunPhase.CHECKING,
+                totalCount = targets.size,
+                currentItem = if (resumeFrom > 0) {
+                    "已載入 ${targets.size} 個追蹤項目，從第 ${resumeFrom + 1} 項繼續"
+                } else {
+                    "已載入 ${targets.size} 個追蹤項目"
+                },
+            )
+        )
+
+        val aliveKeys = favorites.map { it.targetKey() }.toSet()
+        targetQueries.getAll().executeAsList().forEach { target ->
+            val key = "${target.targetType}:${target.targetId}:${target.authorId ?: 0L}"
+            if (key !in aliveKeys) {
+                targetQueries.deleteByTarget(target.targetType, target.targetId, target.authorId ?: 0L)
+            }
+        }
+
+        for ((index, item) in targets.withIndex().drop(resumeFrom)) {
+            if (shouldStop(runId)) {
+                interruptRun(current, "更新檢查已取消")
+                return
+            }
+            current = updateSnapshot(
+                current.copy(currentItem = "[${index + 1}/${targets.size}] 已載入 #${item.targetId} ${item.title}")
+            )
+            val result = checkItem(item)
+            current = when (result) {
+                CheckResult.Skipped -> updateSnapshot(current.copy(skippedCount = current.skippedCount + 1))
+                is CheckResult.Failed -> updateSnapshot(
+                    current.copy(
+                        failedCount = current.failedCount + 1,
+                        warningMessage = appendLine(current.warningMessage, result.reason),
+                    )
+                )
+                is CheckResult.Checked -> updateSnapshot(
+                    current.copy(
+                        completedCount = current.completedCount + 1,
+                        detectedCount = current.detectedCount + result.detectedCount,
+                    )
+                )
+            }
+            delay(250)
+        }
+
+        val now = currentTimeMillis()
+        val completed = current.copy(
+            status = RunStatus.COMPLETED,
+            phase = RunPhase.COMPLETED,
+            updatedAt = now,
+            finishedAt = now,
+            currentItem = "更新檢查完成",
+        )
+        persistSnapshot(completed)
+        stateFlow.value = RunState.Completed(completed)
+        interruptRequestedRunIds.remove(runId)
+    }
+
+    override suspend fun getActiveEvents(): List<UpdateEvent> =
+        eventQueries.getActive().executeAsList().map { it.toModel() }
+
+    override suspend fun markEventRead(eventId: Long) {
+        eventQueries.markRead(currentTimeMillis(), eventId)
+    }
+
+    override suspend fun dismissEvent(eventId: Long) {
+        eventQueries.dismiss(currentTimeMillis(), eventId)
+    }
+
+    override suspend fun getFidFilters(): List<FidFilter> =
+        filterQueries.getAll().executeAsList().map { it.toModel() }
+
+    override suspend fun setFidEnabled(fid: Int, enabled: Boolean) {
+        filterQueries.setEnabled(if (enabled) 1L else 0L, currentTimeMillis(), fid.toLong())
+    }
+
+    private suspend fun checkItem(item: LocalFavoriteRepository.FavoriteItem): CheckResult {
+        return when (item.targetType) {
+            LocalFavoriteRepository.FavoriteTargetType.ThreadNormal -> checkThread(item, TargetMode.NormalThread, null)
+            LocalFavoriteRepository.FavoriteTargetType.ThreadNovel -> checkThread(item, TargetMode.NovelThread, item.authorId)
+            LocalFavoriteRepository.FavoriteTargetType.TagManga -> checkTagManga(item)
+        }
+    }
+
+    private suspend fun checkThread(
+        item: LocalFavoriteRepository.FavoriteItem,
+        mode: TargetMode,
+        authorId: UserId?,
+    ): CheckResult {
+        val threadId = ThreadId(item.targetId.toInt())
+        val result = threadRepository.fetchThread(threadId, authorId, page = 1, reverse = true)
+        return when (result) {
+            is YamiboResult.Success -> handleThreadPage(item, mode, result.value, authorId)
+            is YamiboResult.NotLoggedIn -> CheckResult.Failed("登入狀態已失效，無法檢查 ${item.title}")
+            is YamiboResult.NoPermission -> CheckResult.Failed(result.reason)
+            is YamiboResult.Maintenance -> CheckResult.Failed("百合會維護中，無法檢查 ${item.title}")
+            is YamiboResult.Failure -> CheckResult.Failed(result.reason)
+        }
+    }
+
+    private fun handleThreadPage(
+        item: LocalFavoriteRepository.FavoriteItem,
+        mode: TargetMode,
+        page: ThreadPage,
+        authorId: UserId?,
+    ): CheckResult {
+        val now = currentTimeMillis()
+        val authorIdValue = authorId?.value?.toLong() ?: 0L
+        val existing = targetQueries.getByTarget(item.targetType.name, item.targetId, authorIdValue).executeAsOneOrNull()
+        val postsForMode = if (mode == TargetMode.NovelThread && authorId != null) {
+            page.posts.filter { it.author.uid.value == authorId.value }
+        } else {
+            page.posts
+        }
+        val latest = postsForMode.maxByOrNull { it.pid.value }
+        val latestPid = latest?.pid?.value?.toLong()
+        val pageCount = page.pageNav?.totalPages ?: page.pageNav?.currentPage
+        val replyCount = page.thread.totalReplies
+
+        if (existing?.baselineReady != 1L) {
+            upsertTarget(
+                existing = existing,
+                item = item,
+                mode = mode,
+                latestPostId = latestPid,
+                latestAuthorPostId = if (mode == TargetMode.NovelThread) latestPid else null,
+                replyCount = replyCount,
+                pageCount = pageCount,
+                checkedAt = now,
+                updatedAt = latest?.timeCreate?.text?.let { now },
+                baselineReady = true,
+            )
+            return CheckResult.Checked(0)
+        }
+
+        val knownLatest = if (mode == TargetMode.NovelThread) existing.knownLatestAuthorPostId else existing.knownLatestPostId
+        val newPosts = if (knownLatest == null) emptyList() else postsForMode.filter { it.pid.value.toLong() > knownLatest }
+        val changed = latestPid != null && knownLatest != null && latestPid > knownLatest
+        val ambiguous = changed && newPosts.isEmpty()
+        val detectedCount = if (changed) {
+            val summary = when {
+                ambiguous -> "可能有多筆新內容"
+                mode == TargetMode.NovelThread -> "作者新增 ${newPosts.size} 則內容"
+                else -> "新增 ${newPosts.size} 則回覆"
+            }
+            insertEvent(
+                item = item,
+                mode = mode,
+                summary = summary,
+                latestPostTitle = latest?.title?.takeIf { it.isNotBlank() },
+                detailIds = newPosts.map { it.pid.value.toLong() },
+                ambiguous = ambiguous,
+                detectedAt = now,
+            )
+            1
+        } else {
+            0
+        }
+
+        upsertTarget(
+            existing = existing,
+            item = item,
+            mode = mode,
+            latestPostId = latestPid ?: existing.knownLatestPostId,
+            latestAuthorPostId = if (mode == TargetMode.NovelThread) latestPid ?: existing.knownLatestAuthorPostId else existing.knownLatestAuthorPostId,
+            replyCount = replyCount,
+            pageCount = pageCount,
+            checkedAt = now,
+            updatedAt = if (changed) now else existing.lastUpdatedAt,
+            baselineReady = true,
+        )
+        return CheckResult.Checked(detectedCount)
+    }
+
+    private suspend fun checkTagManga(item: LocalFavoriteRepository.FavoriteItem): CheckResult {
+        val now = currentTimeMillis()
+        val authorId = 0L
+        val existing = targetQueries.getByTarget(item.targetType.name, item.targetId, authorId).executeAsOneOrNull()
+        val pageOne = when (val result = tagRepository.fetchTagPage(TagId(item.targetId.toInt()), 1)) {
+            is YamiboResult.Success -> result.value
+            is YamiboResult.NotLoggedIn -> return CheckResult.Failed("登入狀態已失效，無法檢查 ${item.title}")
+            is YamiboResult.NoPermission -> return CheckResult.Failed(result.reason)
+            is YamiboResult.Maintenance -> return CheckResult.Failed("百合會維護中，無法檢查 ${item.title}")
+            is YamiboResult.Failure -> return CheckResult.Failed(result.reason)
+        }
+        val knownIds = existing?.knownThreadIds?.csvLongs()?.toMutableSet() ?: linkedSetOf()
+        val firstPageIds = pageOne.threadSummaries.map { it.tid.value.toLong() }
+        val currentMaxPage = pageOne.pageNav?.totalPages ?: pageOne.pageNav?.currentPage ?: 1
+        val previousMaxPage = existing?.knownMaxPage?.toInt() ?: currentMaxPage
+        val pagesToScan = linkedSetOf(1, previousMaxPage, currentMaxPage)
+        if (currentMaxPage > previousMaxPage) {
+            for (page in (previousMaxPage + 1)..currentMaxPage) pagesToScan += page
+        }
+
+        var maxPageSeen = currentMaxPage
+        val scannedPages = linkedMapOf<Int, TagPage>()
+        scannedPages[1] = pageOne
+        var cursor = 0
+        while (cursor < pagesToScan.size && pagesToScan.size <= MAX_TAG_SCAN_PAGES) {
+            val pageIndex = pagesToScan.elementAt(cursor++)
+            val page = if (pageIndex == 1) pageOne else fetchTagPageOrFailure(item, pageIndex).getOrElse {
+                return CheckResult.Failed(it.message ?: "Tag 頁面載入失敗")
+            }
+            scannedPages[pageIndex] = page
+            val pageMax = page.pageNav?.totalPages ?: maxPageSeen
+            if (pageMax > maxPageSeen) {
+                for (next in (maxPageSeen + 1)..pageMax) pagesToScan += next
+                maxPageSeen = pageMax
+            }
+        }
+
+        val baselineReady = existing?.baselineReady == 1L
+        val allScannedThreads = scannedPages.values.flatMap { it.threadSummaries }
+        val newThreads = if (baselineReady) {
+            allScannedThreads.filter { it.tid.value.toLong() !in knownIds }.distinctBy { it.tid.value }
+        } else {
+            emptyList()
+        }
+        val ambiguous = pagesToScan.size > MAX_TAG_SCAN_PAGES
+        val detectedCount = when {
+            !baselineReady -> 0
+            newThreads.isNotEmpty() -> {
+                insertEvent(
+                    item = item,
+                    mode = TargetMode.TagManga,
+                    summary = "Tag 新增 ${newThreads.size} 個帖子",
+                    latestPostTitle = newThreads.firstOrNull()?.title?.takeIf { it.isNotBlank() },
+                    detailIds = newThreads.map { it.tid.value.toLong() },
+                    ambiguous = false,
+                    detectedAt = now,
+                )
+                1
+            }
+            ambiguous -> {
+                insertEvent(
+                    item = item,
+                    mode = TargetMode.TagManga,
+                    summary = "Tag 頁數變動過大，可能有多個新帖子",
+                    latestPostTitle = null,
+                    detailIds = emptyList(),
+                    ambiguous = true,
+                    detectedAt = now,
+                )
+                1
+            }
+            else -> 0
+        }
+
+        knownIds += allScannedThreads.map { it.tid.value.toLong() }
+        val firstThreadId = firstPageIds.firstOrNull() ?: existing?.knownFirstThreadId
+        val fingerprints = scannedPages.map { (page, tagPage) ->
+            "$page:${tagPage.threadSummaries.map { it.tid.value }.joinToString("|")}"
+        }.joinToString(";")
+        targetQueries.upsert(
+            targetType = item.targetType.name,
+            targetId = item.targetId,
+            authorId = authorId,
+            fid = item.forumId?.value?.toLong(),
+            forumName = item.forumName,
+            title = pageOne.tagName.ifBlank { item.title },
+            mode = TargetMode.TagManga.name,
+            coverUrl = item.coverUrl,
+            knownLatestPostId = null,
+            knownLatestAuthorPostId = null,
+            knownReplyCount = null,
+            knownPageCount = null,
+            knownThreadIds = knownIds.joinToString(","),
+            knownFirstThreadId = firstThreadId,
+            knownMaxPage = max(maxPageSeen, currentMaxPage).toLong(),
+            tagPageFingerprints = fingerprints,
+            baselineReady = 1L,
+            lastCheckedAt = now,
+            lastUpdatedAt = if (detectedCount > 0) now else existing?.lastUpdatedAt,
+            lastError = null,
+            consecutiveFailures = 0L,
+        )
+        return CheckResult.Checked(detectedCount)
+    }
+
+    private suspend fun fetchTagPageOrFailure(
+        item: LocalFavoriteRepository.FavoriteItem,
+        page: Int,
+    ): Result<TagPage> {
+        return when (val result = tagRepository.fetchTagPage(TagId(item.targetId.toInt()), page)) {
+            is YamiboResult.Success -> Result.success(result.value)
+            is YamiboResult.NotLoggedIn -> Result.failure(IllegalStateException("登入狀態已失效，無法檢查 ${item.title}"))
+            is YamiboResult.NoPermission -> Result.failure(IllegalStateException(result.reason))
+            is YamiboResult.Maintenance -> Result.failure(IllegalStateException("百合會維護中，無法檢查 ${item.title}"))
+            is YamiboResult.Failure -> Result.failure(IllegalStateException(result.reason))
+        }
+    }
+
+    private fun upsertTarget(
+        existing: FavoriteUpdateTrackedTarget?,
+        item: LocalFavoriteRepository.FavoriteItem,
+        mode: TargetMode,
+        latestPostId: Long?,
+        latestAuthorPostId: Long?,
+        replyCount: Int?,
+        pageCount: Int?,
+        checkedAt: Long,
+        updatedAt: Long?,
+        baselineReady: Boolean,
+    ) {
+        targetQueries.upsert(
+            targetType = item.targetType.name,
+            targetId = item.targetId,
+            authorId = item.authorId?.value?.toLong() ?: 0L,
+            fid = item.forumId?.value?.toLong(),
+            forumName = item.forumName,
+            title = item.title,
+            mode = mode.name,
+            coverUrl = item.coverUrl,
+            knownLatestPostId = latestPostId,
+            knownLatestAuthorPostId = latestAuthorPostId,
+            knownReplyCount = replyCount?.toLong(),
+            knownPageCount = pageCount?.toLong(),
+            knownThreadIds = existing?.knownThreadIds,
+            knownFirstThreadId = existing?.knownFirstThreadId,
+            knownMaxPage = existing?.knownMaxPage,
+            tagPageFingerprints = existing?.tagPageFingerprints,
+            baselineReady = if (baselineReady) 1L else 0L,
+            lastCheckedAt = checkedAt,
+            lastUpdatedAt = updatedAt,
+            lastError = null,
+            consecutiveFailures = 0L,
+        )
+    }
+
+    private fun insertEvent(
+        item: LocalFavoriteRepository.FavoriteItem,
+        mode: TargetMode,
+        summary: String,
+        latestPostTitle: String?,
+        detailIds: List<Long>,
+        ambiguous: Boolean,
+        detectedAt: Long,
+    ) {
+        eventQueries.insertEvent(
+            targetType = item.targetType.name,
+            targetId = item.targetId,
+            authorId = item.authorId?.value?.toLong() ?: 0L,
+            fid = item.forumId?.value?.toLong(),
+            forumName = item.forumName,
+            title = item.title,
+            latestPostTitle = latestPostTitle,
+            mode = mode.name,
+            summary = summary,
+            detailIds = detailIds.joinToString(","),
+            coverUrl = item.coverUrl,
+            detectedAt = detectedAt,
+            readAt = null,
+            dismissedAt = null,
+            ambiguous = if (ambiguous) 1L else 0L,
+        )
+    }
+
+    private suspend fun refreshFidFilters(favorites: List<LocalFavoriteRepository.FavoriteItem>) {
+        val now = currentTimeMillis()
+        val counts = favorites.mapNotNull { item ->
+            val fid = item.forumId?.value ?: return@mapNotNull null
+            val name = item.forumName ?: YamiboForum.toForumName(item.forumId) ?: "Forum $fid"
+            fid to name
+        }.groupingBy { it }.eachCount()
+        val existing = filterQueries.getAll().executeAsList().associateBy { it.fid.toInt() }
+        counts.entries.forEach { (fidAndName, count) ->
+            val (fid, name) = fidAndName
+            filterQueries.upsertFilter(
+                fid = fid.toLong(),
+                forumName = name,
+                enabled = existing[fid]?.enabled ?: 1L,
+                itemCount = count.toLong(),
+                updatedAt = now,
+            )
+        }
+    }
+
+    private fun persistSnapshot(snapshot: RunSnapshot) {
+        runQueries.upsertRun(
+            runId = snapshot.runId,
+            status = snapshot.status.name,
+            phase = snapshot.phase.name,
+            startedAt = snapshot.startedAt,
+            updatedAt = snapshot.updatedAt,
+            finishedAt = snapshot.finishedAt,
+            totalCount = snapshot.totalCount.toLong(),
+            completedCount = snapshot.completedCount.toLong(),
+            skippedCount = snapshot.skippedCount.toLong(),
+            failedCount = snapshot.failedCount.toLong(),
+            detectedCount = snapshot.detectedCount.toLong(),
+            currentItem = snapshot.currentItem,
+            logMessage = snapshot.logMessage,
+            warningMessage = snapshot.warningMessage,
+            errorMessage = snapshot.errorMessage,
+        )
+    }
+
+    private fun updateSnapshot(snapshot: RunSnapshot): RunSnapshot {
+        val updated = snapshot.copy(updatedAt = currentTimeMillis())
+        persistSnapshot(updated)
+        stateFlow.value = updated.toState()
+        return updated
+    }
+
+    private fun interruptRun(snapshot: RunSnapshot, reason: String) {
+        val now = currentTimeMillis()
+        val interrupted = snapshot.copy(
+            status = RunStatus.INTERRUPTED,
+            phase = RunPhase.INTERRUPTED,
+            updatedAt = now,
+            errorMessage = reason,
+        )
+        persistSnapshot(interrupted)
+        stateFlow.value = RunState.Interrupted(interrupted)
+        interruptRequestedRunIds.remove(snapshot.runId)
+    }
+
+    private fun FavoriteUpdateRun.toSnapshot(): RunSnapshot =
+        RunSnapshot(
+            runId = runId,
+            status = RunStatus.valueOf(status),
+            phase = RunPhase.valueOf(phase),
+            startedAt = startedAt,
+            updatedAt = updatedAt,
+            finishedAt = finishedAt,
+            totalCount = totalCount.toInt(),
+            completedCount = completedCount.toInt(),
+            skippedCount = skippedCount.toInt(),
+            failedCount = failedCount.toInt(),
+            detectedCount = detectedCount.toInt(),
+            currentItem = currentItem,
+            logMessage = logMessage,
+            warningMessage = warningMessage,
+            errorMessage = errorMessage,
+        )
+
+    private fun RunSnapshot.toState(): RunState = when (status) {
+        RunStatus.RUNNING -> RunState.Running(this)
+        RunStatus.INTERRUPTED -> RunState.Interrupted(this)
+        RunStatus.FAILED -> RunState.Failed(this)
+        RunStatus.COMPLETED -> RunState.Completed(this)
+    }
+
+    private fun FavoriteUpdateEvent.toModel(): UpdateEvent =
+        UpdateEvent(
+            id = id,
+            targetType = LocalFavoriteRepository.FavoriteTargetType.fromStorage(targetType),
+            targetId = targetId,
+            authorId = authorId?.takeIf { it != 0L },
+            fid = fid?.toInt(),
+            forumName = forumName,
+            title = title,
+            latestPostTitle = latestPostTitle,
+            mode = TargetMode.valueOf(mode),
+            summary = summary,
+            detailIds = detailIds.csvLongs(),
+            coverUrl = coverUrl,
+            detectedAt = detectedAt,
+            readAt = readAt,
+            dismissedAt = dismissedAt,
+            ambiguous = ambiguous == 1L,
+        )
+
+    private fun FavoriteUpdateFidFilter.toModel(): FidFilter =
+        FidFilter(
+            fid = fid.toInt(),
+            forumName = forumName,
+            enabled = enabled == 1L,
+            itemCount = itemCount.toInt(),
+        )
+
+    private fun LocalFavoriteRepository.FavoriteItem.targetKey(): String =
+        "${targetType.name}:$targetId:${authorId?.value?.toLong() ?: 0L}"
+
+    private fun String?.csvLongs(): List<Long> =
+        this?.split(",")?.mapNotNull { it.trim().toLongOrNull() }.orEmpty()
+
+    private fun appendLine(existing: String?, line: String): String =
+        listOfNotNull(existing, line).joinToString("\n")
+
+    private fun shouldStop(runId: String): Boolean {
+        if (runId in interruptRequestedRunIds) return true
+        val snapshot = runQueries.getByRunId(runId).executeAsOneOrNull()?.toSnapshot() ?: return false
+        return snapshot.status == RunStatus.INTERRUPTED
+    }
+
+    private sealed interface CheckResult {
+        data object Skipped : CheckResult
+        data class Checked(val detectedCount: Int) : CheckResult
+        data class Failed(val reason: String) : CheckResult
+    }
+
+    companion object {
+        private const val MAX_TAG_SCAN_PAGES = 8
+    }
+}

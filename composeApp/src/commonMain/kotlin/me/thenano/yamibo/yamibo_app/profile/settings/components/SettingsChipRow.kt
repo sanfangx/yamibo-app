@@ -2,10 +2,12 @@ package me.thenano.yamibo.yamibo_app.profile.settings.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -39,7 +41,10 @@ fun <T> SettingsChipRow(
                         if (isSelected) colors.brownPrimary
                         else colors.textDark.copy(alpha = 0.1f)
                     )
-                    .clickable { onSelect(value) }
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                    ) { onSelect(value) }
                     .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
                 Text(

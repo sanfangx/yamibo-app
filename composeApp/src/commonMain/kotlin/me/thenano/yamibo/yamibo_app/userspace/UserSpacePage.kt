@@ -26,13 +26,20 @@ import io.github.littlesurvival.dto.page.*
 import io.github.littlesurvival.dto.value.UserId
 import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.LocalAuthRepository
+import me.thenano.yamibo.yamibo_app.LocalFavoriteUpdateRepository
+import me.thenano.yamibo.yamibo_app.LocalFavoriteUpdateRunner
 import me.thenano.yamibo.yamibo_app.LocalUserSpaceRepository
 import me.thenano.yamibo.yamibo_app.components.*
+import me.thenano.yamibo.yamibo_app.favorite.updates.FavoriteUpdateRunner
 import me.thenano.yamibo.yamibo_app.navigation.ComposableNavigator
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
+import me.thenano.yamibo.yamibo_app.repository.FavoriteUpdateRepository
+import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository
+import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.INovelThreadDetailScreen
+import me.thenano.yamibo.yamibo_app.thread.detail.tag.ITagDetailScreen
 import me.thenano.yamibo.yamibo_app.thread.reader.IThreadReaderScreen
 import me.thenano.yamibo.yamibo_app.userspace.blog.IBlogReaderScreen
 import me.thenano.yamibo.yamibo_app.userspace.notification.IPrivateMessageScreen
@@ -49,6 +56,7 @@ enum class UserSpaceTab(val selfTitle: String, val otherTitle: String = selfTitl
     Online("在線成員"),
     Visitors("我的訪客"),
     Traces("我的足跡"),
+    Updates("更新"),
     Messages("我的消息"),
     Notices("我的提醒");
 
@@ -75,6 +83,11 @@ internal sealed interface UserSpaceContent {
     data class Replies(val page: UserSpaceThreadReplyPage) : UserSpaceContent
     data class Blogs(val page: UserSpaceBlogPage) : UserSpaceContent
     data class Friends(val page: UserSpaceFriendPage) : UserSpaceContent
+    data class Updates(
+        val events: List<FavoriteUpdateRepository.UpdateEvent>,
+        val filters: List<FavoriteUpdateRepository.FidFilter>,
+        val runState: FavoriteUpdateRepository.RunState,
+    ) : UserSpaceContent
     data class Messages(val page: UserSpacePrivateMessagePage) : UserSpaceContent
     data class Notices(val page: UserSpaceNoticePage) : UserSpaceContent
 }
@@ -98,6 +111,9 @@ fun UserSpacePage(
 ) {
     val colors = YamiboTheme.colors
     val repository = LocalUserSpaceRepository.current
+    val favoriteUpdateRepository = LocalFavoriteUpdateRepository.current
+    val favoriteUpdateRunner = LocalFavoriteUpdateRunner.current
+    val favoriteUpdateRunState by favoriteUpdateRunner.state.collectAsState()
     val authRepository = LocalAuthRepository.current
     val navigator = LocalNavigator.current
     val scope = rememberCoroutineScope()
@@ -114,8 +130,20 @@ fun UserSpacePage(
     var profile by remember { mutableStateOf(repository.getCachedProfile(userId)) }
     var isRefreshing by remember { mutableStateOf(false) }
     var viewAllBlogFilter by remember(userId, group) { mutableStateOf(ViewAllBlogFilter.Latest) }
+    var showFavoriteUpdateGlobalRefreshConfirm by remember { mutableStateOf(false) }
 
     suspend fun loadTab(tab: UserSpaceTab, page: Int, preferCache: Boolean = true) {
+        if (tab == UserSpaceTab.Updates) {
+            currentPage = 1
+            state = UserSpaceState.Success(
+                UserSpaceContent.Updates(
+                    events = favoriteUpdateRepository.getActiveEvents(),
+                    filters = favoriteUpdateRepository.getFidFilters(),
+                    runState = favoriteUpdateRunState,
+                )
+            )
+            return
+        }
         if (preferCache) {
             cachedContent(repository, userId, tab, page, viewAllBlogFilter.apiType)?.let {
                 currentPage = page
@@ -148,6 +176,16 @@ fun UserSpacePage(
         currentPage = 1
         state = UserSpaceState.Loading
         loadTab(selectedTab, 1)
+    }
+
+    LaunchedEffect(favoriteUpdateRunState) {
+        if (
+            selectedTab == UserSpaceTab.Updates &&
+            favoriteUpdateRunState !is FavoriteUpdateRepository.RunState.Idle &&
+            favoriteUpdateRunState !is FavoriteUpdateRepository.RunState.Running
+        ) {
+            loadTab(UserSpaceTab.Updates, 1, preferCache = false)
+        }
     }
 
     Scaffold(
@@ -233,7 +271,10 @@ fun UserSpacePage(
                             modifier = Modifier.fillMaxSize()
                         ) {
                             UserSpaceMainContent(
-                                content = current.content,
+                                content = when (val content = current.content) {
+                                    is UserSpaceContent.Updates -> content.copy(runState = favoriteUpdateRunState)
+                                    else -> content
+                                },
                                 isSelf = isSelf,
                                 selectedTab = selectedTab,
                                 currentPage = currentPage,
@@ -252,6 +293,65 @@ fun UserSpacePage(
                                     scope.launch { loadTab(selectedTab, page) }
                                 },
                                 onThreadClick = { thread -> navigateThread(thread, navigator) },
+                                onUpdateEventClick = { event ->
+                                    scope.launch { favoriteUpdateRepository.markEventRead(event.id) }
+                                    when (event.targetType) {
+                                        LocalFavoriteRepository.FavoriteTargetType.TagManga -> navigator.navigate(
+                                            ITagDetailScreen(
+                                                tagId = io.github.littlesurvival.dto.value.TagId(event.targetId.toInt()),
+                                                title = event.title,
+                                            )
+                                        )
+                                        LocalFavoriteRepository.FavoriteTargetType.ThreadNovel -> navigator.navigate(
+                                            INovelThreadDetailScreen(
+                                                tid = io.github.littlesurvival.dto.value.ThreadId(event.targetId.toInt()),
+                                                title = event.title,
+                                                authorId = event.authorId?.toInt()?.let { UserId(it) },
+                                            )
+                                        )
+                                        LocalFavoriteRepository.FavoriteTargetType.ThreadNormal -> navigator.navigate(
+                                            IThreadReaderScreen(
+                                                tid = io.github.littlesurvival.dto.value.ThreadId(event.targetId.toInt()),
+                                                title = event.title,
+                                                threadType = ReadHistoryRepository.ThreadEntryType.Normal,
+                                            )
+                                        )
+                                    }
+                                },
+                                onDismissUpdateEvent = { event ->
+                                    scope.launch {
+                                        favoriteUpdateRepository.dismissEvent(event.id)
+                                        loadTab(UserSpaceTab.Updates, 1, preferCache = false)
+                                    }
+                                },
+                                onStartFavoriteUpdate = {
+                                    scope.launch {
+                                        when (val result = favoriteUpdateRunner.startManualUpdate()) {
+                                            is FavoriteUpdateRunner.LaunchResult.Started -> {
+                                                snackbarHostState.showSnackbar("開始檢查收藏更新", duration = SnackbarDuration.Short)
+                                            }
+                                            is FavoriteUpdateRunner.LaunchResult.Rejected -> {
+                                                snackbarHostState.showSnackbar(result.reason, duration = SnackbarDuration.Short)
+                                            }
+                                        }
+                                    }
+                                },
+                                onGlobalFavoriteUpdate = {
+                                    showFavoriteUpdateGlobalRefreshConfirm = true
+                                },
+                                onCancelFavoriteUpdate = { runId ->
+                                    scope.launch {
+                                        favoriteUpdateRunner.cancelUpdate(runId)
+                                        loadTab(UserSpaceTab.Updates, 1, preferCache = false)
+                                        snackbarHostState.showSnackbar("已中斷收藏更新檢查", duration = SnackbarDuration.Short)
+                                    }
+                                },
+                                onToggleFavoriteUpdateFid = { fid, enabled ->
+                                    scope.launch {
+                                        favoriteUpdateRepository.setFidEnabled(fid, enabled)
+                                        loadTab(UserSpaceTab.Updates, 1, preferCache = false)
+                                    }
+                                },
                                 onUserClick = { user -> navigator.navigate(IUserSpaceScreen(user.uid, user.name)) },
                                 onOpenPrivateMessage = { user -> navigator.navigate(IPrivateMessageScreen(user.uid, user.name)) },
                                 onBlogClick = { blog ->
@@ -289,6 +389,35 @@ fun UserSpacePage(
             }
         }
     }
+
+    if (showFavoriteUpdateGlobalRefreshConfirm) {
+        AlertDialog(
+            onDismissRequest = { showFavoriteUpdateGlobalRefreshConfirm = false },
+            title = { Text("全域刷新收藏更新") },
+            text = {
+                Text("將重新檢查所有收藏並建立新的更新任務。網站維護中可能會產生大量錯誤記錄。")
+            },
+            confirmButton = {
+                YamiboActionChip(text = "開始刷新", onClick = {
+                    showFavoriteUpdateGlobalRefreshConfirm = false
+                    scope.launch {
+                        when (val result = favoriteUpdateRunner.startGlobalRefresh()) {
+                            is FavoriteUpdateRunner.LaunchResult.Started -> {
+                                snackbarHostState.showSnackbar("開始全域刷新收藏更新", duration = SnackbarDuration.Short)
+                            }
+                            is FavoriteUpdateRunner.LaunchResult.Rejected -> {
+                                snackbarHostState.showSnackbar(result.reason, duration = SnackbarDuration.Short)
+                            }
+                        }
+                    }
+                })
+            },
+            dismissButton = {
+                YamiboActionChip(text = "取消", onClick = { showFavoriteUpdateGlobalRefreshConfirm = false })
+            },
+            containerColor = colors.creamSurface,
+        )
+    }
 }
 
 private fun tabsFor(group: UserSpaceGroup, isSelf: Boolean): List<UserSpaceTab> = when (group) {
@@ -305,7 +434,7 @@ private fun tabsFor(group: UserSpaceGroup, isSelf: Boolean): List<UserSpaceTab> 
         UserSpaceTab.Visitors,
         UserSpaceTab.Traces,
     )
-    UserSpaceGroup.Messages -> listOf(UserSpaceTab.Messages, UserSpaceTab.Notices)
+    UserSpaceGroup.Messages -> listOf(UserSpaceTab.Updates, UserSpaceTab.Messages, UserSpaceTab.Notices)
 }
 
 private fun UserSpaceGroup.mainTitle(): String = when (this) {
@@ -470,6 +599,7 @@ private suspend fun fetchContent(
         UserSpaceTab.Online -> repository.fetchFriends(YamiboRoute.UserSpace.FriendPageType.OnlineMember, page).mapSuccess { UserSpaceContent.Friends(it) }
         UserSpaceTab.Visitors -> repository.fetchFriends(YamiboRoute.UserSpace.FriendPageType.MyVisitor, page).mapSuccess { UserSpaceContent.Friends(it) }
         UserSpaceTab.Traces -> repository.fetchFriends(YamiboRoute.UserSpace.FriendPageType.MyTrace, page).mapSuccess { UserSpaceContent.Friends(it) }
+        UserSpaceTab.Updates -> YamiboResult.Failure("更新頁不需要網路載入")
         UserSpaceTab.Messages -> repository.fetchPrivateMessages(page).mapSuccess { UserSpaceContent.Messages(it) }
         UserSpaceTab.Notices -> repository.fetchNotices(page).mapSuccess { UserSpaceContent.Notices(it) }
     }
@@ -493,6 +623,7 @@ private fun cachedContent(
         UserSpaceTab.Online -> repository.getCachedFriends(YamiboRoute.UserSpace.FriendPageType.OnlineMember, page)?.let { UserSpaceContent.Friends(it) }
         UserSpaceTab.Visitors -> repository.getCachedFriends(YamiboRoute.UserSpace.FriendPageType.MyVisitor, page)?.let { UserSpaceContent.Friends(it) }
         UserSpaceTab.Traces -> repository.getCachedFriends(YamiboRoute.UserSpace.FriendPageType.MyTrace, page)?.let { UserSpaceContent.Friends(it) }
+        UserSpaceTab.Updates -> null
         UserSpaceTab.Messages -> repository.getCachedPrivateMessages(page)?.let { UserSpaceContent.Messages(it) }
         UserSpaceTab.Notices -> repository.getCachedNotices(page)?.let { UserSpaceContent.Notices(it) }
     }
@@ -504,6 +635,7 @@ private fun UserSpaceContent.pageNumber(): Int? = when (this) {
     is UserSpaceContent.Replies -> page.pageNav?.currentPage
     is UserSpaceContent.Blogs -> page.pageNav?.currentPage
     is UserSpaceContent.Friends -> page.pageNav?.currentPage
+    is UserSpaceContent.Updates -> 1
     is UserSpaceContent.Messages -> page.pageNav?.currentPage
     is UserSpaceContent.Notices -> page.pageNav?.currentPage
 }
@@ -558,6 +690,7 @@ private fun userSpaceEditActionWebView(group: UserSpaceGroup): IActionWebView {
             successCondition = { url -> isMessageListUrl(url) },
         )
     }
+
 }
 
 private fun isMessageListUrl(url: String): Boolean {

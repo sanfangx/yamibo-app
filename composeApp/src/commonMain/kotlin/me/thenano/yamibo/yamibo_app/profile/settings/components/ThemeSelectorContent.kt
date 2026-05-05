@@ -3,6 +3,7 @@ package me.thenano.yamibo.yamibo_app.profile.settings.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -10,6 +11,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -55,7 +57,10 @@ fun ThemeSelectorContent(
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .clickable { onModeChange(mode) }
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                        ) { onModeChange(mode) }
                         .background(if (isSelected) colors.brownPrimary else Color.Transparent)
                         .padding(vertical = 10.dp),
                     contentAlignment = Alignment.Center
@@ -101,7 +106,11 @@ private fun ThemeCard(
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.clickable(onClick = onClick)
+        modifier = Modifier.clickable(
+            interactionSource = remember { MutableInteractionSource() },
+            indication = null,
+            onClick = onClick,
+        )
     ) {
         Box(
             modifier = Modifier

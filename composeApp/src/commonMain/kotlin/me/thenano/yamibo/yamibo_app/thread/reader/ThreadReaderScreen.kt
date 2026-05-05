@@ -58,6 +58,7 @@ import me.thenano.yamibo.yamibo_app.thread.reader.components.tag.ITagListScreen
 import me.thenano.yamibo.yamibo_app.util.buildImageRequest
 import me.thenano.yamibo.yamibo_app.util.normalizeImageUrl
 import me.thenano.yamibo.yamibo_app.util.shareText
+import me.thenano.yamibo.yamibo_app.util.state
 import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
 import me.thenano.yamibo.yamibo_app.util.time.epochMillisOrNull
 import me.thenano.yamibo.yamibo_app.webview.action.IActionWebView
@@ -152,6 +153,7 @@ internal fun ThreadReaderScreen(
     DebugRecomposeProbe("ThreadReaderScreen", tid.value.toString())
     val colors = YamiboTheme.colors
     val appSettingsRepository = LocalAppSettingsRepository.current
+    val novelSettingsRepository = LocalNovelReaderSettingsRepository.current
     val threadRepository = LocalThreadRepository.current
     val favoriteRepository = LocalFavoriteRepository.current
     val favoriteSyncRepository = LocalFavoriteSyncRepository.current
@@ -161,6 +163,7 @@ internal fun ThreadReaderScreen(
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
     val isNovelThread = threadType == ReadHistoryRepository.ThreadEntryType.Novel
+    val keepSystemBarsBackground = novelSettingsRepository.keepSystemBarsBackground.state()
 
     var state by remember { mutableStateOf<ReaderState>(ReaderState.Loading) }
     var posts by remember { mutableStateOf<List<Post>>(emptyList()) }
@@ -1154,12 +1157,22 @@ internal fun ThreadReaderScreen(
                     }
 
                     is ReaderState.Success -> {
+                        val topContentPadding = if (keepSystemBarsBackground) {
+                            WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+                        } else {
+                            0.dp
+                        }
+                        val bottomContentPadding = if (keepSystemBarsBackground) {
+                            WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 40.dp
+                        } else {
+                            40.dp
+                        }
                         LazyColumn(
                             state = listState,
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(
-                                top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding(),
-                                bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 40.dp
+                                top = topContentPadding,
+                                bottom = bottomContentPadding,
                             )
                         ) {
                             itemsIndexed(
@@ -1381,6 +1394,23 @@ internal fun ThreadReaderScreen(
                     }
                 }
 
+                if (keepSystemBarsBackground) {
+                    Spacer(
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .fillMaxWidth()
+                            .windowInsetsTopHeight(WindowInsets.statusBars)
+                            .background(colors.creamBackground)
+                    )
+                    Spacer(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .fillMaxWidth()
+                            .windowInsetsBottomHeight(WindowInsets.navigationBars)
+                            .background(colors.creamBackground)
+                    )
+                }
+
                 // Manga reader button visibility
                 val isFirstPage = currentPage == 1
                 val showMangaReader = isMangaForum && isFirstPage
@@ -1468,12 +1498,11 @@ internal fun ThreadReaderScreen(
                     )
                 }
 
-                val novelSettingsRepo = LocalNovelReaderSettingsRepository.current
                 val appSettingsRepo = LocalAppSettingsRepository.current
 
                 NovelReaderSettingsPanel(
                     visible = showSettingsPanel,
-                    novelSettingsRepo = novelSettingsRepo,
+                    novelSettingsRepo = novelSettingsRepository,
                     appSettingsRepo = appSettingsRepo,
                     onDismiss = { showSettingsPanel = false },
                     modifier = Modifier.align(Alignment.BottomCenter)

@@ -23,6 +23,7 @@ import me.thenano.yamibo.yamibo_app.repository.settings.NovelReaderSettingsRepos
 import me.thenano.yamibo.yamibo_app.profile.settings.components.ThemeSelectorContent
 import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelFontSizeSetting
 import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelLineSpacingSetting
+import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelSystemBarsBackgroundSetting
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.util.state
 
@@ -69,6 +70,9 @@ fun NovelReaderSettingsPanel(
                 
                 Spacer(Modifier.height(16.dp))
                 NovelLineSpacingSetting()
+
+                Spacer(Modifier.height(16.dp))
+                NovelSystemBarsBackgroundSetting()
 
                 Spacer(Modifier.height(24.dp))
 

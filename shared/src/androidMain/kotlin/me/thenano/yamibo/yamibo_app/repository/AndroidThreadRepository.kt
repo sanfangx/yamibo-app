@@ -25,14 +25,17 @@ class AndroidThreadRepository(
     override suspend fun fetchThread(
         tid: ThreadId,
         authorId: UserId?,
-        page: Int
+        page: Int,
+        reverse: Boolean,
     ): YamiboResult<ThreadPage> {
         yamiboClient.setCookie(cookieStore.load() ?: "")
-        val result = yamiboClient.fetchThreadById(tid, authorId, page)
+        val result = yamiboClient.fetchThreadById(tid, authorId, reverse, page)
 
         if (result is YamiboResult.Success) {
-            val key = ThreadRepository.ThreadCacheKey(tid.value, page, authorId?.value).toCacheKey()
-            threadCache.set(key, result.value)
+            if (!reverse) {
+                val key = ThreadRepository.ThreadCacheKey(tid.value, page, authorId?.value).toCacheKey()
+                threadCache.set(key, result.value)
+            }
         }
         return result
     }

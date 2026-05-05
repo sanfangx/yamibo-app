@@ -25,11 +25,14 @@ import me.thenano.yamibo.yamibo_app.db.DatabaseFactory
 import me.thenano.yamibo.yamibo_app.favorite.sync.AndroidAppForegroundTracker
 import me.thenano.yamibo.yamibo_app.favorite.sync.AndroidBackgroundTaskRepository
 import me.thenano.yamibo.yamibo_app.favorite.sync.FavoriteSyncRunner
+import me.thenano.yamibo.yamibo_app.favorite.updates.AndroidFavoriteUpdateScheduler
+import me.thenano.yamibo.yamibo_app.favorite.updates.FavoriteUpdateRunner
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.navigation.rememberRestorableNavigator
 import me.thenano.yamibo.yamibo_app.profile.settings.access.AndroidBackgroundAccessRepository
 import me.thenano.yamibo.yamibo_app.repository.*
 import me.thenano.yamibo.yamibo_app.repository.favorite.FavoriteSyncRepositoryImpl
+import me.thenano.yamibo.yamibo_app.repository.favorite.FavoriteUpdateRepositoryImpl
 import me.thenano.yamibo.yamibo_app.repository.settings.AppSettingsRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.MangaReaderSettingsRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.NovelReaderSettingsRepository
@@ -38,6 +41,7 @@ import me.thenano.yamibo.yamibo_app.repository.userspace.UserSpaceRepositoryImpl
 import me.thenano.yamibo.yamibo_app.store.AndroidCookieStore
 import me.thenano.yamibo.yamibo_app.store.AndroidUserStore
 import me.thenano.yamibo.yamibo_app.store.settings.AndroidSettingsStore
+import me.thenano.yamibo.yamibo_app.util.state
 
 class MainActivity : ComponentActivity() {
     var lastBackTime = 0L
@@ -107,6 +111,7 @@ class MainActivity : ComponentActivity() {
             val threadRepository = remember { AndroidThreadRepository(cookieStore, yamiboClient, diskCacheFactory) }
             val userSpaceRepository = remember { UserSpaceRepositoryImpl(cookieStore, yamiboClient, diskCacheFactory) }
             val blogRepository = remember { BlogRepositoryImpl(cookieStore, yamiboClient, diskCacheFactory) }
+            val tagRepository = remember { AndroidTagRepository(cookieStore, yamiboClient, diskCacheFactory) }
             val favoriteRepository = remember { AndroidLocalFavoriteRepository(dbFactory) }
             val remoteFavoriteRepository = remember { AndroidFavoriteRepository(cookieStore, yamiboClient) }
             val favoriteSyncDatabase = remember { Database(dbFactory.createDriver()) }
@@ -119,15 +124,25 @@ class MainActivity : ComponentActivity() {
                     threadRepository = threadRepository,
                 )
             }
+            val favoriteUpdateRepository = remember {
+                FavoriteUpdateRepositoryImpl(
+                    db = favoriteSyncDatabase,
+                    localFavoriteRepository = favoriteRepository,
+                    threadRepository = threadRepository,
+                    tagRepository = tagRepository,
+                )
+            }
             val backgroundTaskRepository = remember { AndroidBackgroundTaskRepository(context) }
             @SuppressLint("RememberReturnType")
             val favoriteSyncRunner = remember { FavoriteSyncRunner(favoriteSyncRepository, backgroundTaskRepository) }
+            val favoriteUpdateScheduler = remember { AndroidFavoriteUpdateScheduler(context) }
+            @SuppressLint("RememberReturnType")
+            val favoriteUpdateRunner = remember { FavoriteUpdateRunner(favoriteUpdateRepository, favoriteUpdateScheduler) }
             val backgroundAccessRepository = remember { AndroidBackgroundAccessRepository(context) }
             val novelCacheRepository = remember { AndroidNovelThreadCacheRepository(diskCacheFactory) }
             val readHistoryRepository = remember { AndroidReadHistoryRepository(dbFactory) }
             val signRepository = remember { AndroidSignRepository(dbFactory, authRepository, appSettingsRepository) }
             val themeRepository = remember { AndroidThemeRepository() }
-            val tagRepository = remember { AndroidTagRepository(cookieStore, yamiboClient, diskCacheFactory) }
 
             /** Provide Repositories */
             CompositionLocalProvider(
@@ -141,6 +156,8 @@ class MainActivity : ComponentActivity() {
                 LocalRemoteFavoriteRepository provides remoteFavoriteRepository,
                 LocalFavoriteSyncRepository provides favoriteSyncRepository,
                 LocalFavoriteSyncRunner provides favoriteSyncRunner,
+                LocalFavoriteUpdateRepository provides favoriteUpdateRepository,
+                LocalFavoriteUpdateRunner provides favoriteUpdateRunner,
                 LocalBackgroundAccessRepository provides backgroundAccessRepository,
                 LocalNovelThreadCacheRepository provides novelCacheRepository,
                 LocalReadHistoryRepository provides readHistoryRepository,
@@ -154,6 +171,7 @@ class MainActivity : ComponentActivity() {
             ) {
                 /** Color system bars to match active theme */
                 val scheme = LocalThemeRepository.current.getColorScheme()
+                val favoriteUpdateInterval = appSettingsRepository.favoriteUpdateInterval.state()
                 SideEffect {
                     @Suppress("DEPRECATION")
                     window.statusBarColor = scheme.brownDeep.toInt()
@@ -169,6 +187,9 @@ class MainActivity : ComponentActivity() {
                     if (appSettingsRepository.clearCacheOnAppLaunch.getValue()) {
                         diskCacheFactory.clearAllCache()
                     }
+                }
+                LaunchedEffect(favoriteUpdateInterval) {
+                    favoriteUpdateRunner.schedulePeriodicUpdate(favoriteUpdateInterval)
                 }
                 LaunchedEffect(Unit) {
                     if (

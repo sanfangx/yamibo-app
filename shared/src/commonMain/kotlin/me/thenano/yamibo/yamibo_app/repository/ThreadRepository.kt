@@ -21,7 +21,8 @@ interface ThreadRepository {
     suspend fun fetchThread(
         tid: ThreadId,
         authorId: UserId? = null,
-        page: Int = 1
+        page: Int = 1,
+        reverse: Boolean = false,
     ): YamiboResult<ThreadPage>
 
     /** Locate a specific post in the full-view thread page */

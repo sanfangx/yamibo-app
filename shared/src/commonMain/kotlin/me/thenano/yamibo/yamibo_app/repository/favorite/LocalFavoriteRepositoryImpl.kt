@@ -47,6 +47,12 @@ class LocalFavoriteRepositoryImpl(
             .map { it.toModel() }
     }
 
+    override suspend fun getAllFavoriteItems(): List<FavoriteItem> {
+        return itemQueries.getAll()
+            .executeAsList()
+            .map { it.toModel() }
+    }
+
     override suspend fun getCollections(categoryId: Long): List<FavoriteCollection> {
         return collectionQueries.getByCategoryId(categoryId)
             .executeAsList()

@@ -81,6 +81,7 @@ interface LocalFavoriteRepository {
     suspend fun ensureDefaults()
     suspend fun getDefaultCategory(): FavoriteCategory
     suspend fun getCategories(): List<FavoriteCategory>
+    suspend fun getAllFavoriteItems(): List<FavoriteItem>
     suspend fun getCollections(categoryId: Long): List<FavoriteCollection>
     suspend fun getAllCollections(): List<FavoriteCollection>
     suspend fun getCategoryContent(categoryId: Long): FavoriteCategoryContent
