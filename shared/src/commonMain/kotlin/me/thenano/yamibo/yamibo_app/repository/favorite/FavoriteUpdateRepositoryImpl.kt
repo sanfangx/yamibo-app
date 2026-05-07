@@ -105,8 +105,25 @@ class FavoriteUpdateRepositoryImpl(
         interruptRequestedRunIds += runId
         val snapshot = runQueries.getByRunId(runId).executeAsOneOrNull()?.toSnapshot() ?: return
         if (snapshot.status == RunStatus.RUNNING) {
-            interruptRun(snapshot, "更新檢查已取消")
+            interruptRun(snapshot, "更新檢查已中斷")
         }
+    }
+
+    override suspend fun cancelRun(runId: String) {
+        interruptRequestedRunIds += runId
+        val snapshot = runQueries.getByRunId(runId).executeAsOneOrNull()?.toSnapshot() ?: return
+        val now = currentTimeMillis()
+        val canceled = snapshot.copy(
+            status = RunStatus.CANCELED,
+            phase = RunPhase.CANCELED,
+            updatedAt = now,
+            finishedAt = now,
+            currentItem = "更新檢查已取消",
+            errorMessage = "更新檢查已取消",
+        )
+        persistSnapshot(canceled)
+        stateFlow.value = RunState.Idle
+        interruptRequestedRunIds.remove(runId)
     }
 
     override suspend fun markRunInterrupted(runId: String, reason: String) {
@@ -117,11 +134,14 @@ class FavoriteUpdateRepositoryImpl(
     override suspend fun getLatestSnapshot(): RunSnapshot? =
         runQueries.getLatestRecoverable().executeAsOneOrNull()?.toSnapshot()
 
+    override suspend fun getRunSnapshot(runId: String): RunSnapshot? =
+        runQueries.getByRunId(runId).executeAsOneOrNull()?.toSnapshot()
+
     override suspend fun runUpdate(runId: String) {
         interruptRequestedRunIds.remove(runId)
         var current = runQueries.getByRunId(runId).executeAsOneOrNull()?.toSnapshot() ?: return
         if (shouldStop(runId)) {
-            interruptRun(current, "更新檢查已取消")
+            interruptRun(current, "更新檢查已中斷")
             return
         }
 
@@ -156,13 +176,17 @@ class FavoriteUpdateRepositoryImpl(
 
         for ((index, item) in targets.withIndex().drop(resumeFrom)) {
             if (shouldStop(runId)) {
-                interruptRun(current, "更新檢查已取消")
+                interruptRun(current, "更新檢查已中斷")
                 return
             }
             current = updateSnapshot(
                 current.copy(currentItem = "[${index + 1}/${targets.size}] 已載入 #${item.targetId} ${item.title}")
             )
             val result = checkItem(item)
+            if (shouldStop(runId)) {
+                interruptRun(current, "更新檢查已中斷")
+                return
+            }
             current = when (result) {
                 CheckResult.Skipped -> updateSnapshot(current.copy(skippedCount = current.skippedCount + 1))
                 is CheckResult.Failed -> updateSnapshot(
@@ -252,10 +276,31 @@ class FavoriteUpdateRepositoryImpl(
         }
         val latest = postsForMode.maxByOrNull { it.pid.value }
         val latestPid = latest?.pid?.value?.toLong()
+        val latestUpdateMillis = latest?.updateTimeMillis()
         val pageCount = page.pageNav?.totalPages ?: page.pageNav?.currentPage
         val replyCount = page.thread.totalReplies
 
         if (existing?.baselineReady != 1L) {
+            val shouldReportImportedUpdate = shouldReportImportedUpdate(
+                item = item,
+                latestPid = latestPid,
+                latestUpdateMillis = latestUpdateMillis,
+                existing = existing,
+            )
+            val detectedCount = if (shouldReportImportedUpdate && latestPid != null) {
+                insertEvent(
+                    item = item,
+                    mode = mode,
+                    summary = mode.importedUpdateSummary(),
+                    latestPostTitle = latest.title.takeIf { it.isNotBlank() },
+                    detailIds = listOf(latestPid),
+                    ambiguous = false,
+                    detectedAt = now,
+                )
+                1
+            } else {
+                0
+            }
             upsertTarget(
                 existing = existing,
                 item = item,
@@ -265,28 +310,45 @@ class FavoriteUpdateRepositoryImpl(
                 replyCount = replyCount,
                 pageCount = pageCount,
                 checkedAt = now,
-                updatedAt = latest?.timeCreate?.text?.let { now },
+                updatedAt = latestUpdateMillis,
                 baselineReady = true,
             )
-            return CheckResult.Checked(0)
+            return CheckResult.Checked(detectedCount)
         }
 
         val knownLatest = if (mode == TargetMode.NovelThread) existing.knownLatestAuthorPostId else existing.knownLatestPostId
         val newPosts = if (knownLatest == null) emptyList() else postsForMode.filter { it.pid.value.toLong() > knownLatest }
-        val changed = latestPid != null && knownLatest != null && latestPid > knownLatest
+        val changedByPostId = latestPid != null && knownLatest != null && latestPid > knownLatest
+        val changedByImportedTime = shouldReportImportedUpdate(
+            item = item,
+            latestPid = latestPid,
+            latestUpdateMillis = latestUpdateMillis,
+            existing = existing,
+        )
+        val changedByTime = latestUpdateMillis != null &&
+            existing.lastUpdatedAt != null &&
+            latestUpdateMillis > existing.lastUpdatedAt + UPDATE_TIME_TOLERANCE_MILLIS
+        val changed = changedByPostId || changedByImportedTime || changedByTime
         val ambiguous = changed && newPosts.isEmpty()
         val detectedCount = if (changed) {
             val summary = when {
+                changedByImportedTime -> mode.importedUpdateSummary()
+                changedByTime && !changedByPostId -> mode.editedUpdateSummary()
                 ambiguous -> "可能有多筆新內容"
                 mode == TargetMode.NovelThread -> "作者新增 ${newPosts.size} 則內容"
                 else -> "新增 ${newPosts.size} 則回覆"
+            }
+            val detailIds = when {
+                newPosts.isNotEmpty() -> newPosts.map { it.pid.value.toLong() }
+                latestPid != null -> listOf(latestPid)
+                else -> emptyList()
             }
             insertEvent(
                 item = item,
                 mode = mode,
                 summary = summary,
                 latestPostTitle = latest?.title?.takeIf { it.isNotBlank() },
-                detailIds = newPosts.map { it.pid.value.toLong() },
+                detailIds = detailIds,
                 ambiguous = ambiguous,
                 detectedAt = now,
             )
@@ -304,10 +366,39 @@ class FavoriteUpdateRepositoryImpl(
             replyCount = replyCount,
             pageCount = pageCount,
             checkedAt = now,
-            updatedAt = if (changed) now else existing.lastUpdatedAt,
+            updatedAt = latestUpdateMillis ?: existing.lastUpdatedAt,
             baselineReady = true,
         )
         return CheckResult.Checked(detectedCount)
+    }
+
+    private fun shouldReportImportedUpdate(
+        item: LocalFavoriteRepository.FavoriteItem,
+        latestPid: Long?,
+        latestUpdateMillis: Long?,
+        existing: FavoriteUpdateTrackedTarget?,
+    ): Boolean {
+        if (latestPid == null || latestUpdateMillis == null) return false
+        val favoriteUpdatedAt = item.lastUpdatedTime ?: return false
+        if (latestUpdateMillis <= favoriteUpdatedAt + UPDATE_TIME_TOLERANCE_MILLIS) return false
+        return existing?.lastUpdatedAt != latestUpdateMillis
+    }
+
+    private fun Post.updateTimeMillis(): Long? {
+        val latestEpoch = maxOf(timeCreate.epoch, lastEditedTime?.epoch ?: 0L)
+        return latestEpoch.takeIf { it > 0L }?.let { it * 1000L }
+    }
+
+    private fun TargetMode.importedUpdateSummary(): String = when (this) {
+        TargetMode.NovelThread -> "作者有新的內容"
+        TargetMode.NormalThread -> "帖子有新的內容"
+        TargetMode.TagManga -> "Tag 有新的帖子"
+    }
+
+    private fun TargetMode.editedUpdateSummary(): String = when (this) {
+        TargetMode.NovelThread -> "作者更新內容"
+        TargetMode.NormalThread -> "帖子內容已更新"
+        TargetMode.TagManga -> "Tag 內容已更新"
     }
 
     private suspend fun checkTagManga(item: LocalFavoriteRepository.FavoriteItem): CheckResult {
@@ -541,8 +632,10 @@ class FavoriteUpdateRepositoryImpl(
     }
 
     private fun interruptRun(snapshot: RunSnapshot, reason: String) {
+        val latest = runQueries.getByRunId(snapshot.runId).executeAsOneOrNull()?.toSnapshot() ?: snapshot
+        if (latest.status != RunStatus.RUNNING) return
         val now = currentTimeMillis()
-        val interrupted = snapshot.copy(
+        val interrupted = latest.copy(
             status = RunStatus.INTERRUPTED,
             phase = RunPhase.INTERRUPTED,
             updatedAt = now,
@@ -550,7 +643,7 @@ class FavoriteUpdateRepositoryImpl(
         )
         persistSnapshot(interrupted)
         stateFlow.value = RunState.Interrupted(interrupted)
-        interruptRequestedRunIds.remove(snapshot.runId)
+        interruptRequestedRunIds.remove(latest.runId)
     }
 
     private fun FavoriteUpdateRun.toSnapshot(): RunSnapshot =
@@ -577,6 +670,7 @@ class FavoriteUpdateRepositoryImpl(
         RunStatus.INTERRUPTED -> RunState.Interrupted(this)
         RunStatus.FAILED -> RunState.Failed(this)
         RunStatus.COMPLETED -> RunState.Completed(this)
+        RunStatus.CANCELED -> RunState.Idle
     }
 
     private fun FavoriteUpdateEvent.toModel(): UpdateEvent =
@@ -619,7 +713,7 @@ class FavoriteUpdateRepositoryImpl(
     private fun shouldStop(runId: String): Boolean {
         if (runId in interruptRequestedRunIds) return true
         val snapshot = runQueries.getByRunId(runId).executeAsOneOrNull()?.toSnapshot() ?: return false
-        return snapshot.status == RunStatus.INTERRUPTED
+        return snapshot.status != RunStatus.RUNNING
     }
 
     private sealed interface CheckResult {
@@ -630,5 +724,6 @@ class FavoriteUpdateRepositoryImpl(
 
     companion object {
         private const val MAX_TAG_SCAN_PAGES = 8
+        private const val UPDATE_TIME_TOLERANCE_MILLIS = 60_000L
     }
 }

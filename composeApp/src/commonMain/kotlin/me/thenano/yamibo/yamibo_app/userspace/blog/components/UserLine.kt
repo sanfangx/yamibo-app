@@ -1,4 +1,4 @@
-﻿package me.thenano.yamibo.yamibo_app.userspace.blog.components
+package me.thenano.yamibo.yamibo_app.userspace.blog.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box

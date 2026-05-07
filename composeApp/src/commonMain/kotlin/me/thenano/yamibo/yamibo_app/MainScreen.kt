@@ -25,6 +25,8 @@ import androidx.compose.ui.unit.sp
 import kotlinx.serialization.Serializable
 import me.thenano.yamibo.yamibo_app.favorite.FavoritePage
 import me.thenano.yamibo.yamibo_app.history.ReadHistoryPage
+import me.thenano.yamibo.yamibo_app.message.MessageCenterScreen
+import me.thenano.yamibo.yamibo_app.message.MessageCenterTab
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.navigation.Navigatable
 import me.thenano.yamibo.yamibo_app.navigation.RestorableNavigatable
@@ -34,9 +36,6 @@ import me.thenano.yamibo.yamibo_app.navigation.decodeRestorePayload
 import me.thenano.yamibo.yamibo_app.navigation.restoreSnapshot
 import me.thenano.yamibo.yamibo_app.profile.ProfilePage
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
-import me.thenano.yamibo.yamibo_app.userspace.UserSpaceGroup
-import me.thenano.yamibo.yamibo_app.userspace.UserSpacePage
-import me.thenano.yamibo.yamibo_app.userspace.UserSpaceTab
 
 enum class MainTab(val title: String, val icon: ImageVector) {
     Home("首页", YamiboIcons.Home),
@@ -138,9 +137,8 @@ fun MainScreen(initialTab: MainTab = MainTab.Home) {
                     when (tab) {
                         MainTab.Home -> HomeScreenContent()
                         MainTab.History -> ReadHistoryPage(reTapHistoryToken)
-                        MainTab.Message -> UserSpacePage(
-                            group = UserSpaceGroup.Messages,
-                            initialTab = UserSpaceTab.Messages,
+                        MainTab.Message -> MessageCenterScreen(
+                            initialTab = MessageCenterTab.PrivateMessages,
                             mainTabTopBar = true,
                         )
                         MainTab.Favorite -> FavoritePage()

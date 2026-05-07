@@ -2,7 +2,9 @@ package me.thenano.yamibo.yamibo_app.favorite.updates
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,12 +23,19 @@ class FavoriteUpdateRunner(
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val stateFlow = MutableStateFlow<FavoriteUpdateRepository.RunState>(FavoriteUpdateRepository.RunState.Idle)
+    private var syncJob: Job? = null
 
     val state: StateFlow<FavoriteUpdateRepository.RunState> = stateFlow.asStateFlow()
 
     init {
         scope.launch {
-            repository.state.collect { stateFlow.value = it }
+            repository.state.collect { state ->
+                stateFlow.value = state
+                val snapshot = state.snapshotOrNull()
+                if (snapshot != null && state is FavoriteUpdateRepository.RunState.Running) {
+                    startSnapshotSync(snapshot.runId)
+                }
+            }
         }
     }
 
@@ -35,10 +44,12 @@ class FavoriteUpdateRunner(
         if (running != null) return LaunchResult.Started(running.snapshot.runId)
 
         val runId = repository.startRun()
+        startSnapshotSync(runId)
         return when (val result = scheduler.startFavoriteUpdate(runId)) {
             FavoriteUpdateScheduler.StartResult.Started -> LaunchResult.Started(runId)
             is FavoriteUpdateScheduler.StartResult.Rejected -> {
                 repository.markRunInterrupted(runId, result.reason)
+                syncRunSnapshot(runId)
                 LaunchResult.Rejected(result.reason, runId)
             }
         }
@@ -46,10 +57,12 @@ class FavoriteUpdateRunner(
 
     suspend fun resumeInterruptedUpdate(): LaunchResult? {
         val runId = repository.resumeInterruptedRun() ?: return null
+        startSnapshotSync(runId)
         return when (val result = scheduler.startFavoriteUpdate(runId)) {
             FavoriteUpdateScheduler.StartResult.Started -> LaunchResult.Started(runId)
             is FavoriteUpdateScheduler.StartResult.Rejected -> {
                 repository.markRunInterrupted(runId, result.reason)
+                syncRunSnapshot(runId)
                 LaunchResult.Rejected(result.reason, runId)
             }
         }
@@ -59,11 +72,58 @@ class FavoriteUpdateRunner(
 
     suspend fun cancelUpdate(runId: String) {
         scheduler.cancelFavoriteUpdate(runId)
+        repository.cancelRun(runId)
+        syncJob?.cancel()
+        stateFlow.value = FavoriteUpdateRepository.RunState.Idle
+    }
+
+    suspend fun interruptUpdate(runId: String) {
+        scheduler.cancelFavoriteUpdate(runId)
         repository.interruptRun(runId)
+        syncRunSnapshot(runId)
     }
 
     suspend fun schedulePeriodicUpdate(interval: FavoriteUpdateInterval) {
         scheduler.schedulePeriodicFavoriteUpdate(interval)
+    }
+
+    private fun startSnapshotSync(runId: String) {
+        if (syncJob?.isActive == true) return
+        syncJob = scope.launch {
+            while (true) {
+                val state = syncRunSnapshot(runId)
+                if (state !is FavoriteUpdateRepository.RunState.Running) break
+                delay(RUN_SYNC_INTERVAL_MS)
+            }
+        }
+    }
+
+    private suspend fun syncRunSnapshot(runId: String): FavoriteUpdateRepository.RunState {
+        val state = repository.getRunSnapshot(runId)?.toState() ?: FavoriteUpdateRepository.RunState.Idle
+        stateFlow.value = state
+        return state
+    }
+
+    private fun FavoriteUpdateRepository.RunSnapshot.toState(): FavoriteUpdateRepository.RunState =
+        when (status) {
+            FavoriteUpdateRepository.RunStatus.RUNNING -> FavoriteUpdateRepository.RunState.Running(this)
+            FavoriteUpdateRepository.RunStatus.INTERRUPTED -> FavoriteUpdateRepository.RunState.Interrupted(this)
+            FavoriteUpdateRepository.RunStatus.FAILED -> FavoriteUpdateRepository.RunState.Failed(this)
+            FavoriteUpdateRepository.RunStatus.COMPLETED -> FavoriteUpdateRepository.RunState.Completed(this)
+            FavoriteUpdateRepository.RunStatus.CANCELED -> FavoriteUpdateRepository.RunState.Idle
+        }
+
+    private fun FavoriteUpdateRepository.RunState.snapshotOrNull(): FavoriteUpdateRepository.RunSnapshot? =
+        when (this) {
+            FavoriteUpdateRepository.RunState.Idle -> null
+            is FavoriteUpdateRepository.RunState.Running -> snapshot
+            is FavoriteUpdateRepository.RunState.Interrupted -> snapshot
+            is FavoriteUpdateRepository.RunState.Failed -> snapshot
+            is FavoriteUpdateRepository.RunState.Completed -> snapshot
+        }
+
+    companion object {
+        private const val RUN_SYNC_INTERVAL_MS = 500L
     }
 }
 

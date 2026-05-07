@@ -31,6 +31,7 @@ expect fun PlatformWebViewContent(
     onReload: (() -> Unit) -> Unit,
     onPageFinished: (String) -> Unit,
     onHtmlAvailable: (url: String, html: String) -> Unit,
+    onLoadError: (url: String?, description: String) -> Unit,
     shouldOverrideUrlLoading: (String) -> Boolean,
 )
 
@@ -44,6 +45,7 @@ internal fun PlatformWebViewScreen(
     captureHtml: Boolean = false,
     onPageFinished: (String) -> Unit = {},
     onHtmlAvailable: (url: String, html: String) -> Unit = { _, _ -> },
+    onLoadError: (url: String?, description: String) -> Unit = { _, _ -> },
     shouldOverrideUrlLoading: (String) -> Boolean = { false },
 ) {
     val navigator = LocalNavigator.current
@@ -88,6 +90,7 @@ internal fun PlatformWebViewScreen(
                     onReload = { reloadFunc = it },
                     onPageFinished = onPageFinished,
                     onHtmlAvailable = onHtmlAvailable,
+                    onLoadError = onLoadError,
                     shouldOverrideUrlLoading = shouldOverrideUrlLoading,
                 )
                 LoadingOverlay(visible = loading)
@@ -105,6 +108,7 @@ class IPlatformWebView(
     private val captureHtml: Boolean = false,
     private val onPageFinished: (String) -> Unit = {},
     private val onHtmlAvailable: (url: String, html: String) -> Unit = { _, _ -> },
+    private val onLoadError: (url: String?, description: String) -> Unit = { _, _ -> },
     private val shouldOverrideUrlLoading: (String) -> Boolean = { false },
 ) : Navigatable {
     override val id = buildId(link, title, showNavigation, useBackIcon, syncAuthCookies, captureHtml)
@@ -120,6 +124,7 @@ class IPlatformWebView(
             captureHtml = captureHtml,
             onPageFinished = onPageFinished,
             onHtmlAvailable = onHtmlAvailable,
+            onLoadError = onLoadError,
             shouldOverrideUrlLoading = shouldOverrideUrlLoading,
         )
     }

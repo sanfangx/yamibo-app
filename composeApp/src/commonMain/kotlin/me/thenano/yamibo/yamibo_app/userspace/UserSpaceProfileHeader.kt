@@ -1,4 +1,4 @@
-﻿package me.thenano.yamibo.yamibo_app.userspace
+package me.thenano.yamibo.yamibo_app.userspace
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -39,7 +39,8 @@ import me.thenano.yamibo.yamibo_app.util.rememberImageRequest
 internal fun UserSpaceProfileHeader(
     profile: ProfilePage,
     isSelf: Boolean,
-    onNavigateGroup: (UserSpaceGroup, UserSpaceTab) -> Unit,
+    onNavigateSection: (UserSpaceSection, UserSpaceSubPage) -> Unit,
+    onOpenMessageCenter: () -> Unit,
     onOpenWebView: (String, String) -> Unit,
 ) {
     val colors = YamiboTheme.colors
@@ -69,7 +70,7 @@ internal fun UserSpaceProfileHeader(
         }
 
         StatPanel(profile)
-        ActionGrid(isSelf, onNavigateGroup)
+        ActionGrid(isSelf, onNavigateSection, onOpenMessageCenter)
         if (!profile.signatureHtml.isNullOrBlank()) {
             ProfileSignatureCard(profile.signatureHtml)
         }
@@ -104,26 +105,31 @@ private fun ProfileStat(label: String, value: String, modifier: Modifier) {
 }
 
 private data class SpaceAction(
-    val group: UserSpaceGroup?,
-    val initialTab: UserSpaceTab,
+    val group: UserSpaceSection?,
+    val initialTab: UserSpaceSubPage,
     val label: String,
+    val opensMessageCenter: Boolean = false,
 )
 
 @Composable
-private fun ActionGrid(isSelf: Boolean, onNavigateGroup: (UserSpaceGroup, UserSpaceTab) -> Unit) {
+private fun ActionGrid(
+    isSelf: Boolean,
+    onNavigateSection: (UserSpaceSection, UserSpaceSubPage) -> Unit,
+    onOpenMessageCenter: () -> Unit,
+) {
     val actions = if (isSelf) {
         listOf(
-            SpaceAction(UserSpaceGroup.Threads, UserSpaceTab.Threads, "我的主題"),
-            SpaceAction(UserSpaceGroup.Blogs, UserSpaceTab.FriendBlogs, "我的日志"),
-            SpaceAction(UserSpaceGroup.Friends, UserSpaceTab.Friends, "我的好友"),
-            SpaceAction(UserSpaceGroup.Messages, UserSpaceTab.Messages, "消息提醒"),
+            SpaceAction(UserSpaceSection.Threads, UserSpaceSubPage.Threads, "我的主題"),
+            SpaceAction(UserSpaceSection.Blogs, UserSpaceSubPage.FriendBlogs, "我的日志"),
+            SpaceAction(UserSpaceSection.Friends, UserSpaceSubPage.Friends, "我的好友"),
+            SpaceAction(null, UserSpaceSubPage.Profile, "消息提醒", opensMessageCenter = true),
         )
     } else {
         listOf(
-            SpaceAction(UserSpaceGroup.Threads, UserSpaceTab.Threads, "Ta的主題"),
-            SpaceAction(UserSpaceGroup.Blogs, UserSpaceTab.MyBlogs, "Ta的日志"),
-            SpaceAction(UserSpaceGroup.Threads, UserSpaceTab.Replies, "Ta的回覆"),
-            SpaceAction(null, UserSpaceTab.Profile, "加為好友"),
+            SpaceAction(UserSpaceSection.Threads, UserSpaceSubPage.Threads, "Ta的主題"),
+            SpaceAction(UserSpaceSection.Blogs, UserSpaceSubPage.MyBlogs, "Ta的日志"),
+            SpaceAction(UserSpaceSection.Threads, UserSpaceSubPage.Replies, "Ta的回覆"),
+            SpaceAction(null, UserSpaceSubPage.Profile, "加為好友"),
         )
     }
     val colors = YamiboTheme.colors
@@ -140,8 +146,9 @@ private fun ActionGrid(isSelf: Boolean, onNavigateGroup: (UserSpaceGroup, UserSp
                     row.forEach { action ->
                         Surface(
                             onClick = {
-                                if (action.group != null) {
-                                    onNavigateGroup(action.group, action.initialTab)
+                                when {
+                                    action.opensMessageCenter -> onOpenMessageCenter()
+                                    action.group != null -> onNavigateSection(action.group, action.initialTab)
                                 }
                             },
                             modifier = Modifier.weight(1f),

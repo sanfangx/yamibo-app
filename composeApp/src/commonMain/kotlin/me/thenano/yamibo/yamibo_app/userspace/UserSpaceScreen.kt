@@ -26,26 +26,21 @@ import io.github.littlesurvival.dto.page.*
 import io.github.littlesurvival.dto.value.UserId
 import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.LocalAuthRepository
-import me.thenano.yamibo.yamibo_app.LocalFavoriteUpdateRepository
-import me.thenano.yamibo.yamibo_app.LocalFavoriteUpdateRunner
 import me.thenano.yamibo.yamibo_app.LocalUserSpaceRepository
 import me.thenano.yamibo.yamibo_app.components.*
-import me.thenano.yamibo.yamibo_app.favorite.updates.FavoriteUpdateRunner
+import me.thenano.yamibo.yamibo_app.message.IPrivateMessageScreen
+import me.thenano.yamibo.yamibo_app.message.IMessageCenterScreen
+import me.thenano.yamibo.yamibo_app.message.MessageCenterTab
 import me.thenano.yamibo.yamibo_app.navigation.ComposableNavigator
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
-import me.thenano.yamibo.yamibo_app.repository.FavoriteUpdateRepository
-import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository
-import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.INovelThreadDetailScreen
-import me.thenano.yamibo.yamibo_app.thread.detail.tag.ITagDetailScreen
 import me.thenano.yamibo.yamibo_app.thread.reader.IThreadReaderScreen
 import me.thenano.yamibo.yamibo_app.userspace.blog.IBlogReaderScreen
-import me.thenano.yamibo.yamibo_app.userspace.notification.IPrivateMessageScreen
 import me.thenano.yamibo.yamibo_app.webview.action.IActionWebView
 
-enum class UserSpaceTab(val selfTitle: String, val otherTitle: String = selfTitle) {
+enum class UserSpaceSubPage(val selfTitle: String, val otherTitle: String = selfTitle) {
     Profile("我的資料", "Ta的資料"),
     Threads("我的主題", "Ta的主題"),
     Replies("我的回覆", "Ta的回覆"),
@@ -55,41 +50,30 @@ enum class UserSpaceTab(val selfTitle: String, val otherTitle: String = selfTitl
     Friends("我的好友"),
     Online("在線成員"),
     Visitors("我的訪客"),
-    Traces("我的足跡"),
-    Updates("更新"),
-    Messages("我的消息"),
-    Notices("我的提醒");
+    Traces("我的足跡");
 
     fun title(isSelf: Boolean): String = if (isSelf) selfTitle else otherTitle
 }
 
-enum class UserSpaceGroup {
+enum class UserSpaceSection {
     Space,
     Threads,
     Blogs,
     Friends,
-    Messages,
 }
 
 private sealed interface UserSpaceState {
     data object Loading : UserSpaceState
-    data class Success(val content: UserSpaceContent) : UserSpaceState
+    data class Success(val content: UserSpaceScreenContent) : UserSpaceState
     data class Error(val message: String) : UserSpaceState
 }
 
-internal sealed interface UserSpaceContent {
-    data class Profile(val page: ProfilePage) : UserSpaceContent
-    data class Threads(val page: UserSpaceThreadPage) : UserSpaceContent
-    data class Replies(val page: UserSpaceThreadReplyPage) : UserSpaceContent
-    data class Blogs(val page: UserSpaceBlogPage) : UserSpaceContent
-    data class Friends(val page: UserSpaceFriendPage) : UserSpaceContent
-    data class Updates(
-        val events: List<FavoriteUpdateRepository.UpdateEvent>,
-        val filters: List<FavoriteUpdateRepository.FidFilter>,
-        val runState: FavoriteUpdateRepository.RunState,
-    ) : UserSpaceContent
-    data class Messages(val page: UserSpacePrivateMessagePage) : UserSpaceContent
-    data class Notices(val page: UserSpaceNoticePage) : UserSpaceContent
+internal sealed interface UserSpaceScreenContent {
+    data class Profile(val page: ProfilePage) : UserSpaceScreenContent
+    data class Threads(val page: UserSpaceThreadPage) : UserSpaceScreenContent
+    data class Replies(val page: UserSpaceThreadReplyPage) : UserSpaceScreenContent
+    data class Blogs(val page: UserSpaceBlogPage) : UserSpaceScreenContent
+    data class Friends(val page: UserSpaceFriendPage) : UserSpaceScreenContent
 }
 
 private enum class ViewAllBlogFilter(
@@ -102,18 +86,15 @@ private enum class ViewAllBlogFilter(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun UserSpacePage(
+fun UserSpaceScreen(
     userId: UserId? = null,
     titleHint: String? = null,
-    group: UserSpaceGroup = UserSpaceGroup.Space,
-    initialTab: UserSpaceTab = UserSpaceTab.Profile,
+    group: UserSpaceSection = UserSpaceSection.Space,
+    initialTab: UserSpaceSubPage = UserSpaceSubPage.Profile,
     mainTabTopBar: Boolean = false,
 ) {
     val colors = YamiboTheme.colors
     val repository = LocalUserSpaceRepository.current
-    val favoriteUpdateRepository = LocalFavoriteUpdateRepository.current
-    val favoriteUpdateRunner = LocalFavoriteUpdateRunner.current
-    val favoriteUpdateRunState by favoriteUpdateRunner.state.collectAsState()
     val authRepository = LocalAuthRepository.current
     val navigator = LocalNavigator.current
     val scope = rememberCoroutineScope()
@@ -130,20 +111,8 @@ fun UserSpacePage(
     var profile by remember { mutableStateOf(repository.getCachedProfile(userId)) }
     var isRefreshing by remember { mutableStateOf(false) }
     var viewAllBlogFilter by remember(userId, group) { mutableStateOf(ViewAllBlogFilter.Latest) }
-    var showFavoriteUpdateGlobalRefreshConfirm by remember { mutableStateOf(false) }
 
-    suspend fun loadTab(tab: UserSpaceTab, page: Int, preferCache: Boolean = true) {
-        if (tab == UserSpaceTab.Updates) {
-            currentPage = 1
-            state = UserSpaceState.Success(
-                UserSpaceContent.Updates(
-                    events = favoriteUpdateRepository.getActiveEvents(),
-                    filters = favoriteUpdateRepository.getFidFilters(),
-                    runState = favoriteUpdateRunState,
-                )
-            )
-            return
-        }
+    suspend fun loadTab(tab: UserSpaceSubPage, page: Int, preferCache: Boolean = true) {
         if (preferCache) {
             cachedContent(repository, userId, tab, page, viewAllBlogFilter.apiType)?.let {
                 currentPage = page
@@ -178,16 +147,6 @@ fun UserSpacePage(
         loadTab(selectedTab, 1)
     }
 
-    LaunchedEffect(favoriteUpdateRunState) {
-        if (
-            selectedTab == UserSpaceTab.Updates &&
-            favoriteUpdateRunState !is FavoriteUpdateRepository.RunState.Idle &&
-            favoriteUpdateRunState !is FavoriteUpdateRepository.RunState.Running
-        ) {
-            loadTab(UserSpaceTab.Updates, 1, preferCache = false)
-        }
-    }
-
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = colors.creamBackground,
@@ -204,10 +163,7 @@ fun UserSpacePage(
             } else {
                 UserSpaceTopBar(
                     title = topBarTitle(profile, titleHint, group, selectedTab, isSelf),
-                    showEdit = isSelf && (
-                        group == UserSpaceGroup.Blogs ||
-                            (group == UserSpaceGroup.Messages && selectedTab == UserSpaceTab.Messages)
-                    ),
+                    showEdit = isSelf && group == UserSpaceSection.Blogs,
                     applyStatusPadding = true,
                     onBack = { navigator.pop() },
                     onEdit = {
@@ -224,14 +180,14 @@ fun UserSpacePage(
                 .background(colors.creamBackground)
         ) {
             if (tabs.size > 1) {
-                UserSpaceTabRow(
+                UserSpaceSubPageRow(
                     tabs = tabs,
                     selectedTab = selectedTab,
                     isSelf = isSelf,
                     onSelect = { selectedTab = it }
                 )
             }
-            if (selectedTab == UserSpaceTab.ViewAllBlogs) {
+            if (selectedTab == UserSpaceSubPage.ViewAllBlogs) {
                 UserSpaceViewAllBlogFilterRow(
                     selected = viewAllBlogFilter,
                     onSelect = { viewAllBlogFilter = it },
@@ -259,7 +215,7 @@ fun UserSpacePage(
                                 isRefreshing = true
                                 scope.launch {
                                     loadTab(selectedTab, currentPage, preferCache = false)
-                                    if (selectedTab == UserSpaceTab.Profile) {
+                                    if (selectedTab == UserSpaceSubPage.Profile) {
                                         when (val result = repository.fetchProfile(userId)) {
                                             is YamiboResult.Success -> profile = result.value
                                             else -> Unit
@@ -270,15 +226,12 @@ fun UserSpacePage(
                             },
                             modifier = Modifier.fillMaxSize()
                         ) {
-                            UserSpaceMainContent(
-                                content = when (val content = current.content) {
-                                    is UserSpaceContent.Updates -> content.copy(runState = favoriteUpdateRunState)
-                                    else -> content
-                                },
+                            UserSpaceSectionContent(
+                                content = current.content,
                                 isSelf = isSelf,
                                 selectedTab = selectedTab,
                                 currentPage = currentPage,
-                                onNavigateGroup = { targetGroup, targetTab ->
+                                onNavigateSection = { targetGroup, targetTab ->
                                     navigator.navigate(
                                         IUserSpaceScreen(
                                             userId = userId,
@@ -288,70 +241,14 @@ fun UserSpacePage(
                                         )
                                     )
                                 },
+                                onOpenMessageCenter = { tab ->
+                                    navigator.navigate(IMessageCenterScreen(initialTab = tab))
+                                },
                                 onPageChange = { page ->
                                     state = UserSpaceState.Loading
                                     scope.launch { loadTab(selectedTab, page) }
                                 },
                                 onThreadClick = { thread -> navigateThread(thread, navigator) },
-                                onUpdateEventClick = { event ->
-                                    scope.launch { favoriteUpdateRepository.markEventRead(event.id) }
-                                    when (event.targetType) {
-                                        LocalFavoriteRepository.FavoriteTargetType.TagManga -> navigator.navigate(
-                                            ITagDetailScreen(
-                                                tagId = io.github.littlesurvival.dto.value.TagId(event.targetId.toInt()),
-                                                title = event.title,
-                                            )
-                                        )
-                                        LocalFavoriteRepository.FavoriteTargetType.ThreadNovel -> navigator.navigate(
-                                            INovelThreadDetailScreen(
-                                                tid = io.github.littlesurvival.dto.value.ThreadId(event.targetId.toInt()),
-                                                title = event.title,
-                                                authorId = event.authorId?.toInt()?.let { UserId(it) },
-                                            )
-                                        )
-                                        LocalFavoriteRepository.FavoriteTargetType.ThreadNormal -> navigator.navigate(
-                                            IThreadReaderScreen(
-                                                tid = io.github.littlesurvival.dto.value.ThreadId(event.targetId.toInt()),
-                                                title = event.title,
-                                                threadType = ReadHistoryRepository.ThreadEntryType.Normal,
-                                            )
-                                        )
-                                    }
-                                },
-                                onDismissUpdateEvent = { event ->
-                                    scope.launch {
-                                        favoriteUpdateRepository.dismissEvent(event.id)
-                                        loadTab(UserSpaceTab.Updates, 1, preferCache = false)
-                                    }
-                                },
-                                onStartFavoriteUpdate = {
-                                    scope.launch {
-                                        when (val result = favoriteUpdateRunner.startManualUpdate()) {
-                                            is FavoriteUpdateRunner.LaunchResult.Started -> {
-                                                snackbarHostState.showSnackbar("開始檢查收藏更新", duration = SnackbarDuration.Short)
-                                            }
-                                            is FavoriteUpdateRunner.LaunchResult.Rejected -> {
-                                                snackbarHostState.showSnackbar(result.reason, duration = SnackbarDuration.Short)
-                                            }
-                                        }
-                                    }
-                                },
-                                onGlobalFavoriteUpdate = {
-                                    showFavoriteUpdateGlobalRefreshConfirm = true
-                                },
-                                onCancelFavoriteUpdate = { runId ->
-                                    scope.launch {
-                                        favoriteUpdateRunner.cancelUpdate(runId)
-                                        loadTab(UserSpaceTab.Updates, 1, preferCache = false)
-                                        snackbarHostState.showSnackbar("已中斷收藏更新檢查", duration = SnackbarDuration.Short)
-                                    }
-                                },
-                                onToggleFavoriteUpdateFid = { fid, enabled ->
-                                    scope.launch {
-                                        favoriteUpdateRepository.setFidEnabled(fid, enabled)
-                                        loadTab(UserSpaceTab.Updates, 1, preferCache = false)
-                                    }
-                                },
                                 onUserClick = { user -> navigator.navigate(IUserSpaceScreen(user.uid, user.name)) },
                                 onOpenPrivateMessage = { user -> navigator.navigate(IPrivateMessageScreen(user.uid, user.name)) },
                                 onBlogClick = { blog ->
@@ -389,60 +286,29 @@ fun UserSpacePage(
             }
         }
     }
-
-    if (showFavoriteUpdateGlobalRefreshConfirm) {
-        AlertDialog(
-            onDismissRequest = { showFavoriteUpdateGlobalRefreshConfirm = false },
-            title = { Text("全域刷新收藏更新") },
-            text = {
-                Text("將重新檢查所有收藏並建立新的更新任務。網站維護中可能會產生大量錯誤記錄。")
-            },
-            confirmButton = {
-                YamiboActionChip(text = "開始刷新", onClick = {
-                    showFavoriteUpdateGlobalRefreshConfirm = false
-                    scope.launch {
-                        when (val result = favoriteUpdateRunner.startGlobalRefresh()) {
-                            is FavoriteUpdateRunner.LaunchResult.Started -> {
-                                snackbarHostState.showSnackbar("開始全域刷新收藏更新", duration = SnackbarDuration.Short)
-                            }
-                            is FavoriteUpdateRunner.LaunchResult.Rejected -> {
-                                snackbarHostState.showSnackbar(result.reason, duration = SnackbarDuration.Short)
-                            }
-                        }
-                    }
-                })
-            },
-            dismissButton = {
-                YamiboActionChip(text = "取消", onClick = { showFavoriteUpdateGlobalRefreshConfirm = false })
-            },
-            containerColor = colors.creamSurface,
-        )
-    }
 }
 
-private fun tabsFor(group: UserSpaceGroup, isSelf: Boolean): List<UserSpaceTab> = when (group) {
-    UserSpaceGroup.Space -> listOf(UserSpaceTab.Profile)
-    UserSpaceGroup.Threads -> listOf(UserSpaceTab.Threads, UserSpaceTab.Replies)
-    UserSpaceGroup.Blogs -> if (isSelf) {
-        listOf(UserSpaceTab.FriendBlogs, UserSpaceTab.MyBlogs, UserSpaceTab.ViewAllBlogs)
+private fun tabsFor(group: UserSpaceSection, isSelf: Boolean): List<UserSpaceSubPage> = when (group) {
+    UserSpaceSection.Space -> listOf(UserSpaceSubPage.Profile)
+    UserSpaceSection.Threads -> listOf(UserSpaceSubPage.Threads, UserSpaceSubPage.Replies)
+    UserSpaceSection.Blogs -> if (isSelf) {
+        listOf(UserSpaceSubPage.FriendBlogs, UserSpaceSubPage.MyBlogs, UserSpaceSubPage.ViewAllBlogs)
     } else {
-        listOf(UserSpaceTab.MyBlogs)
+        listOf(UserSpaceSubPage.MyBlogs)
     }
-    UserSpaceGroup.Friends -> listOf(
-        UserSpaceTab.Friends,
-        UserSpaceTab.Online,
-        UserSpaceTab.Visitors,
-        UserSpaceTab.Traces,
+    UserSpaceSection.Friends -> listOf(
+        UserSpaceSubPage.Friends,
+        UserSpaceSubPage.Online,
+        UserSpaceSubPage.Visitors,
+        UserSpaceSubPage.Traces,
     )
-    UserSpaceGroup.Messages -> listOf(UserSpaceTab.Updates, UserSpaceTab.Messages, UserSpaceTab.Notices)
 }
 
-private fun UserSpaceGroup.mainTitle(): String = when (this) {
-    UserSpaceGroup.Space -> "我的資料"
-    UserSpaceGroup.Threads -> "我的主題"
-    UserSpaceGroup.Blogs -> "我的日志"
-    UserSpaceGroup.Friends -> "我的好友"
-    UserSpaceGroup.Messages -> "我的消息"
+private fun UserSpaceSection.mainTitle(): String = when (this) {
+    UserSpaceSection.Space -> "我的資料"
+    UserSpaceSection.Threads -> "我的主題"
+    UserSpaceSection.Blogs -> "我的日志"
+    UserSpaceSection.Friends -> "我的好友"
 }
 
 @Composable
@@ -514,11 +380,11 @@ private fun UserSpaceMainTopBar(
 }
 
 @Composable
-private fun UserSpaceTabRow(
-    tabs: List<UserSpaceTab>,
-    selectedTab: UserSpaceTab,
+private fun UserSpaceSubPageRow(
+    tabs: List<UserSpaceSubPage>,
+    selectedTab: UserSpaceSubPage,
     isSelf: Boolean,
-    onSelect: (UserSpaceTab) -> Unit,
+    onSelect: (UserSpaceSubPage) -> Unit,
 ) {
     val colors = YamiboTheme.colors
     val selectedIndex = tabs.indexOf(selectedTab).coerceAtLeast(0)
@@ -584,60 +450,51 @@ private fun UserSpaceErrorContent(message: String, onRetry: () -> Unit) {
 private suspend fun fetchContent(
     repository: me.thenano.yamibo.yamibo_app.repository.UserSpaceRepository,
     userId: UserId?,
-    tab: UserSpaceTab,
+    tab: UserSpaceSubPage,
     page: Int,
     viewAllType: YamiboRoute.UserSpace.Blog.ViewAllType,
-): YamiboResult<UserSpaceContent> {
+): YamiboResult<UserSpaceScreenContent> {
     return when (tab) {
-        UserSpaceTab.Profile -> repository.fetchProfile(userId).mapSuccess { UserSpaceContent.Profile(it) }
-        UserSpaceTab.Threads -> repository.fetchThreads(userId, page).mapSuccess { UserSpaceContent.Threads(it) }
-        UserSpaceTab.Replies -> repository.fetchReplies(userId, page).mapSuccess { UserSpaceContent.Replies(it) }
-        UserSpaceTab.MyBlogs -> repository.fetchMyBlogs(userId, page).mapSuccess { UserSpaceContent.Blogs(it) }
-        UserSpaceTab.FriendBlogs -> repository.fetchFriendBlogs(page).mapSuccess { UserSpaceContent.Blogs(it) }
-        UserSpaceTab.ViewAllBlogs -> repository.fetchViewAllBlogs(viewAllType, page).mapSuccess { UserSpaceContent.Blogs(it) }
-        UserSpaceTab.Friends -> repository.fetchFriends(YamiboRoute.UserSpace.FriendPageType.MyFriend, page).mapSuccess { UserSpaceContent.Friends(it) }
-        UserSpaceTab.Online -> repository.fetchFriends(YamiboRoute.UserSpace.FriendPageType.OnlineMember, page).mapSuccess { UserSpaceContent.Friends(it) }
-        UserSpaceTab.Visitors -> repository.fetchFriends(YamiboRoute.UserSpace.FriendPageType.MyVisitor, page).mapSuccess { UserSpaceContent.Friends(it) }
-        UserSpaceTab.Traces -> repository.fetchFriends(YamiboRoute.UserSpace.FriendPageType.MyTrace, page).mapSuccess { UserSpaceContent.Friends(it) }
-        UserSpaceTab.Updates -> YamiboResult.Failure("更新頁不需要網路載入")
-        UserSpaceTab.Messages -> repository.fetchPrivateMessages(page).mapSuccess { UserSpaceContent.Messages(it) }
-        UserSpaceTab.Notices -> repository.fetchNotices(page).mapSuccess { UserSpaceContent.Notices(it) }
+        UserSpaceSubPage.Profile -> repository.fetchProfile(userId).mapSuccess { UserSpaceScreenContent.Profile(it) }
+        UserSpaceSubPage.Threads -> repository.fetchThreads(userId, page).mapSuccess { UserSpaceScreenContent.Threads(it) }
+        UserSpaceSubPage.Replies -> repository.fetchReplies(userId, page).mapSuccess { UserSpaceScreenContent.Replies(it) }
+        UserSpaceSubPage.MyBlogs -> repository.fetchMyBlogs(userId, page).mapSuccess { UserSpaceScreenContent.Blogs(it) }
+        UserSpaceSubPage.FriendBlogs -> repository.fetchFriendBlogs(page).mapSuccess { UserSpaceScreenContent.Blogs(it) }
+        UserSpaceSubPage.ViewAllBlogs -> repository.fetchViewAllBlogs(viewAllType, page).mapSuccess { UserSpaceScreenContent.Blogs(it) }
+        UserSpaceSubPage.Friends -> repository.fetchFriends(YamiboRoute.UserSpace.FriendPageType.MyFriend, page).mapSuccess { UserSpaceScreenContent.Friends(it) }
+        UserSpaceSubPage.Online -> repository.fetchFriends(YamiboRoute.UserSpace.FriendPageType.OnlineMember, page).mapSuccess { UserSpaceScreenContent.Friends(it) }
+        UserSpaceSubPage.Visitors -> repository.fetchFriends(YamiboRoute.UserSpace.FriendPageType.MyVisitor, page).mapSuccess { UserSpaceScreenContent.Friends(it) }
+        UserSpaceSubPage.Traces -> repository.fetchFriends(YamiboRoute.UserSpace.FriendPageType.MyTrace, page).mapSuccess { UserSpaceScreenContent.Friends(it) }
     }
 }
 
 private fun cachedContent(
     repository: me.thenano.yamibo.yamibo_app.repository.UserSpaceRepository,
     userId: UserId?,
-    tab: UserSpaceTab,
+    tab: UserSpaceSubPage,
     page: Int,
     viewAllType: YamiboRoute.UserSpace.Blog.ViewAllType,
-): UserSpaceContent? {
+): UserSpaceScreenContent? {
     return when (tab) {
-        UserSpaceTab.Profile -> repository.getCachedProfile(userId)?.let { UserSpaceContent.Profile(it) }
-        UserSpaceTab.Threads -> repository.getCachedThreads(userId, page)?.let { UserSpaceContent.Threads(it) }
-        UserSpaceTab.Replies -> repository.getCachedReplies(userId, page)?.let { UserSpaceContent.Replies(it) }
-        UserSpaceTab.MyBlogs -> repository.getCachedMyBlogs(userId, page)?.let { UserSpaceContent.Blogs(it) }
-        UserSpaceTab.FriendBlogs -> repository.getCachedFriendBlogs(page)?.let { UserSpaceContent.Blogs(it) }
-        UserSpaceTab.ViewAllBlogs -> repository.getCachedViewAllBlogs(viewAllType, page)?.let { UserSpaceContent.Blogs(it) }
-        UserSpaceTab.Friends -> repository.getCachedFriends(YamiboRoute.UserSpace.FriendPageType.MyFriend, page)?.let { UserSpaceContent.Friends(it) }
-        UserSpaceTab.Online -> repository.getCachedFriends(YamiboRoute.UserSpace.FriendPageType.OnlineMember, page)?.let { UserSpaceContent.Friends(it) }
-        UserSpaceTab.Visitors -> repository.getCachedFriends(YamiboRoute.UserSpace.FriendPageType.MyVisitor, page)?.let { UserSpaceContent.Friends(it) }
-        UserSpaceTab.Traces -> repository.getCachedFriends(YamiboRoute.UserSpace.FriendPageType.MyTrace, page)?.let { UserSpaceContent.Friends(it) }
-        UserSpaceTab.Updates -> null
-        UserSpaceTab.Messages -> repository.getCachedPrivateMessages(page)?.let { UserSpaceContent.Messages(it) }
-        UserSpaceTab.Notices -> repository.getCachedNotices(page)?.let { UserSpaceContent.Notices(it) }
+        UserSpaceSubPage.Profile -> repository.getCachedProfile(userId)?.let { UserSpaceScreenContent.Profile(it) }
+        UserSpaceSubPage.Threads -> repository.getCachedThreads(userId, page)?.let { UserSpaceScreenContent.Threads(it) }
+        UserSpaceSubPage.Replies -> repository.getCachedReplies(userId, page)?.let { UserSpaceScreenContent.Replies(it) }
+        UserSpaceSubPage.MyBlogs -> repository.getCachedMyBlogs(userId, page)?.let { UserSpaceScreenContent.Blogs(it) }
+        UserSpaceSubPage.FriendBlogs -> repository.getCachedFriendBlogs(page)?.let { UserSpaceScreenContent.Blogs(it) }
+        UserSpaceSubPage.ViewAllBlogs -> repository.getCachedViewAllBlogs(viewAllType, page)?.let { UserSpaceScreenContent.Blogs(it) }
+        UserSpaceSubPage.Friends -> repository.getCachedFriends(YamiboRoute.UserSpace.FriendPageType.MyFriend, page)?.let { UserSpaceScreenContent.Friends(it) }
+        UserSpaceSubPage.Online -> repository.getCachedFriends(YamiboRoute.UserSpace.FriendPageType.OnlineMember, page)?.let { UserSpaceScreenContent.Friends(it) }
+        UserSpaceSubPage.Visitors -> repository.getCachedFriends(YamiboRoute.UserSpace.FriendPageType.MyVisitor, page)?.let { UserSpaceScreenContent.Friends(it) }
+        UserSpaceSubPage.Traces -> repository.getCachedFriends(YamiboRoute.UserSpace.FriendPageType.MyTrace, page)?.let { UserSpaceScreenContent.Friends(it) }
     }
 }
 
-private fun UserSpaceContent.pageNumber(): Int? = when (this) {
-    is UserSpaceContent.Profile -> null
-    is UserSpaceContent.Threads -> page.pageNav?.currentPage
-    is UserSpaceContent.Replies -> page.pageNav?.currentPage
-    is UserSpaceContent.Blogs -> page.pageNav?.currentPage
-    is UserSpaceContent.Friends -> page.pageNav?.currentPage
-    is UserSpaceContent.Updates -> 1
-    is UserSpaceContent.Messages -> page.pageNav?.currentPage
-    is UserSpaceContent.Notices -> page.pageNav?.currentPage
+private fun UserSpaceScreenContent.pageNumber(): Int? = when (this) {
+    is UserSpaceScreenContent.Profile -> null
+    is UserSpaceScreenContent.Threads -> page.pageNav?.currentPage
+    is UserSpaceScreenContent.Replies -> page.pageNav?.currentPage
+    is UserSpaceScreenContent.Blogs -> page.pageNav?.currentPage
+    is UserSpaceScreenContent.Friends -> page.pageNav?.currentPage
 }
 
 private fun <T, R> YamiboResult<T>.mapSuccess(transform: (T) -> R): YamiboResult<R> = when (this) {
@@ -651,17 +508,16 @@ private fun <T, R> YamiboResult<T>.mapSuccess(transform: (T) -> R): YamiboResult
 private fun topBarTitle(
     profile: ProfilePage?,
     titleHint: String?,
-    group: UserSpaceGroup,
-    tab: UserSpaceTab,
+    group: UserSpaceSection,
+    tab: UserSpaceSubPage,
     isSelf: Boolean,
 ): String {
     val name = profile?.username ?: titleHint ?: "用戶"
     return when (group) {
-        UserSpaceGroup.Space -> if (isSelf) "我的資料" else "${name}的資料"
-        UserSpaceGroup.Threads -> if (isSelf) "我的主題" else "$name - Ta的主題"
-        UserSpaceGroup.Blogs -> if (isSelf) "我的日志" else "$name - Ta的日志"
-        UserSpaceGroup.Friends -> tab.title(isSelf)
-        UserSpaceGroup.Messages -> tab.title(isSelf)
+        UserSpaceSection.Space -> if (isSelf) "我的資料" else "${name}的資料"
+        UserSpaceSection.Threads -> if (isSelf) "我的主題" else "$name - Ta的主題"
+        UserSpaceSection.Blogs -> if (isSelf) "我的日志" else "$name - Ta的日志"
+        UserSpaceSection.Friends -> tab.title(isSelf)
     }
 }
 
@@ -677,31 +533,16 @@ private fun navigateThread(thread: ThreadSummary, navigator: ComposableNavigator
 private fun fullYamiboUrl(url: String): String =
     YamiboRoute.Domain.toFullLink(url)
 
-private fun userSpaceEditActionWebView(group: UserSpaceGroup): IActionWebView {
+private fun userSpaceEditActionWebView(group: UserSpaceSection): IActionWebView {
     return when (group) {
-        UserSpaceGroup.Blogs -> IActionWebView(
+        UserSpaceSection.Blogs -> IActionWebView(
             title = "發日志",
             initialUrl = YamiboRoute.SendBlogPage.build(),
             successCondition = { url -> isSendBlogSuccessUrl(url) },
         )
-        else -> IActionWebView(
-            title = "發消息",
-            initialUrl = YamiboRoute.SendPrivateMessagePage.build(),
-            successCondition = { url -> isMessageListUrl(url) },
-        )
+        else -> error("UserSpace edit action is only available for blog pages.")
     }
 
-}
-
-private fun isMessageListUrl(url: String): Boolean {
-    val target = YamiboRoute.UserSpace.Notification(
-        type = YamiboRoute.UserSpace.NotificationType.MyMessage,
-        page = 1,
-    ).build()
-    return url.startsWith(target.substringBefore("&page=")) &&
-        url.contains("mod=space") &&
-        url.contains("do=pm") &&
-        !url.contains("spacecp")
 }
 
 private fun isSendBlogSuccessUrl(url: String): Boolean {

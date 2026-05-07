@@ -28,8 +28,10 @@ import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 fun FavoriteUpdateStatusCard(
     state: FavoriteUpdateRepository.RunState,
     modifier: Modifier = Modifier,
-    onGlobalRefresh: (() -> Unit)? = null,
     onCancel: ((String) -> Unit)? = null,
+    onInterrupt: ((String) -> Unit)? = null,
+    onResume: (() -> Unit)? = null,
+    onHide: (() -> Unit)? = null,
 ) {
     val colors = YamiboTheme.colors
     val snapshot = state.snapshotOrNull() ?: return
@@ -39,7 +41,7 @@ fun FavoriteUpdateStatusCard(
     val boundedProgress = progress.coerceIn(0f, 1f)
 
     Surface(
-        modifier = modifier.heightIn(max = 168.dp),
+        modifier = modifier.heightIn(max = 184.dp),
         shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
         color = colors.creamSurface,
         border = BorderStroke(1.dp, colors.brownPrimary.copy(alpha = 0.18f)),
@@ -109,29 +111,59 @@ fun FavoriteUpdateStatusCard(
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (state is FavoriteUpdateRepository.RunState.Running && onCancel != null) {
-                    Button(
+                    CompactStatusButton(
+                        text = "取消",
                         onClick = { onCancel(snapshot.runId) },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF8C4B3B),
-                            contentColor = Color.White,
-                        ),
-                    ) {
-                        Text("取消")
-                    }
+                        containerColor = Color(0xFF8C4B3B),
+                        contentColor = Color.White,
+                    )
                 }
-                if (state !is FavoriteUpdateRepository.RunState.Running && onGlobalRefresh != null) {
-                    Button(
-                        onClick = onGlobalRefresh,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = colors.brownPrimary.copy(alpha = 0.18f),
-                            contentColor = colors.brownDeep,
-                        ),
-                    ) {
-                        Text("全域刷新")
-                    }
+                if (state is FavoriteUpdateRepository.RunState.Running && onInterrupt != null) {
+                    CompactStatusButton(
+                        text = "中斷",
+                        onClick = { onInterrupt(snapshot.runId) },
+                        containerColor = colors.brownPrimary.copy(alpha = 0.18f),
+                        contentColor = colors.brownDeep,
+                    )
+                }
+                if (state is FavoriteUpdateRepository.RunState.Interrupted && onResume != null) {
+                    CompactStatusButton(
+                        text = "繼續",
+                        onClick = onResume,
+                        containerColor = Color(0xFF8C4B3B),
+                        contentColor = Color.White,
+                    )
+                }
+                if (state !is FavoriteUpdateRepository.RunState.Running && onHide != null) {
+                    CompactStatusButton(
+                        text = "隱藏",
+                        onClick = onHide,
+                        containerColor = colors.brownPrimary.copy(alpha = 0.18f),
+                        contentColor = colors.brownDeep,
+                    )
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun CompactStatusButton(
+    text: String,
+    onClick: () -> Unit,
+    containerColor: Color,
+    contentColor: Color,
+) {
+    Button(
+        onClick = onClick,
+        modifier = Modifier.height(34.dp),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 0.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = containerColor,
+            contentColor = contentColor,
+        ),
+    ) {
+        Text(text = text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
     }
 }
 

@@ -31,6 +31,7 @@ actual fun PlatformWebViewContent(
     onReload: (() -> Unit) -> Unit,
     onPageFinished: (String) -> Unit,
     onHtmlAvailable: (url: String, html: String) -> Unit,
+    onLoadError: (url: String?, description: String) -> Unit,
     shouldOverrideUrlLoading: (String) -> Boolean,
 ) {
     val navigator = LocalNavigator.current
@@ -94,7 +95,22 @@ actual fun PlatformWebViewContent(
                         request: WebResourceRequest?,
                         error: WebResourceError?
                     ) {
-                        me.thenano.yamibo.yamibo_app.Logger.e("WebView", error?.description.toString())
+                        val description = error?.description?.toString().orEmpty()
+                        me.thenano.yamibo.yamibo_app.Logger.e("WebView", description)
+                        if (request?.isForMainFrame == true) {
+                            onLoadingChanged(false)
+                            onLoadError(request.url?.toString(), description)
+                        }
+                    }
+
+                    override fun onReceivedHttpError(
+                        view: WebView?,
+                        request: WebResourceRequest?,
+                        errorResponse: WebResourceResponse?
+                    ) {
+                        super.onReceivedHttpError(view, request, errorResponse)
+                        val statusCode = errorResponse?.statusCode ?: return
+                        me.thenano.yamibo.yamibo_app.Logger.e("WebView", "HTTP $statusCode ${request?.url}")
                     }
 
                     override fun shouldOverrideUrlLoading(

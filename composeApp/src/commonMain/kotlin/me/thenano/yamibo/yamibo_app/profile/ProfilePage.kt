@@ -207,6 +207,14 @@ fun ProfilePage() {
                                             snackbarHostState.showSnackbar("百合會維護中...現在不是簽到的好時機呢")
                                         }
                                     },
+                                    onLoadFailed = { reason ->
+                                        coroutineScope.launch {
+                                            isSigning = false
+                                            refreshSignStatus()
+                                            snackbarHostState.currentSnackbarData?.dismiss()
+                                            snackbarHostState.showSnackbar("簽到頁載入失敗：$reason")
+                                        }
+                                    },
                                 )
                             )
                         }

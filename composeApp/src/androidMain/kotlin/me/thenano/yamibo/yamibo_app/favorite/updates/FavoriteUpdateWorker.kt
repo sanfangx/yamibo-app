@@ -7,6 +7,7 @@ import android.os.SystemClock
 import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
 import me.thenano.yamibo.yamibo_app.repository.FavoriteUpdateRepository
@@ -36,15 +37,20 @@ class FavoriteUpdateWorker(
                 }
             }
             try {
-                repository.getLatestSnapshot()?.takeIf { it.runId == runId }?.let {
+                repository.getRunSnapshot(runId)?.let {
                     setForeground(createForegroundInfo(notifications, it))
                 }
                 repository.runUpdate(runId)
-                repository.getLatestSnapshot()?.takeIf { it.runId == runId }?.let { snapshot ->
-                    @Suppress("MissingPermission")
-                    notifications.showCompleted(snapshot)
+                repository.getRunSnapshot(runId)?.let { snapshot ->
+                    if (snapshot.status == FavoriteUpdateRepository.RunStatus.COMPLETED) {
+                        @Suppress("MissingPermission")
+                        notifications.showCompleted(snapshot)
+                    }
                 }
                 Result.success()
+            } catch (throwable: CancellationException) {
+                repository.markRunInterrupted(runId, "更新檢查已中斷")
+                Result.failure()
             } catch (throwable: Throwable) {
                 repository.markRunInterrupted(runId, throwable.message ?: "更新檢查被系統中斷")
                 @Suppress("MissingPermission")

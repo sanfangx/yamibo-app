@@ -3,6 +3,8 @@ package me.thenano.yamibo.yamibo_app.userspace
 import androidx.compose.runtime.Composable
 import io.github.littlesurvival.dto.value.UserId
 import kotlinx.serialization.Serializable
+import me.thenano.yamibo.yamibo_app.message.IMessageCenterScreen
+import me.thenano.yamibo.yamibo_app.message.MessageCenterTab
 import me.thenano.yamibo.yamibo_app.navigation.RestorableNavigatable
 import me.thenano.yamibo.yamibo_app.navigation.RestorableScreenSnapshot
 import me.thenano.yamibo.yamibo_app.navigation.TypedRestorableNavigatableDecoder
@@ -13,15 +15,15 @@ import me.thenano.yamibo.yamibo_app.navigation.restoreSnapshot
 private data class UserSpaceScreenRestorePayload(
     val userId: Int? = null,
     val titleHint: String? = null,
-    val groupName: String = UserSpaceGroup.Space.name,
-    val initialTabName: String = UserSpaceTab.Profile.name,
+    val groupName: String = UserSpaceSection.Space.name,
+    val initialTabName: String = UserSpaceSubPage.Profile.name,
 )
 
 class IUserSpaceScreen(
     val userId: UserId? = null,
     val titleHint: String? = null,
-    val group: UserSpaceGroup = UserSpaceGroup.Space,
-    val initialTab: UserSpaceTab = UserSpaceTab.Profile,
+    val group: UserSpaceSection = UserSpaceSection.Space,
+    val initialTab: UserSpaceSubPage = UserSpaceSubPage.Profile,
 ) : RestorableNavigatable {
     override val id = buildId(userId?.value ?: "self", group.name, initialTab.name)
     override val restoreDecoder = Decoder
@@ -38,17 +40,26 @@ class IUserSpaceScreen(
 
     @Composable
     override fun Content() {
-        UserSpacePage(userId = userId, titleHint = titleHint, group = group, initialTab = initialTab)
+        UserSpaceScreen(userId = userId, titleHint = titleHint, group = group, initialTab = initialTab)
     }
 
     companion object Decoder : TypedRestorableNavigatableDecoder<IUserSpaceScreen>(IUserSpaceScreen::class) {
         override fun decode(payload: String): RestorableNavigatable {
             val data = decodeRestorePayload<UserSpaceScreenRestorePayload>(payload)
+            if (data.groupName == "Messages") {
+                return IMessageCenterScreen(
+                    initialTab = when (data.initialTabName) {
+                        "Updates" -> MessageCenterTab.Updates
+                        "Notices" -> MessageCenterTab.Notices
+                        else -> MessageCenterTab.PrivateMessages
+                    },
+                )
+            }
             return IUserSpaceScreen(
                 userId = data.userId?.let(::UserId),
                 titleHint = data.titleHint,
-                group = UserSpaceGroup.valueOf(data.groupName),
-                initialTab = UserSpaceTab.valueOf(data.initialTabName),
+                group = UserSpaceSection.valueOf(data.groupName),
+                initialTab = UserSpaceSubPage.valueOf(data.initialTabName),
             )
         }
     }

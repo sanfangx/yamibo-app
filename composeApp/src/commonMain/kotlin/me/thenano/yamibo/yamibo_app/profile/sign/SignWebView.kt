@@ -20,6 +20,7 @@ internal class ISignWebView(
     private val onCfCleared: () -> Unit = {},
     private val onResultObserved: () -> Unit = {},
     private val onMaintenanceObserved: () -> Unit = {},
+    private val onLoadFailed: (String) -> Unit = {},
 ) : Navigatable {
     override val id = buildId("sign-webview", semiAutomatic)
 
@@ -30,6 +31,7 @@ internal class ISignWebView(
             onCfCleared = onCfCleared,
             onResultObserved = onResultObserved,
             onMaintenanceObserved = onMaintenanceObserved,
+            onLoadFailed = onLoadFailed,
         )
     }
 }
@@ -40,12 +42,14 @@ private fun SignWebViewScreen(
     onCfCleared: () -> Unit,
     onResultObserved: () -> Unit,
     onMaintenanceObserved: () -> Unit,
+    onLoadFailed: (String) -> Unit,
 ) {
     val navigator = LocalNavigator.current
     val authRepository = LocalAuthRepository.current
     val signRepository = LocalSignRepository.current
     val scope = rememberCoroutineScope()
     var handledMaintenancePage by remember(semiAutomatic) { mutableStateOf(false) }
+    var handledLoadFailure by remember(semiAutomatic) { mutableStateOf(false) }
     var autoSignStarted by remember(semiAutomatic) { mutableStateOf(false) }
     var autoSignChecking by remember(semiAutomatic) { mutableStateOf(false) }
 
@@ -101,6 +105,13 @@ private fun SignWebViewScreen(
             }
             if (isResolvedResultPage) {
                 onResultObserved()
+            }
+        },
+        onLoadError = { _, description ->
+            if (semiAutomatic && !handledLoadFailure) {
+                handledLoadFailure = true
+                onLoadFailed(description.ifBlank { "簽到頁載入失敗" })
+                navigator.pop()
             }
         },
     )

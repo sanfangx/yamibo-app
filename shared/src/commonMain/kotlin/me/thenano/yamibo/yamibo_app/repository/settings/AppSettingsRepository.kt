@@ -65,6 +65,7 @@ enum class FavoriteSortMode(val label: String) {
 }
 
 enum class FavoriteUpdateInterval(val label: String, val hours: Long?, val smart: Boolean = false) {
+    MANUAL("手動刷新", null),
     HOURS_6("6 小時", 6L),
     HOURS_12("12 小時", 12L),
     HOURS_24("24 小時", 24L),

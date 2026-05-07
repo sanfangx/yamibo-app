@@ -14,6 +14,7 @@ interface FavoriteUpdateRepository {
         INTERRUPTED,
         FAILED,
         COMPLETED,
+        CANCELED,
     }
 
     enum class RunPhase {
@@ -22,6 +23,7 @@ interface FavoriteUpdateRepository {
         INTERRUPTED,
         FAILED,
         COMPLETED,
+        CANCELED,
     }
 
     data class UpdateEvent(
@@ -81,8 +83,10 @@ interface FavoriteUpdateRepository {
     suspend fun startRun(): String
     suspend fun resumeInterruptedRun(): String?
     suspend fun interruptRun(runId: String)
+    suspend fun cancelRun(runId: String)
     suspend fun markRunInterrupted(runId: String, reason: String)
     suspend fun getLatestSnapshot(): RunSnapshot?
+    suspend fun getRunSnapshot(runId: String): RunSnapshot?
     suspend fun runUpdate(runId: String)
     suspend fun getActiveEvents(): List<UpdateEvent>
     suspend fun markEventRead(eventId: Long)

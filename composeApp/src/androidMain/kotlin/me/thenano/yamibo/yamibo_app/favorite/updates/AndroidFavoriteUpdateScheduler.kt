@@ -34,11 +34,12 @@ class AndroidFavoriteUpdateScheduler(
     }
 
     override suspend fun schedulePeriodicFavoriteUpdate(interval: FavoriteUpdateInterval) {
-        if (interval.smart) {
+        val intervalHours = interval.hours
+        if (interval.smart || intervalHours == null) {
             workManager.cancelUniqueWork(UNIQUE_PERIODIC_WORK)
             return
         }
-        val repeat = (interval.hours ?: 12L).hours
+        val repeat = intervalHours.hours
         val request = PeriodicWorkRequestBuilder<FavoriteUpdateWorker>(repeat.toJavaDuration())
             .setConstraints(defaultConstraints())
             .addTag(WORK_TAG)

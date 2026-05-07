@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.userspace.notification
+package me.thenano.yamibo.yamibo_app.message
 
 import androidx.compose.runtime.Composable
 import io.github.littlesurvival.dto.value.UserId

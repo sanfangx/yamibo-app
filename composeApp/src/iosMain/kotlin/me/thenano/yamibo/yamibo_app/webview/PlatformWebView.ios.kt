@@ -29,6 +29,7 @@ class PlatformNavigationDelegate(
     private val onUrlChanged: (String) -> Unit,
     private val onTitleChanged: (String) -> Unit,
     private val onHtmlAvailable: (String, String) -> Unit,
+    private val onLoadError: (String?, String) -> Unit,
     private val authCookieSync: () -> Unit,
 ) : NSObject(), WKNavigationDelegateProtocol {
 
@@ -57,12 +58,24 @@ class PlatformNavigationDelegate(
         }
     }
 
+    @ObjCSignatureOverride
     override fun webView(
         webView: WKWebView,
         didFailNavigation: WKNavigation?,
         withError: platform.Foundation.NSError
     ) {
         onLoadingChanged(false)
+        onLoadError(webView.URL?.absoluteString, withError.localizedDescription)
+    }
+
+    @ObjCSignatureOverride
+    override fun webView(
+        webView: WKWebView,
+        didFailProvisionalNavigation: WKNavigation?,
+        withError: platform.Foundation.NSError
+    ) {
+        onLoadingChanged(false)
+        onLoadError(webView.URL?.absoluteString, withError.localizedDescription)
     }
 }
 
@@ -80,6 +93,7 @@ actual fun PlatformWebViewContent(
     onReload: (() -> Unit) -> Unit,
     onPageFinished: (String) -> Unit,
     onHtmlAvailable: (url: String, html: String) -> Unit,
+    onLoadError: (url: String?, description: String) -> Unit,
     shouldOverrideUrlLoading: (String) -> Boolean,
 ) {
     val navigator = LocalNavigator.current
@@ -95,6 +109,7 @@ actual fun PlatformWebViewContent(
             onUrlChanged = onUrlChanged,
             onTitleChanged = onTitleChanged,
             onHtmlAvailable = onHtmlAvailable,
+            onLoadError = onLoadError,
             authCookieSync = { authRepo.syncCookieFromWebView() },
         )
     }
