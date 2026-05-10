@@ -88,6 +88,7 @@ fun MessageCenterScreen(
     val favoriteUpdateRefreshKey = favoriteUpdateRunState.refreshKey()
     val appSettingsRepository = LocalAppSettingsRepository.current
     val favoriteUpdateInterval = appSettingsRepository.favoriteUpdateInterval.state()
+    val favoriteUpdateHiddenRunId = appSettingsRepository.favoriteUpdateHiddenRunId.state()
     val authRepository = LocalAuthRepository.current
     val navigator = LocalNavigator.current
     val scope = rememberCoroutineScope()
@@ -239,6 +240,7 @@ fun MessageCenterScreen(
                                 scope.launch {
                                     when (val result = favoriteUpdateRunner.resumeInterruptedUpdate()) {
                                         is FavoriteUpdateRunner.LaunchResult.Started -> {
+                                            appSettingsRepository.favoriteUpdateHiddenRunId.setValue("")
                                             loadTab(MessageCenterTab.Updates, 1, preferCache = false)
                                             snackbarHostState.showSnackbar("繼續檢查收藏更新", duration = SnackbarDuration.Short)
                                         }
@@ -261,6 +263,10 @@ fun MessageCenterScreen(
                                         duration = SnackbarDuration.Short,
                                     )
                                 }
+                            },
+                            favoriteUpdateHiddenRunId = favoriteUpdateHiddenRunId,
+                            onHideFavoriteUpdateStatus = { runId ->
+                                appSettingsRepository.favoriteUpdateHiddenRunId.setValue(runId)
                             },
                             onToggleFavoriteUpdateFid = { fid, enabled ->
                                 scope.launch { favoriteUpdateRepository.setFidEnabled(fid, enabled) }
@@ -290,6 +296,7 @@ fun MessageCenterScreen(
                     scope.launch {
                         when (val result = favoriteUpdateRunner.startGlobalRefresh()) {
                             is FavoriteUpdateRunner.LaunchResult.Started -> {
+                                appSettingsRepository.favoriteUpdateHiddenRunId.setValue("")
                                 snackbarHostState.showSnackbar("開始全域刷新收藏更新", duration = SnackbarDuration.Short)
                             }
                             is FavoriteUpdateRunner.LaunchResult.Rejected -> {

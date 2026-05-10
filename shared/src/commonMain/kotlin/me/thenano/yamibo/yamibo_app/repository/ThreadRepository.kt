@@ -28,7 +28,8 @@ interface ThreadRepository {
     /** Locate a specific post in the full-view thread page */
     suspend fun fetchFindPost(
         tid: ThreadId,
-        postId: PostId
+        postId: PostId,
+        authorId: UserId? = null,
     ): YamiboResult<ThreadPage>
 
     suspend fun addFavorite(tid: ThreadId, formHash: FormHash): YamiboResult<String>

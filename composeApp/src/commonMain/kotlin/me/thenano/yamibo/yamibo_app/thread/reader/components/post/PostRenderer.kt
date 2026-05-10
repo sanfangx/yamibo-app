@@ -31,6 +31,7 @@ import io.github.littlesurvival.dto.page.Post
 import io.github.littlesurvival.dto.value.PollOptionId
 import me.thenano.yamibo.yamibo_app.LocalNovelReaderSettingsRepository
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
+import me.thenano.yamibo.yamibo_app.repository.inapplinknavigation.InAppLinkContext
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.thread.reader.debug.DebugRecomposeProbe
 import me.thenano.yamibo.yamibo_app.thread.reader.debug.debugPerfLog
@@ -65,6 +66,7 @@ fun PostRenderer(
     verticalPadding: Dp = 8.dp,
     totalViews: Int? = null,
     totalReplies: Int? = null,
+    linkContext: InAppLinkContext = InAppLinkContext(),
 ) {
     DebugRecomposeProbe("PostRenderer", "${post.pid.value}#${post.floor}")
 
@@ -106,6 +108,7 @@ fun PostRenderer(
             ) {
                 HtmlBlocksRenderer(
                     blocks = blocksToRender,
+                    linkContext = linkContext,
                     onImageSuccess = onImageSuccess,
                     onImageError = onImageError,
                     onImageReload = onImageReload,
@@ -210,6 +213,7 @@ fun PostRenderer(
             if (blocksToRender != null) {
                 HtmlBlocksRenderer(
                     blocks = blocksToRender,
+                    linkContext = linkContext,
                     onImageSuccess = onImageSuccess,
                     onImageError = onImageError,
                     onImageReload = onImageReload,
@@ -223,6 +227,7 @@ fun PostRenderer(
             } else {
                 HtmlRenderer(
                     html = post.contentHtml,
+                    linkContext = linkContext,
                     onImageSuccess = onImageSuccess,
                     onImageError = onImageError,
                     onImageReload = onImageReload,

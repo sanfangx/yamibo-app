@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,6 +26,8 @@ import me.thenano.yamibo.yamibo_app.LocalAuthRepository
 import me.thenano.yamibo.yamibo_app.LocalNovelThreadCacheRepository
 import me.thenano.yamibo.yamibo_app.LocalThreadRepository
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
+import me.thenano.yamibo.yamibo_app.repository.inapplinknavigation.InAppLinkContext
+import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.components.ThreadErrorContent
@@ -57,7 +60,8 @@ internal fun CommentReaderScreen(
     tid: ThreadId,
     postTitle: String,
     oPostId: PostId,
-    authorId: UserId
+    authorId: UserId,
+    targetCommentPid: PostId? = null,
 ) {
     val colors = YamiboTheme.colors
     val threadRepository = LocalThreadRepository.current
@@ -67,6 +71,15 @@ internal fun CommentReaderScreen(
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val platformContext = LocalPlatformContext.current
+    val listState = rememberLazyListState()
+    val htmlLinkContext = remember(tid, postTitle, authorId) {
+        InAppLinkContext(
+            currentTid = tid,
+            currentTitle = postTitle,
+            currentAuthorId = authorId,
+            currentThreadType = ReadHistoryRepository.ThreadEntryType.Novel,
+        )
+    }
 
     var state by remember { mutableStateOf<CommentState>(CommentState.Loading) }
     var commentPosts by remember { mutableStateOf<List<Post>>(emptyList()) }
@@ -76,6 +89,7 @@ internal fun CommentReaderScreen(
     /** Current page in the full-view thread where we last fetched */
     var currentFullPage by remember { mutableIntStateOf(0) }
     var totalFullPages by remember { mutableIntStateOf(1) }
+    var targetCommentHandled by remember(tid, oPostId, targetCommentPid) { mutableStateOf(false) }
 
     fun getFormHash(): FormHash? {
         return authRepo.currentUser()?.formHash
@@ -242,6 +256,19 @@ internal fun CommentReaderScreen(
         }
     }
 
+    LaunchedEffect(state, commentPosts, targetCommentPid) {
+        val target = targetCommentPid ?: return@LaunchedEffect
+        if (targetCommentHandled || state !is CommentState.Success) return@LaunchedEffect
+        val index = commentPosts.indexOfFirst { it.pid == target }
+        if (index >= 0) {
+            listState.animateScrollToItem(index)
+            targetCommentHandled = true
+        } else if (isCommentComplete) {
+            snackbarHostState.showSnackbar("無法精準定位該評論")
+            targetCommentHandled = true
+        }
+    }
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = colors.creamBackground,
@@ -300,6 +327,7 @@ internal fun CommentReaderScreen(
                         }
                     } else {
                         LazyColumn(
+                            state = listState,
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(bottom = 120.dp)
                         ) {
@@ -310,6 +338,7 @@ internal fun CommentReaderScreen(
                                 PostRenderer(
                                     post = post,
                                     threadTitle = postTitle,
+                                    linkContext = htmlLinkContext,
                                     onRate = { score, reason ->
                                         val formHash = getFormHash()
                                         if (formHash == null) {

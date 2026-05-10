@@ -3,15 +3,19 @@ package me.thenano.yamibo.yamibo_app.thread.detail.tag.components
 import YamiboIcons
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -30,17 +34,29 @@ fun TagThreadCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     isLastRead: Boolean = false,
-    readingProgressText: String? = null
+    readingProgressText: String? = null,
+    bookmarked: Boolean = false,
+    read: Boolean = false,
+    onLongPress: (() -> Unit)? = null,
 ) {
     val colors = YamiboTheme.colors
     val navigator = LocalNavigator.current
 
     Surface(
-        onClick = onClick,
         shape = RoundedCornerShape(12.dp),
         color = colors.creamSurface,
         border = BorderStroke(0.5.dp, colors.brownPrimary.copy(alpha = 0.15f)),
-        modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).clip(RoundedCornerShape(12.dp))
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .alpha(if (read) 0.6f else 1f)
+            .pointerInput(thread.tid, onClick, onLongPress) {
+                detectTapGestures(
+                    onTap = { onClick() },
+                    onLongPress = { onLongPress?.invoke() },
+                )
+            }
     ) {
         Column(
             modifier = Modifier
@@ -107,6 +123,16 @@ fun TagThreadCard(
                         fontSize = 14.sp,
                         modifier = Modifier.padding(end = 6.dp)
                     )
+                }
+
+                if (bookmarked) {
+                    Icon(
+                        imageVector = YamiboIcons.Bookmark,
+                        contentDescription = null,
+                        tint = colors.orangeAccent,
+                        modifier = Modifier.size(12.dp).padding(end = 3.dp),
+                    )
+                    Spacer(Modifier.width(3.dp))
                 }
 
                 Text(

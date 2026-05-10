@@ -17,6 +17,7 @@ private data class CommentReaderRestorePayload(
     val postTitle: String,
     val oPostId: Int,
     val authorId: Int,
+    val targetCommentPid: Int? = null,
 )
 
 /** Navigatable screen for viewing comments of a specific author post. */
@@ -24,9 +25,10 @@ class ICommentReaderScreen(
     val tid: ThreadId,
     val postTitle: String,
     val oPostId: PostId,
-    val authorId: UserId
+    val authorId: UserId,
+    val targetCommentPid: PostId? = null,
 ) : RestorableNavigatable {
-    override val id = buildId(tid.value, oPostId.value)
+    override val id = buildId(tid.value, oPostId.value, targetCommentPid?.value ?: "top")
     override val restoreDecoder = Decoder
 
     override fun toRestoreSnapshot(): RestorableScreenSnapshot = restoreSnapshot(
@@ -36,6 +38,7 @@ class ICommentReaderScreen(
             postTitle = postTitle,
             oPostId = oPostId.value,
             authorId = authorId.value,
+            targetCommentPid = targetCommentPid?.value,
         ),
     )
 
@@ -45,7 +48,8 @@ class ICommentReaderScreen(
             tid = tid,
             postTitle = postTitle,
             oPostId = oPostId,
-            authorId = authorId
+            authorId = authorId,
+            targetCommentPid = targetCommentPid,
         )
     }
 
@@ -57,6 +61,7 @@ class ICommentReaderScreen(
                 postTitle = data.postTitle,
                 oPostId = PostId(data.oPostId),
                 authorId = UserId(data.authorId),
+                targetCommentPid = data.targetCommentPid?.let(::PostId),
             )
         }
     }

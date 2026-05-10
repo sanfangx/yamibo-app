@@ -40,8 +40,8 @@ object HtmlParser {
 
     /** Parses raw HTML string into a list of HtmlBlock for Compose to render */
     fun parseHtml(html: String): List<HtmlBlock> {
-        // Strip raw newlines and convert &nbsp; to four-per-em space (1/4 em width)
-        val cleanHtml = html.replace("\r", "").replace("\n", "").replace("&nbsp;", "\u2005")
+        // Keep HTML entities intact so Ksoup decodes spaces such as &nbsp; with their real width.
+        val cleanHtml = html.replace("\r", "")
         val document: Document = Ksoup.parseBodyFragment(cleanHtml)
         
         val blocks = mutableListOf<HtmlBlock>()
@@ -51,34 +51,86 @@ object HtmlParser {
         var blockCounter = 0
         var rubyCounter = 0
         var currentAlign = TextAlign.Start
+        var explicitBreaksSinceCommit = 0
         val pendingRubies = mutableListOf<PendingRuby>()
+
+        fun trailingNewlineCount(): Int {
+            val text = globalBuilder.toAnnotatedString().text
+            var count = 0
+            var index = text.length - 1
+            while (index >= 0 && text[index] == '\n') {
+                count++
+                index--
+            }
+            return count
+        }
+
+        fun appendLineBreak(maxConsecutive: Int = 2, explicit: Boolean = false) {
+            if (explicit) {
+                explicitBreaksSinceCommit++
+            }
+            if (globalBuilder.length == 0 && !explicit) return
+            if (trailingNewlineCount() < maxConsecutive) {
+                globalBuilder.append("\n")
+            }
+        }
+
+        fun appendCollapsibleSpace() {
+            if (globalBuilder.length == 0) return
+            val last = globalBuilder.toAnnotatedString().lastOrNull()
+            if (last != null && last != ' ' && last != '\n' && last != '\u3000') {
+                globalBuilder.append(" ")
+            }
+        }
+
+        fun appendTextNodeText(text: String) {
+            text.forEach { char ->
+                when (char) {
+                    '\u00A0' -> globalBuilder.append("\u3000")
+                    ' ', '\n', '\t', '\u000C' -> appendCollapsibleSpace()
+                    else -> globalBuilder.append(char.toString())
+                }
+            }
+        }
+
+        fun isBlockEdgeTrimChar(char: Char): Boolean {
+            return char == ' ' || char == '\n' || char == '\t' || char == '\u000C'
+        }
 
         fun commitText() {
             if (globalBuilder.length > lastCommitIndex) {
-                val textStr = globalBuilder.toAnnotatedString().subSequence(lastCommitIndex, globalBuilder.length)
+                val fullText = globalBuilder.toAnnotatedString()
+                var start = lastCommitIndex
+                var end = globalBuilder.length
+                while (start < end && isBlockEdgeTrimChar(fullText.text[start])) start++
+                while (end > start && isBlockEdgeTrimChar(fullText.text[end - 1])) end--
+                val textStr = fullText.subSequence(start, end)
                 
                 if (textStr.isNotEmpty()) {
                     val aid = hashId("t", textStr.text, blockCounter++)
                     val rubies = pendingRubies
-                        .filter { it.start in lastCommitIndex until globalBuilder.length }
+                        .filter { it.start in start until end }
                         .map { it.ruby }
                     blocks.add(HtmlBlock.Text(textStr, currentAlign, rubies = rubies, anchorId = aid))
+                } else if (explicitBreaksSinceCommit > 0) {
+                    val aid = hashId("t", "br", blockCounter++)
+                    blocks.add(HtmlBlock.Text(AnnotatedString("\n"), currentAlign, anchorId = aid))
                 }
                 lastCommitIndex = globalBuilder.length
+                explicitBreaksSinceCommit = 0
             }
         }
 
         fun parseNode(node: Node, parentAlign: TextAlign = TextAlign.Start) {
             when (node) {
                 is TextNode -> {
-                    val txt = node.text()
-                    if (txt.isNotEmpty()) globalBuilder.append(txt)
+                    appendTextNodeText(node.getWholeText())
                 }
                 is Element -> {
                     val tag = node.tagName().lowercase()
                     when (tag) {
                         "br" -> {
-                            globalBuilder.append("\n")
+                            appendLineBreak(explicit = true)
                         }
                         "hr" -> {
                             commitText()
@@ -149,13 +201,9 @@ object HtmlParser {
                                         currentAlign = newAlign
                                     }
                                     
-                                    if (globalBuilder.length > 0 && globalBuilder.toAnnotatedString().lastOrNull() != '\n') {
-                                        globalBuilder.append("\n")
-                                    }
+                                    appendLineBreak(maxConsecutive = 1)
                                     node.childNodes().forEach { parseNode(it, newAlign) }
-                                    if (globalBuilder.length > 0 && globalBuilder.toAnnotatedString().lastOrNull() != '\n') {
-                                        globalBuilder.append("\n")
-                                    }
+                                    appendLineBreak(maxConsecutive = 1)
                                     
                                     if (newAlign != prevAlign) {
                                         commitText()
@@ -186,13 +234,9 @@ object HtmlParser {
                                 blocks.add(HtmlBlock.Table(rows = rows, anchorId = aid))
                             } else {
                                 // Single-cell wrapper table — treat as inline content
-                                if (globalBuilder.length > 0 && globalBuilder.toAnnotatedString().lastOrNull() != '\n') {
-                                    globalBuilder.append("\n")
-                                }
+                                appendLineBreak(maxConsecutive = 1)
                                 node.childNodes().forEach { parseNode(it, parentAlign) }
-                                if (globalBuilder.length > 0 && globalBuilder.toAnnotatedString().lastOrNull() != '\n') {
-                                    globalBuilder.append("\n")
-                                }
+                                appendLineBreak(maxConsecutive = 1)
                             }
                         }
                         "ul" -> {
@@ -212,23 +256,15 @@ object HtmlParser {
                                     )
                                 )
                             } else {
-                                if (globalBuilder.length > 0 && globalBuilder.toAnnotatedString().lastOrNull() != '\n') {
-                                    globalBuilder.append("\n")
-                                }
+                                appendLineBreak(maxConsecutive = 1)
                                 node.childNodes().forEach { parseNode(it, parentAlign) }
-                                if (globalBuilder.length > 0 && globalBuilder.toAnnotatedString().lastOrNull() != '\n') {
-                                    globalBuilder.append("\n")
-                                }
+                                appendLineBreak(maxConsecutive = 1)
                             }
                         }
                         "p", "ol", "tbody", "tr", "td", "th" -> {
-                            if (globalBuilder.length > 0 && globalBuilder.toAnnotatedString().lastOrNull() != '\n') {
-                                globalBuilder.append("\n")
-                            }
+                            appendLineBreak(maxConsecutive = 1)
                             node.childNodes().forEach { parseNode(it, parentAlign) }
-                            if (globalBuilder.length > 0 && globalBuilder.toAnnotatedString().lastOrNull() != '\n') {
-                                globalBuilder.append("\n")
-                            }
+                            appendLineBreak(maxConsecutive = 1)
                         }
                         "b", "strong" -> globalBuilder.withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { node.childNodes().forEach { parseNode(it, parentAlign) } }
                         "i", "em" -> globalBuilder.withStyle(SpanStyle(fontStyle = FontStyle.Italic)) { node.childNodes().forEach { parseNode(it, parentAlign) } }
@@ -272,7 +308,7 @@ object HtmlParser {
                                 val textContent = globalBuilder.toAnnotatedString().substring(start, end)
                                 if (textContent.trim().isNotEmpty()) {
                                     globalBuilder.addStringAnnotation("URL", href, start, end)
-                                    globalBuilder.addStyle(SpanStyle(color = Color(0xFF007BFF), textDecoration = TextDecoration.Underline), start, end)
+                                    globalBuilder.addStyle(SpanStyle(textDecoration = TextDecoration.Underline), start, end)
                                 }
                             }
                             currentLinkHref = prevLink

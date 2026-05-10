@@ -33,6 +33,7 @@ import me.thenano.yamibo.yamibo_app.profile.settings.access.AndroidBackgroundAcc
 import me.thenano.yamibo.yamibo_app.repository.*
 import me.thenano.yamibo.yamibo_app.repository.favorite.FavoriteSyncRepositoryImpl
 import me.thenano.yamibo.yamibo_app.repository.favorite.FavoriteUpdateRepositoryImpl
+import me.thenano.yamibo.yamibo_app.repository.inapplinknavigation.DefaultInAppLinkNavigationRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.AppSettingsRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.MangaReaderSettingsRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.NovelReaderSettingsRepository
@@ -113,6 +114,8 @@ class MainActivity : ComponentActivity() {
             val blogRepository = remember { BlogRepositoryImpl(cookieStore, yamiboClient, diskCacheFactory) }
             val tagRepository = remember { AndroidTagRepository(cookieStore, yamiboClient, diskCacheFactory) }
             val favoriteRepository = remember { AndroidLocalFavoriteRepository(dbFactory) }
+            val detailNoteRepository = remember { AndroidDetailNoteRepository(dbFactory) }
+            val bookMarkRepository = remember { AndroidLocalBookMarkRepository(dbFactory) }
             val remoteFavoriteRepository = remember { AndroidFavoriteRepository(cookieStore, yamiboClient) }
             val favoriteSyncDatabase = remember { Database(dbFactory.createDriver()) }
             val favoriteSyncRepository = remember {
@@ -140,6 +143,9 @@ class MainActivity : ComponentActivity() {
             val favoriteUpdateRunner = remember { FavoriteUpdateRunner(favoriteUpdateRepository, favoriteUpdateScheduler) }
             val backgroundAccessRepository = remember { AndroidBackgroundAccessRepository(context) }
             val novelCacheRepository = remember { AndroidNovelThreadCacheRepository(diskCacheFactory) }
+            val inAppLinkNavigationRepository = remember {
+                DefaultInAppLinkNavigationRepository(threadRepository, novelCacheRepository)
+            }
             val readHistoryRepository = remember { AndroidReadHistoryRepository(dbFactory) }
             val signRepository = remember { AndroidSignRepository(dbFactory, authRepository, appSettingsRepository) }
             val themeRepository = remember { AndroidThemeRepository() }
@@ -150,8 +156,11 @@ class MainActivity : ComponentActivity() {
                 LocalAuthRepository provides authRepository,
                 LocalForumRepository provides forumRepository,
                 LocalThreadRepository provides threadRepository,
+                LocalInAppLinkNavigationRepository provides inAppLinkNavigationRepository,
                 LocalUserSpaceRepository provides userSpaceRepository,
                 LocalBlogRepository provides blogRepository,
+                LocalDetailNoteRepository provides detailNoteRepository,
+                LocalBookMarkRepository provides bookMarkRepository,
                 LocalFavoriteRepository provides favoriteRepository,
                 LocalRemoteFavoriteRepository provides remoteFavoriteRepository,
                 LocalFavoriteSyncRepository provides favoriteSyncRepository,

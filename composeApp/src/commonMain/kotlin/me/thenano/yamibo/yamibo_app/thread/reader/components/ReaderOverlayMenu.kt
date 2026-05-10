@@ -2,14 +2,11 @@ package me.thenano.yamibo.yamibo_app.thread.reader.components
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import me.thenano.yamibo.yamibo_app.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.thread.reader.debug.DebugRecomposeProbe
 import me.thenano.yamibo.yamibo_app.thread.reader.components.overlay.ReaderBottomBar
 import me.thenano.yamibo.yamibo_app.thread.reader.components.overlay.ReaderFloatButtons
@@ -26,7 +23,6 @@ import me.thenano.yamibo.yamibo_app.thread.reader.components.overlay.ReaderOverl
 internal fun ReaderOverlayMenu(
     visible: Boolean,
     title: String,
-    snackbarHostState: SnackbarHostState,
     isFavorited: Boolean,
     onBack: () -> Unit,
     onCatalog: () -> Unit,
@@ -72,13 +68,6 @@ internal fun ReaderOverlayMenu(
             onFavoriteLongPress = onFavoriteLongPress,
             onShare = onShare,
             modifier = Modifier.align(Alignment.BottomCenter)
-        )
-        YamiboSnackbarHost(
-            hostState = snackbarHostState,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .navigationBarsPadding()
-                .padding(bottom = 72.dp)
         )
     }
 }

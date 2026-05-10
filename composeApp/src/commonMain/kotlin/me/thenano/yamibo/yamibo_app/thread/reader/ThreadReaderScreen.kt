@@ -35,9 +35,12 @@ import kotlinx.coroutines.runBlocking
 import me.thenano.yamibo.yamibo_app.*
 import me.thenano.yamibo.yamibo_app.favorite.*
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
+import me.thenano.yamibo.yamibo_app.repository.inapplinknavigation.InAppLinkContext
+import me.thenano.yamibo.yamibo_app.repository.LocalBookMarkRepository as BookMarkRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository.ThreadReadingHistory
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.components.ThreadErrorContent
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.components.ThreadLoadingSkeleton
 import me.thenano.yamibo.yamibo_app.thread.image.LocalImageClickListener
@@ -158,6 +161,7 @@ internal fun ThreadReaderScreen(
     val favoriteRepository = LocalFavoriteRepository.current
     val favoriteSyncRepository = LocalFavoriteSyncRepository.current
     val readHistoryRepo = LocalReadHistoryRepository.current
+    val bookMarkRepository = LocalBookMarkRepository.current
     val navigator = LocalNavigator.current
     val platformContext = LocalPlatformContext.current
     val scope = rememberCoroutineScope()
@@ -195,6 +199,7 @@ internal fun ThreadReaderScreen(
     val snackbarHostState = remember { SnackbarHostState() }
 
     var hasRestoredPosition by remember { mutableStateOf(false) }
+    var pendingTargetPid by remember(tid, targetPid) { mutableStateOf(targetPid?.value?.toLong()) }
 
     /** Extract image URL for thread avatar based on forum type */
     var coverUrl by remember { mutableStateOf<String?>(null) }
@@ -216,6 +221,18 @@ internal fun ThreadReaderScreen(
     var showFavoriteMultiPathDialog by remember { mutableStateOf(false) }
     var showFavoriteAddSyncConfirm by remember { mutableStateOf(false) }
     var showFavoriteRemoveSyncConfirm by remember { mutableStateOf(false) }
+    var postBookMarkEntries by remember { mutableStateOf<Map<Long, BookMarkRepository.Entry>>(emptyMap()) }
+    var catalogActionPost by remember { mutableStateOf<Post?>(null) }
+
+    suspend fun reloadPostBookMarks() {
+        postBookMarkEntries = bookMarkRepository
+            .getEntriesByParent(BookMarkRepository.TargetType.ThreadPost, tid.value.toLong())
+            .associateBy { it.targetId }
+    }
+
+    LaunchedEffect(tid) {
+        reloadPostBookMarks()
+    }
     
     fun resolveValidCoverUrl(rawUrl: String?): String? {
         if (
@@ -455,6 +472,15 @@ internal fun ThreadReaderScreen(
         }
     }
     val forumId = threadInfo?.forum?.fid
+    val htmlLinkContext = remember(tid, title, forumId, authorId, threadType) {
+        InAppLinkContext(
+            currentTid = tid,
+            currentTitle = title,
+            currentFid = forumId,
+            currentAuthorId = authorId,
+            currentThreadType = threadType,
+        )
+    }
     val isMangaForum = forumId?.let { YamiboForum.isMangaForum(it) } == true
     val isNovelForum = forumId?.let { YamiboForum.isNovelForum(it) } == true
     val showRegularFirstPostTagBanner = isMangaForum || (!isNovelForum && !isNovelThread)
@@ -866,16 +892,6 @@ internal fun ThreadReaderScreen(
     LaunchedEffect(tid, initialPage, targetPid) {
         loadPage(initialPage)
 
-        if (targetPid != null && posts.isNotEmpty()) {
-            val targetIndex = entryIndexByPid[targetPid.value.toLong()] ?: -1
-            if (targetIndex >= 0) {
-                listState.scrollToItem(targetIndex)
-                hasRestoredPosition = true
-            } else {
-                fallbackNearestPost(targetPid.value.toLong(), initialPage)
-            }
-        }
-
         /** Restore position from history if no explicit targetPid */
         if (!hasRestoredPosition && targetPid == null) {
             try {
@@ -926,6 +942,22 @@ internal fun ThreadReaderScreen(
             } catch (_: Exception) {
             }
             hasRestoredPosition = true
+        }
+    }
+
+    LaunchedEffect(state, posts, readerEntries, pendingTargetPid) {
+        val targetPidLong = pendingTargetPid ?: return@LaunchedEffect
+        if (state != ReaderState.Success || posts.isEmpty() || readerEntries.isEmpty()) return@LaunchedEffect
+
+        val targetIndex = entryIndexByPid[targetPidLong] ?: -1
+        if (targetIndex >= 0) {
+            listState.scrollToItem(targetIndex)
+            hasRestoredPosition = true
+            pendingTargetPid = null
+        } else {
+            fallbackNearestPost(targetPidLong, initialPage)
+            hasRestoredPosition = true
+            pendingTargetPid = null
         }
     }
 
@@ -1058,41 +1090,49 @@ internal fun ThreadReaderScreen(
         if (candidate <= totalPages && candidate in failedAutoLoadPages) candidate else null
     }
 
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        gesturesEnabled = drawerState.isOpen,
-        drawerContent = {
-            ModalDrawerSheet(
-                drawerContainerColor = colors.creamBackground,
-                modifier = Modifier.fillMaxWidth(0.7f)
-            ) {
-                ReaderCatalogPanel(
-                    totalPages = totalPages,
-                    loadedPostsByPage = loadedPostsByPage,
-                    currentPage = currentPage,
-                    currentPid = currentPid,
-                    onPageOrPostClick = { page, post ->
-                        scope.launch {
-                            if (post != null) {
-                                drawerState.close()
-                                if (page !in loadedPages) {
-                                    loadPage(page)
-                                    delay(50.milliseconds) // Wait briefly for Compose to layout the new items
-                                }
-                                val targetIndex = entryIndexByPid[post.pid.value.toLong()] ?: -1
-                                if (targetIndex >= 0) listState.scrollToItem(targetIndex)
-                            } else {
-                                // User just clicked the page header to expand catalog, load the page, don't close drawer
-                                if (page !in loadedPages) {
-                                    loadPage(page)
+    Box(modifier = Modifier.fillMaxSize()) {
+        ModalNavigationDrawer(
+            drawerState = drawerState,
+            gesturesEnabled = drawerState.isOpen,
+            drawerContent = {
+                ModalDrawerSheet(
+                    drawerContainerColor = colors.creamBackground,
+                    modifier = Modifier.fillMaxWidth(0.7f)
+                ) {
+                    ReaderCatalogPanel(
+                        totalPages = totalPages,
+                        loadedPostsByPage = loadedPostsByPage,
+                        currentPage = currentPage,
+                        currentPid = currentPid,
+                        bookmarkedPostIds = postBookMarkEntries.values
+                            .filter { it.bookmarked }
+                            .mapTo(mutableSetOf()) { it.targetId },
+                        readPostIds = postBookMarkEntries.values
+                            .filter { it.read }
+                            .mapTo(mutableSetOf()) { it.targetId },
+                        onPageOrPostClick = { page, post ->
+                            scope.launch {
+                                if (post != null) {
+                                    drawerState.close()
+                                    if (page !in loadedPages) {
+                                        loadPage(page)
+                                        delay(50.milliseconds) // Wait briefly for Compose to layout the new items
+                                    }
+                                    val targetIndex = entryIndexByPid[post.pid.value.toLong()] ?: -1
+                                    if (targetIndex >= 0) listState.scrollToItem(targetIndex)
+                                } else {
+                                    // User just clicked the page header to expand catalog, load the page, don't close drawer
+                                    if (page !in loadedPages) {
+                                        loadPage(page)
+                                    }
                                 }
                             }
-                        }
-                    }
-                )
+                        },
+                        onPostLongPress = { post -> catalogActionPost = post },
+                    )
+                }
             }
-        }
-    ) {
+        ) {
         val handleImageDoubleTap: (String) -> Unit = { url ->
             val post = posts.firstOrNull { p -> p.images.any { it.url.endsWith(url) || url.endsWith(it.url) } }
             if (post != null) {
@@ -1191,6 +1231,7 @@ internal fun ThreadReaderScreen(
                                             threadTitle = if (post.floor == 1) title else null,
                                             totalViews = threadInfo?.totalViews.takeIf { post.floor == 1 },
                                             totalReplies = threadInfo?.totalReplies.takeIf { post.floor == 1 },
+                                            linkContext = htmlLinkContext,
                                             onVote = { optionIds -> handleVote(optionIds) },
                                             onRate = { score, reason -> handleRate(post.pid, score, reason) },
                                             onComment = { message -> handleComment(post.pid, message) },
@@ -1231,6 +1272,7 @@ internal fun ThreadReaderScreen(
                                             threadTitle = if (post.floor == 1) title else null,
                                             totalViews = threadInfo?.totalViews.takeIf { post.floor == 1 },
                                             totalReplies = threadInfo?.totalReplies.takeIf { post.floor == 1 },
+                                            linkContext = htmlLinkContext,
                                             bodyBlocks = emptyList(),
                                             showFooter = false,
                                             onImageSuccess = { imageUrl -> handlePostImageSuccess(post, imageUrl) },
@@ -1261,6 +1303,7 @@ internal fun ThreadReaderScreen(
                                         PostRenderer(
                                             post = post,
                                             bodyBlocks = entry.bodyBlocks,
+                                            linkContext = htmlLinkContext,
                                             showHeader = false,
                                             showFooter = false,
                                             verticalPadding = 0.dp,
@@ -1294,6 +1337,7 @@ internal fun ThreadReaderScreen(
                                             bodyBlocks = emptyList(),
                                             showHeader = false,
                                             showFooter = true,
+                                            linkContext = htmlLinkContext,
                                             verticalPadding = 0.dp,
                                             onVote = { optionIds -> handleVote(optionIds) },
                                             onRate = { score, reason -> handleRate(post.pid, score, reason) },
@@ -1419,7 +1463,6 @@ internal fun ThreadReaderScreen(
                 ReaderOverlayMenu(
                     visible = showMenu,
                     title = threadInfo?.title ?: title,
-                    snackbarHostState = snackbarHostState,
                     isFavorited = isFavorited,
                     onBack = { navigator.pop() },
                     onCatalog = { scope.launch { drawerState.open() } },
@@ -1509,6 +1552,14 @@ internal fun ThreadReaderScreen(
                 )
             }
         }
+        }
+        YamiboSnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .navigationBarsPadding()
+                .padding(bottom = 72.dp)
+        )
     }
 
     if (showFavoriteDialog) {
@@ -1636,6 +1687,110 @@ internal fun ThreadReaderScreen(
                     maybePromptRemoteRemoval()
                 }
             },
+        )
+    }
+
+    catalogActionPost?.let { post ->
+        val entry = postBookMarkEntries[post.pid.value.toLong()]
+        CatalogBookMarkActionDialog(
+            bookmarked = entry?.bookmarked == true,
+            read = entry?.read == true,
+            onDismiss = { catalogActionPost = null },
+            onToggleBookMark = {
+                catalogActionPost = null
+                scope.launch {
+                    val next = entry?.bookmarked != true
+                    bookMarkRepository.setBookmarked(
+                        targetType = BookMarkRepository.TargetType.ThreadPost,
+                        parentId = tid.value.toLong(),
+                        targetId = post.pid.value.toLong(),
+                        title = post.title.ifBlank { "（無標題）" },
+                        bookmarked = next,
+                    )
+                    reloadPostBookMarks()
+                    snackbarHostState.showSnackbar(
+                        if (next) "已新增書籤" else "已移除書籤",
+                        duration = SnackbarDuration.Short,
+                    )
+                }
+            },
+            onToggleRead = {
+                catalogActionPost = null
+                scope.launch {
+                    val next = entry?.read != true
+                    bookMarkRepository.setRead(
+                        targetType = BookMarkRepository.TargetType.ThreadPost,
+                        parentId = tid.value.toLong(),
+                        targetId = post.pid.value.toLong(),
+                        title = post.title.ifBlank { "（無標題）" },
+                        read = next,
+                    )
+                    reloadPostBookMarks()
+                    snackbarHostState.showSnackbar(
+                        if (next) "已標為已讀" else "已標為未讀",
+                        duration = SnackbarDuration.Short,
+                    )
+                }
+            },
+            onClearHistory = {
+                catalogActionPost = null
+                scope.launch {
+                    bookMarkRepository.setRead(
+                        targetType = BookMarkRepository.TargetType.ThreadPost,
+                        parentId = tid.value.toLong(),
+                        targetId = post.pid.value.toLong(),
+                        title = post.title.ifBlank { "（無標題）" },
+                        read = false,
+                    )
+                    reloadPostBookMarks()
+                    snackbarHostState.showSnackbar("已清除閱讀紀錄", duration = SnackbarDuration.Short)
+                }
+            },
+        )
+    }
+}
+
+@Composable
+private fun CatalogBookMarkActionDialog(
+    bookmarked: Boolean,
+    read: Boolean,
+    onDismiss: () -> Unit,
+    onToggleBookMark: () -> Unit,
+    onToggleRead: () -> Unit,
+    onClearHistory: () -> Unit,
+) {
+    val colors = YamiboTheme.colors
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("閱讀標記", color = colors.brownDeep) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                CatalogActionRow(if (bookmarked) "移除書籤" else "新增書籤", onToggleBookMark)
+                CatalogActionRow(if (read) "標為未讀" else "標為已讀", onToggleRead)
+                CatalogActionRow("清除閱讀紀錄", onClearHistory)
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("取消", color = colors.brownDeep) }
+        },
+        containerColor = colors.creamSurface,
+    )
+}
+
+@Composable
+private fun CatalogActionRow(text: String, onClick: () -> Unit) {
+    val colors = YamiboTheme.colors
+    Surface(
+        onClick = onClick,
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+        color = colors.creamBackground,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+            color = colors.textDark,
         )
     }
 }

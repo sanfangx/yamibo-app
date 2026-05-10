@@ -1,13 +1,9 @@
 package me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.selection.DisableSelection
@@ -28,25 +24,25 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.Placeholder
-import androidx.compose.ui.text.PlaceholderVerticalAlign
-import androidx.compose.ui.text.TextLayoutResult
-import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.*
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import io.github.littlesurvival.dto.value.ThreadId
-import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
-import me.thenano.yamibo.yamibo_app.util.state
 import me.thenano.yamibo.yamibo_app.LocalNovelReaderSettingsRepository
+import me.thenano.yamibo.yamibo_app.navigation.IInAppLinkResolvingScreen
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
+import me.thenano.yamibo.yamibo_app.navigation.looksLikeSupportedYamiboInAppLink
+import me.thenano.yamibo.yamibo_app.repository.inapplinknavigation.InAppLinkContext
+import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.thread.image.ImageViewer
 import me.thenano.yamibo.yamibo_app.thread.reader.debug.DebugRecomposeProbe
 import me.thenano.yamibo.yamibo_app.util.rememberImageRequest
+import me.thenano.yamibo.yamibo_app.util.state
 import me.thenano.yamibo.yamibo_app.webview.IPlatformWebView
 
 internal fun normalizeHtmlBlocks(rawBlocks: List<HtmlBlock>): List<HtmlBlock> {
@@ -66,10 +62,41 @@ internal fun normalizeHtmlBlocks(rawBlocks: List<HtmlBlock>): List<HtmlBlock> {
     }
 }
 
+private data class LinkMenuState(
+    val url: String,
+    val linkText: String,
+    val canOpenInApp: Boolean,
+)
+
+private fun normalizeYamiboLink(url: String): String {
+    val cleaned = url.trim().replace("&amp;", "&")
+    return when {
+        cleaned.startsWith("http://") || cleaned.startsWith("https://") -> cleaned
+        cleaned.startsWith("//") -> "https:$cleaned"
+        cleaned.startsWith("/") -> "https://bbs.yamibo.com$cleaned"
+        else -> "https://bbs.yamibo.com/$cleaned"
+    }
+}
+
+private fun applyThemedLinkStyle(text: AnnotatedString, linkColor: Color): AnnotatedString {
+    val links = text.getStringAnnotations("URL", 0, text.length)
+    if (links.isEmpty()) return text
+    val builder = AnnotatedString.Builder(text)
+    links.forEach { link ->
+        builder.addStyle(
+            SpanStyle(color = linkColor, textDecoration = TextDecoration.Underline),
+            link.start,
+            link.end,
+        )
+    }
+    return builder.toAnnotatedString()
+}
+
 @Composable
 fun HtmlRenderer(
     html: String,
     tid: ThreadId? = null,
+    linkContext: InAppLinkContext = InAppLinkContext(currentTid = tid),
     modifier: Modifier = Modifier,
     onImageSuccess: ((String) -> Unit)? = null,
     onImageError: ((String, String) -> Unit)? = null,
@@ -87,6 +114,7 @@ fun HtmlRenderer(
     HtmlBlocksRenderer(
         blocks = blocks,
         tid = tid,
+        linkContext = linkContext,
         modifier = modifier,
         onImageSuccess = onImageSuccess,
         onImageError = onImageError,
@@ -104,6 +132,7 @@ fun HtmlRenderer(
 fun HtmlBlocksRenderer(
     blocks: List<HtmlBlock>,
     tid: ThreadId? = null,
+    linkContext: InAppLinkContext = InAppLinkContext(currentTid = tid),
     modifier: Modifier = Modifier,
     onImageSuccess: ((String) -> Unit)? = null,
     onImageError: ((String, String) -> Unit)? = null,
@@ -124,6 +153,7 @@ fun HtmlBlocksRenderer(
                 HtmlBlockRenderer(
                     block = block,
                     tid = tid,
+                    linkContext = linkContext,
                     onImageSuccess = onImageSuccess,
                     onImageError = onImageError,
                     onImageReload = onImageReload,
@@ -150,6 +180,7 @@ fun HtmlBlocksRenderer(
 private fun HtmlBlockRenderer(
     block: HtmlBlock,
     tid: ThreadId? = null,
+    linkContext: InAppLinkContext = InAppLinkContext(currentTid = tid),
     onImageSuccess: ((String) -> Unit)? = null,
     onImageError: ((String, String) -> Unit)? = null,
     onImageReload: ((String) -> Unit)? = null,
@@ -197,9 +228,12 @@ private fun HtmlBlockRenderer(
 
     when (block) {
         is HtmlBlock.Text -> {
-            var showLongPressMenu by remember { mutableStateOf<Pair<String, String>?>(null) }
+            var showLongPressMenu by remember { mutableStateOf<LinkMenuState?>(null) }
             val layoutResult = remember { mutableStateOf<TextLayoutResult?>(null) }
-            val adjustedAnnotatedString = adjustAnnotatedString(block.annotatedString)
+            val baseAdjustedAnnotatedString = adjustAnnotatedString(block.annotatedString)
+            val adjustedAnnotatedString = remember(baseAdjustedAnnotatedString, colors.htmlTextDark) {
+                applyThemedLinkStyle(baseAdjustedAnnotatedString, colors.htmlTextDark)
+            }
             val inlineContent = remember(block.rubies, fontSize, colors.htmlTextDark) {
                 block.rubies.associate { ruby ->
                     val widthEm = maxOf(
@@ -220,6 +254,7 @@ private fun HtmlBlockRenderer(
                             Text(
                                 text = ruby.rubyText,
                                 color = colors.htmlTextDark,
+                                fontFamily = HtmlDefaultFontFamily,
                                 fontSize = (fontSize * 0.75f).sp,
                                 lineHeight = (fontSize * 0.75f).sp,
                                 maxLines = 1,
@@ -227,6 +262,7 @@ private fun HtmlBlockRenderer(
                             Text(
                                 text = ruby.baseText,
                                 color = colors.htmlTextDark,
+                                fontFamily = HtmlDefaultFontFamily,
                                 fontSize = fontSize.sp,
                                 lineHeight = fontSize.sp,
                                 maxLines = 1,
@@ -243,7 +279,7 @@ private fun HtmlBlockRenderer(
                 .padding(vertical = 0.dp)
                 .then(
                     if (hasLinks) {
-                        Modifier.pointerInput(adjustedAnnotatedString) {
+                        Modifier.pointerInput(adjustedAnnotatedString, linkContext) {
                             awaitPointerEventScope {
                                 while (true) {
                                     // 1. Initial Pass: Intercept 'down' on links to disable global selection
@@ -273,9 +309,12 @@ private fun HtmlBlockRenderer(
                                                         adjustedAnnotatedString.getStringAnnotations("URL", offset, offset)
                                                             .firstOrNull()
                                                     if (link != null) {
-                                                        showLongPressMenu = link.item to adjustedAnnotatedString.substring(
-                                                            link.start,
-                                                            link.end
+                                                        val fullUrl = normalizeYamiboLink(link.item)
+                                                        val linkText = adjustedAnnotatedString.substring(link.start, link.end)
+                                                        showLongPressMenu = LinkMenuState(
+                                                            url = fullUrl,
+                                                            linkText = linkText,
+                                                            canOpenInApp = looksLikeSupportedYamiboInAppLink(fullUrl),
                                                         )
                                                         // Consume all movement until release
                                                         while (true) {
@@ -285,7 +324,15 @@ private fun HtmlBlockRenderer(
                                                         }
                                                     }
                                                 } else {
-                                                    // Fast tap (up before timeout) - Do nothing to avoid mis-clicks
+                                                    val link =
+                                                        adjustedAnnotatedString.getStringAnnotations("URL", offset, offset)
+                                                            .firstOrNull()
+                                                    if (link != null) {
+                                                        val fullUrl = normalizeYamiboLink(link.item)
+                                                        if (looksLikeSupportedYamiboInAppLink(fullUrl)) {
+                                                            navigator.navigate(IInAppLinkResolvingScreen(fullUrl, linkContext))
+                                                        }
+                                                    }
                                                 }
                                             }
                                         }
@@ -302,6 +349,7 @@ private fun HtmlBlockRenderer(
                 text = adjustedAnnotatedString,
                 style = TextStyle(
                     color = colors.htmlTextDark,
+                    fontFamily = HtmlDefaultFontFamily,
                     fontSize = fontSize.sp,
                     lineHeight = (fontSize * lineSpacing).sp,
                     textAlign = block.textAlign
@@ -314,50 +362,56 @@ private fun HtmlBlockRenderer(
 
             if (showLongPressMenu != null) {
                 DisableSelection {
-                    val (url, linkText) = showLongPressMenu!!
-                    val fullUrl = if (url.startsWith("http")) url else "https://bbs.yamibo.com/$url"
+                    val menu = showLongPressMenu!!
+                    val fullUrl = menu.url
 
                     AlertDialog(
                         onDismissRequest = { showLongPressMenu = null },
                         title = { Text("連結選項", style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 20.sp)) },
                         text = {
                             Column(modifier = Modifier.fillMaxWidth()) {
-                                // Info Section
                                 Column(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
                                     Text(
-                                        text = linkText,
+                                        text = menu.linkText,
                                         color = colors.htmlTextDark,
                                         fontSize = 14.sp,
-                                        fontWeight = FontWeight.Bold
+                                        fontWeight = FontWeight.Bold,
                                     )
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
                                         text = fullUrl,
                                         color = colors.htmlTextDark.copy(alpha = 0.6f),
                                         fontSize = 12.sp,
-                                        lineHeight = 16.sp
+                                        lineHeight = 16.sp,
                                     )
                                 }
-                                
+
                                 HorizontalDivider(
                                     modifier = Modifier.padding(bottom = 8.dp),
-                                    color = colors.brownPrimary.copy(alpha = 0.1f)
+                                    color = colors.brownPrimary.copy(alpha = 0.1f),
                                 )
+
+                                if (menu.canOpenInApp) {
+                                    TextButton(onClick = {
+                                        navigator.navigate(IInAppLinkResolvingScreen(fullUrl, linkContext))
+                                        showLongPressMenu = null
+                                    }) { Text("App 內打開", color = colors.brownPrimary, fontSize = 16.sp) }
+                                }
 
                                 TextButton(onClick = {
                                     navigator.navigate(IPlatformWebView(fullUrl))
                                     showLongPressMenu = null
-                                }) { Text("在應用內開啟連結", color = colors.brownPrimary, fontSize = 16.sp) }
+                                }) { Text("WebView 打開", color = colors.brownPrimary, fontSize = 16.sp) }
 
                                 TextButton(onClick = {
                                     clipboardManager.setText(AnnotatedString(fullUrl))
                                     showLongPressMenu = null
-                                }) { Text("複製連結地址", color = colors.brownPrimary, fontSize = 16.sp) }
+                                }) { Text("複製連結", color = colors.brownPrimary, fontSize = 16.sp) }
 
                                 TextButton(onClick = {
-                                    clipboardManager.setText(AnnotatedString(linkText))
+                                    clipboardManager.setText(AnnotatedString(menu.linkText))
                                     showLongPressMenu = null
-                                }) { Text("複製連結文字", color = colors.brownPrimary, fontSize = 16.sp) }
+                                }) { Text("複製文字", color = colors.brownPrimary, fontSize = 16.sp) }
 
                                 TextButton(onClick = {
                                     try {
@@ -365,7 +419,7 @@ private fun HtmlBlockRenderer(
                                     } catch (_: Exception) {
                                     }
                                     showLongPressMenu = null
-                                }) { Text("使用外部瀏覽器開啟", color = colors.brownPrimary, fontSize = 16.sp) }
+                                }) { Text("外部瀏覽器", color = colors.brownPrimary, fontSize = 16.sp) }
                             }
                         },
                         confirmButton = {},
@@ -375,7 +429,7 @@ private fun HtmlBlockRenderer(
                             }
                         },
                         containerColor = colors.creamSurface,
-                        titleContentColor = colors.textDark
+                        titleContentColor = colors.textDark,
                     )
                 }
             }
@@ -612,6 +666,7 @@ private fun HtmlBlockRenderer(
                                 HtmlBlockRenderer(
                                     block = it,
                                     tid = tid,
+                                    linkContext = linkContext,
                                     onImageSuccess = onImageSuccess,
                                     onImageError = onImageError,
                                     onImageReload = onImageReload,
@@ -663,6 +718,7 @@ private fun HtmlBlockRenderer(
                         HtmlBlockRenderer(
                             block = it,
                             tid = tid,
+                            linkContext = linkContext,
                             onImageSuccess = onImageSuccess,
                             onImageError = onImageError,
                             onImageReload = onImageReload,
@@ -697,6 +753,7 @@ private fun HtmlBlockRenderer(
                         HtmlBlockRenderer(
                             block = it,
                             tid = tid,
+                            linkContext = linkContext,
                             onImageSuccess = onImageSuccess,
                             onImageError = onImageError,
                             onImageReload = onImageReload,
@@ -775,6 +832,7 @@ private fun HtmlBlockRenderer(
                                                                 text = adjustAnnotatedString(innerBlock.annotatedString),
                                                                 style = TextStyle(
                                                                     color = cellTextColor,
+                                                                    fontFamily = HtmlDefaultFontFamily,
                                                                     fontSize = (fontSize - 3).coerceAtLeast(10).sp,
                                                                     lineHeight = ((fontSize - 3).coerceAtLeast(10) * lineSpacing).sp,
                                                                     fontWeight = if (cell.isHeader) FontWeight.Bold else FontWeight.Normal,
@@ -785,6 +843,7 @@ private fun HtmlBlockRenderer(
                                                         else -> HtmlBlockRenderer(
                                                             block = innerBlock,
                                                             tid = tid,
+                                                            linkContext = linkContext,
                                                             onImageSuccess = onImageSuccess,
                                                             onImageError = onImageError,
                                                             onImageReload = onImageReload,

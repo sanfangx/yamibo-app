@@ -1,5 +1,6 @@
 package me.thenano.yamibo.yamibo_app.thread.detail.novel.components
 
+import YamiboIcons
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -7,16 +8,20 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -30,9 +35,12 @@ internal fun PostPageSection(
     page: Int,
     isExpanded: Boolean,
     posts: List<Post>?,
+    bookmarkedPostIds: Set<Long>,
+    readPostIds: Set<Long>,
     isFirstPage: Boolean,
     onToggle: () -> Unit,
-    onPostClick: (Post) -> Unit
+    onPostClick: (Post) -> Unit,
+    onPostLongPress: (Post) -> Unit,
 ) {
     val colors = YamiboTheme.colors
     val rotation by
@@ -104,7 +112,10 @@ internal fun PostPageSection(
                     posts.forEach { post ->
                         PostTitleRow(
                             post = post,
-                            onClick = { onPostClick(post) }
+                            bookmarked = post.pid.value.toLong() in bookmarkedPostIds,
+                            read = post.pid.value.toLong() in readPostIds,
+                            onClick = { onPostClick(post) },
+                            onLongPress = { onPostLongPress(post) },
                         )
                     }
                 }
@@ -115,14 +126,28 @@ internal fun PostPageSection(
 
 /** Single post title row (lightweight — just title) */
 @Composable
-private fun PostTitleRow(post: Post, onClick: () -> Unit) {
+private fun PostTitleRow(
+    post: Post,
+    bookmarked: Boolean,
+    read: Boolean,
+    onClick: () -> Unit,
+    onLongPress: () -> Unit,
+) {
     val colors = YamiboTheme.colors
 
     Surface(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp, horizontal = 4.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp, horizontal = 4.dp)
+            .alpha(if (read) 0.6f else 1f)
+            .pointerInput(post.pid, onClick, onLongPress) {
+                detectTapGestures(
+                    onTap = { onClick() },
+                    onLongPress = { onLongPress() },
+                )
+            },
         shape = RoundedCornerShape(10.dp),
         color = colors.creamSurface,
-        onClick = onClick
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
@@ -139,6 +164,16 @@ private fun PostTitleRow(post: Post, onClick: () -> Unit) {
                 )
             }
             Spacer(Modifier.width(10.dp))
+
+            if (bookmarked) {
+                Icon(
+                    imageVector = YamiboIcons.Bookmark,
+                    contentDescription = null,
+                    tint = colors.orangeAccent,
+                    modifier = Modifier.size(12.dp).padding(end = 3.dp),
+                )
+                Spacer(Modifier.width(3.dp))
+            }
 
             /** Post title or fallback */
             Text(

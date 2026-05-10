@@ -24,7 +24,6 @@ import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -66,6 +65,8 @@ internal fun MessageCenterMainContent(
     onResumeFavoriteUpdate: () -> Unit,
     favoriteUpdateInterval: FavoriteUpdateInterval,
     onFavoriteUpdateIntervalChange: (FavoriteUpdateInterval) -> Unit,
+    favoriteUpdateHiddenRunId: String,
+    onHideFavoriteUpdateStatus: (String) -> Unit,
     onToggleFavoriteUpdateFid: (Int, Boolean) -> Unit,
     onUserClick: (User) -> Unit,
     onOpenPrivateMessage: (User) -> Unit,
@@ -87,6 +88,8 @@ internal fun MessageCenterMainContent(
                         onResumeFavoriteUpdate = onResumeFavoriteUpdate,
                         favoriteUpdateInterval = favoriteUpdateInterval,
                         onFavoriteUpdateIntervalChange = onFavoriteUpdateIntervalChange,
+                        favoriteUpdateHiddenRunId = favoriteUpdateHiddenRunId,
+                        onHideFavoriteUpdateStatus = onHideFavoriteUpdateStatus,
                         onToggleFavoriteUpdateFid = onToggleFavoriteUpdateFid,
                     )
                 }
@@ -132,21 +135,17 @@ private fun FavoriteUpdateHeader(
     onResumeFavoriteUpdate: () -> Unit,
     favoriteUpdateInterval: FavoriteUpdateInterval,
     onFavoriteUpdateIntervalChange: (FavoriteUpdateInterval) -> Unit,
+    favoriteUpdateHiddenRunId: String,
+    onHideFavoriteUpdateStatus: (String) -> Unit,
     onToggleFavoriteUpdateFid: (Int, Boolean) -> Unit,
 ) {
     var showFilterDialog by remember { mutableStateOf(false) }
     var showIntervalDialog by remember { mutableStateOf(false) }
-    var hiddenRunId by remember { mutableStateOf<String?>(null) }
     val running = (runState as? FavoriteUpdateRepository.RunState.Running)?.snapshot
     val interrupted = (runState as? FavoriteUpdateRepository.RunState.Interrupted)?.snapshot
     val snapshot = runState.snapshotOrNull()
-    val statusVisible = snapshot != null && hiddenRunId != snapshot.runId
-
-    LaunchedEffect(snapshot?.runId, runState is FavoriteUpdateRepository.RunState.Running) {
-        if (runState is FavoriteUpdateRepository.RunState.Running) {
-            hiddenRunId = null
-        }
-    }
+    val statusVisible = snapshot != null &&
+        (runState is FavoriteUpdateRepository.RunState.Running || favoriteUpdateHiddenRunId != snapshot.runId)
 
     Column(
         modifier = Modifier
@@ -177,7 +176,7 @@ private fun FavoriteUpdateHeader(
                 onCancel = onCancelFavoriteUpdate,
                 onInterrupt = onInterruptFavoriteUpdate,
                 onResume = onResumeFavoriteUpdate,
-                onHide = { hiddenRunId = snapshot.runId },
+                onHide = { onHideFavoriteUpdateStatus(snapshot.runId) },
             )
         }
     }

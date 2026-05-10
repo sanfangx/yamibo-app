@@ -151,6 +151,11 @@ class AppSettingsRepository(store: SettingsStore) : SettingsRegistry(store, pref
         default = FavoriteUpdateInterval.HOURS_12,
     )
 
+    val favoriteUpdateHiddenRunId by stringSetting(
+        name = "收藏更新已隱藏任務",
+        default = "",
+    )
+
     val signInMode by enumSetting(
         name = "簽到模式",
         default = SignInMode.SEMI_AUTOMATIC,

@@ -1,19 +1,24 @@
 package me.thenano.yamibo.yamibo_app.thread.reader.components
 
+import YamiboIcons
 import androidx.compose.animation.*
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -29,7 +34,10 @@ internal fun ReaderCatalogPanel(
     loadedPostsByPage: Map<Int, List<Post>>,
     currentPage: Int,
     currentPid: PostId?,
-    onPageOrPostClick: (Int, Post?) -> Unit
+    bookmarkedPostIds: Set<Long> = emptySet(),
+    readPostIds: Set<Long> = emptySet(),
+    onPageOrPostClick: (Int, Post?) -> Unit,
+    onPostLongPress: (Post) -> Unit = {},
 ) {
     val colors = YamiboTheme.colors
     var expandedPages by remember { mutableStateOf(setOf(currentPage)) }
@@ -122,10 +130,19 @@ internal fun ReaderCatalogPanel(
                             Column(modifier = Modifier.fillMaxWidth().background(colors.creamSurface)) {
                                 pagePosts.forEach { post ->
                                     val isCurrentPost = post.pid == currentPid
+                                    val isBookmarked = post.pid.value.toLong() in bookmarkedPostIds
+                                    val isRead = post.pid.value.toLong() in readPostIds
                                     Surface(
                                         color = if (isCurrentPost) colors.brownLight.copy(alpha = 0.15f) else colors.creamSurface,
-                                        onClick = { onPageOrPostClick(page, post) },
-                                        modifier = Modifier.fillMaxWidth()
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .alpha(if (isRead) 0.6f else 1f)
+                                            .pointerInput(page, post.pid) {
+                                                detectTapGestures(
+                                                    onTap = { onPageOrPostClick(page, post) },
+                                                    onLongPress = { onPostLongPress(post) },
+                                                )
+                                            }
                                     ) {
                                         Row(
                                             modifier = Modifier
@@ -152,6 +169,15 @@ internal fun ReaderCatalogPanel(
                                                 fontSize = if (isCurrentPost) 16.sp else 14.sp,
                                                 modifier = Modifier.width(if (isCurrentPost) 48.dp else 40.dp)
                                             )
+                                            if (isBookmarked) {
+                                                Icon(
+                                                    imageVector = YamiboIcons.Bookmark,
+                                                    contentDescription = null,
+                                                    tint = colors.orangeAccent,
+                                                    modifier = Modifier.size(12.dp)
+                                                )
+                                                Spacer(Modifier.width(6.dp))
+                                            }
                                             Text(
                                                 text = post.title.ifEmpty { "..." },
                                                 color = if (isCurrentPost) colors.brownDeep else colors.textDark,

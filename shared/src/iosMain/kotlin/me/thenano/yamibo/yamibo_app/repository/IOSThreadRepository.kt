@@ -41,10 +41,11 @@ class IOSThreadRepository(
 
     override suspend fun fetchFindPost(
         tid: ThreadId,
-        postId: PostId
+        postId: PostId,
+        authorId: UserId?,
     ): YamiboResult<ThreadPage> {
         yamiboClient.setCookie(cookieStore.load() ?: "")
-        return yamiboClient.fetchFindPost(threadId = tid, postId = postId)
+        return yamiboClient.fetchFindPost(threadId = tid, authorId = authorId, postId = postId)
     }
 
     override suspend fun addFavorite(tid: ThreadId, formHash: FormHash): YamiboResult<String> {

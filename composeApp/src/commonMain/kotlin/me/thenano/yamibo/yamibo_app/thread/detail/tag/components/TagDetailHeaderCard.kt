@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.SubcomposeAsyncImage
 import me.thenano.yamibo.yamibo_app.favorite.FavoriteActionButton
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.thread.detail.components.DetailNoteActionButton
 import me.thenano.yamibo.yamibo_app.util.rememberImageRequest
 import org.jetbrains.compose.resources.painterResource
 import yamibo_app.composeapp.generated.resources.Res
@@ -49,7 +50,9 @@ fun TagDetailHeaderCard(
     isFavorited: Boolean,
     onFavorite: () -> Unit,
     onFavoriteLongPress: (() -> Unit)? = null,
-    onShare: () -> Unit
+    onShare: () -> Unit,
+    noteContent: String = "",
+    onNoteClick: () -> Unit = {},
 ) {
     val colors = YamiboTheme.colors
 
@@ -63,31 +66,41 @@ fun TagDetailHeaderCard(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(modifier = Modifier.fillMaxWidth()) {
-                Card(
-                    modifier = Modifier.size(width = 100.dp, height = 130.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    elevation = CardDefaults.cardElevation(2.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = colors.brownPrimary.copy(alpha = 0.1f)
-                    )
+                Column(
+                    modifier = Modifier.width(100.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    if (coverUrl != null) {
-                        SubcomposeAsyncImage(
-                            model = rememberImageRequest(url = coverUrl),
-                            contentDescription = "cover",
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize(),
+                    Card(
+                        modifier = Modifier.size(width = 100.dp, height = 130.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        elevation = CardDefaults.cardElevation(2.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = colors.brownPrimary.copy(alpha = 0.1f)
                         )
-                    } else {
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Icon(
-                                painter = painterResource(Res.drawable.book),
+                    ) {
+                        if (coverUrl != null) {
+                            SubcomposeAsyncImage(
+                                model = rememberImageRequest(url = coverUrl),
                                 contentDescription = "cover",
-                                modifier = Modifier.size(48.dp),
-                                tint = colors.brownPrimary.copy(alpha = 0.4f)
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize(),
                             )
+                        } else {
+                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Icon(
+                                    painter = painterResource(Res.drawable.book),
+                                    contentDescription = "cover",
+                                    modifier = Modifier.size(48.dp),
+                                    tint = colors.brownPrimary.copy(alpha = 0.4f)
+                                )
+                            }
                         }
                     }
+                    DetailNoteActionButton(
+                        hasNote = noteContent.isNotBlank(),
+                        onClick = onNoteClick,
+                    )
                 }
 
                 Spacer(Modifier.width(14.dp))

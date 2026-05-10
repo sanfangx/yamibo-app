@@ -17,6 +17,7 @@ import me.thenano.yamibo.yamibo_app.profile.settings.access.IOSBackgroundAccessR
 import me.thenano.yamibo.yamibo_app.repository.*
 import me.thenano.yamibo.yamibo_app.repository.favorite.FavoriteSyncRepositoryImpl
 import me.thenano.yamibo.yamibo_app.repository.favorite.FavoriteUpdateRepositoryImpl
+import me.thenano.yamibo.yamibo_app.repository.inapplinknavigation.DefaultInAppLinkNavigationRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.AppSettingsRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.MangaReaderSettingsRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.NovelReaderSettingsRepository
@@ -59,6 +60,8 @@ fun MainViewController() = ComposeUIViewController {
     val blogRepository = remember { BlogRepositoryImpl(cookieStore, yamiboClient, diskCacheFactory) }
     val tagRepository = remember { IOSTagRepository(cookieStore, yamiboClient, diskCacheFactory) }
     val favoriteRepository = remember { IOSLocalFavoriteRepository(dbFactory) }
+    val detailNoteRepository = remember { IOSDetailNoteRepository(dbFactory) }
+    val bookMarkRepository = remember { IOSLocalBookMarkRepository(dbFactory) }
     val remoteFavoriteRepository = remember { IOSFavoriteRepository(cookieStore, yamiboClient) }
     val favoriteSyncDatabase = remember { Database(dbFactory.createDriver()) }
     val favoriteSyncRepository = remember {
@@ -84,6 +87,9 @@ fun MainViewController() = ComposeUIViewController {
     val favoriteUpdateRunner = remember { FavoriteUpdateRunner(favoriteUpdateRepository, favoriteUpdateScheduler) }
     val backgroundAccessRepository = remember { IOSBackgroundAccessRepository() }
     val novelCacheRepository = remember { IOSNovelThreadCacheRepository(diskCacheFactory) }
+    val inAppLinkNavigationRepository = remember {
+        DefaultInAppLinkNavigationRepository(threadRepository, novelCacheRepository)
+    }
     val readHistoryRepository = remember { IOSReadHistoryRepository(dbFactory) }
     val signRepository = remember { IOSSignRepository(dbFactory, authRepository, appSettingsRepository) }
     val themeRepository = remember { IOSThemeRepository() }
@@ -94,8 +100,11 @@ fun MainViewController() = ComposeUIViewController {
         LocalAuthRepository provides authRepository,
         LocalForumRepository provides forumRepository,
         LocalThreadRepository provides threadRepository,
+        LocalInAppLinkNavigationRepository provides inAppLinkNavigationRepository,
         LocalUserSpaceRepository provides userSpaceRepository,
         LocalBlogRepository provides blogRepository,
+        LocalDetailNoteRepository provides detailNoteRepository,
+        LocalBookMarkRepository provides bookMarkRepository,
         LocalFavoriteRepository provides favoriteRepository,
         LocalRemoteFavoriteRepository provides remoteFavoriteRepository,
         LocalFavoriteSyncRepository provides favoriteSyncRepository,

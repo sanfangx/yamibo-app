@@ -11,6 +11,7 @@ import me.thenano.yamibo.yamibo_app.favorite.sync.IFavoriteSyncProgressScreen
 import me.thenano.yamibo.yamibo_app.forum.IForumScreen
 import me.thenano.yamibo.yamibo_app.message.IMessageCenterScreen
 import me.thenano.yamibo.yamibo_app.message.IPrivateMessageScreen
+import me.thenano.yamibo.yamibo_app.navigation.IInAppLinkResolvingScreen
 import me.thenano.yamibo.yamibo_app.profile.ILoginScreen
 import me.thenano.yamibo.yamibo_app.profile.settings.ISettingsCategoryScreen
 import me.thenano.yamibo.yamibo_app.profile.settings.ISettingsScreen
@@ -151,6 +152,7 @@ internal object RestorableScreenRegistry {
         IMessageCenterScreen.Decoder,
         IBlogReaderScreen.Decoder,
         IPrivateMessageScreen.Decoder,
+        IInAppLinkResolvingScreen.Decoder,
     ).associateBy { it.type }
 
     fun decode(

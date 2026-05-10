@@ -11,6 +11,7 @@ import androidx.compose.ui.unit.dp
 import io.github.littlesurvival.dto.model.ThreadSummary
 import io.github.littlesurvival.dto.page.TagPage
 import me.thenano.yamibo.yamibo_app.forum.components.PageNavigation
+import me.thenano.yamibo.yamibo_app.thread.detail.components.DetailNoteCard
 
 /** Tag Detail Content (scrollable body) */
 @Composable
@@ -27,8 +28,13 @@ fun TagDetailContent(
     onFavorite: () -> Unit,
     onFavoriteLongPress: (() -> Unit)? = null,
     onShare: () -> Unit,
+    noteContent: String,
+    onNoteClick: () -> Unit,
     onPageChange: (Int) -> Unit,
-    onThreadClick: (ThreadSummary) -> Unit
+    onThreadClick: (ThreadSummary) -> Unit,
+    bookmarkedThreadIds: Set<Long> = emptySet(),
+    readThreadIds: Set<Long> = emptySet(),
+    onThreadLongPress: (ThreadSummary) -> Unit = {},
 ) {
     val listState = rememberLazyListState()
 
@@ -50,8 +56,19 @@ fun TagDetailContent(
                 isFavorited = isFavorited,
                 onFavorite = onFavorite,
                 onFavoriteLongPress = onFavoriteLongPress,
-                onShare = onShare
+                onShare = onShare,
+                noteContent = noteContent,
+                onNoteClick = onNoteClick,
             )
+        }
+
+        if (noteContent.isNotBlank()) {
+            item {
+                DetailNoteCard(
+                    content = noteContent,
+                    onEdit = onNoteClick,
+                )
+            }
         }
 
         // top page nav
@@ -68,7 +85,10 @@ fun TagDetailContent(
         items(tagPage.threadSummaries, key = { it.tid.value }) { thread ->
             TagThreadCard(
                 thread = thread,
-                onClick = { onThreadClick(thread) }
+                onClick = { onThreadClick(thread) },
+                bookmarked = thread.tid.value.toLong() in bookmarkedThreadIds,
+                read = thread.tid.value.toLong() in readThreadIds,
+                onLongPress = { onThreadLongPress(thread) },
             )
         }
 

@@ -1,9 +1,12 @@
 package me.thenano.yamibo.yamibo_app.thread.detail.novel
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -26,10 +29,14 @@ import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.*
 import me.thenano.yamibo.yamibo_app.favorite.*
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
+import me.thenano.yamibo.yamibo_app.repository.LocalBookMarkRepository as BookMarkRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository.ThreadReadingHistory
+import me.thenano.yamibo.yamibo_app.repository.DetailNoteRepository
 import me.thenano.yamibo.yamibo_app.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.thread.detail.components.DetailNoteCard
+import me.thenano.yamibo.yamibo_app.thread.detail.components.DetailNoteEditorDialog
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.components.*
 import me.thenano.yamibo.yamibo_app.thread.reader.IThreadReaderScreen
 import me.thenano.yamibo.yamibo_app.util.shareText
@@ -51,6 +58,8 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
     val threadRepository = LocalThreadRepository.current
     val favoriteRepository = LocalFavoriteRepository.current
     val favoriteSyncRepository = LocalFavoriteSyncRepository.current
+    val detailNoteRepository = LocalDetailNoteRepository.current
+    val bookMarkRepository = LocalBookMarkRepository.current
     val readHistoryRepo = LocalReadHistoryRepository.current
     val navigator = LocalNavigator.current
     val scope = rememberCoroutineScope()
@@ -80,6 +89,33 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
     var showFavoriteMultiPathDialog by remember { mutableStateOf(false) }
     var showFavoriteAddSyncConfirm by remember { mutableStateOf(false) }
     var showFavoriteRemoveSyncConfirm by remember { mutableStateOf(false) }
+    var detailNote by remember { mutableStateOf<DetailNoteRepository.DetailNote?>(null) }
+    var showNoteDialog by remember { mutableStateOf(false) }
+    var postBookMarkEntries by remember { mutableStateOf<Map<Long, BookMarkRepository.Entry>>(emptyMap()) }
+    var actionPost by remember { mutableStateOf<Post?>(null) }
+    val noteAuthorId = authorId?.value?.toLong() ?: 0L
+
+    suspend fun reloadPostBookMarks() {
+        postBookMarkEntries = bookMarkRepository
+            .getEntriesByParent(BookMarkRepository.TargetType.ThreadPost, tid.value.toLong())
+            .associateBy { it.targetId }
+    }
+
+    suspend fun reloadNote() {
+        detailNote = detailNoteRepository.getNote(
+            targetType = DetailNoteRepository.TargetType.NovelThread,
+            targetId = tid.value.toLong(),
+            authorId = noteAuthorId,
+        )
+    }
+
+    LaunchedEffect(tid, noteAuthorId) {
+        reloadNote()
+    }
+
+    LaunchedEffect(tid) {
+        reloadPostBookMarks()
+    }
 
     /** Load reading history for this thread */
     LaunchedEffect(tid) {
@@ -346,6 +382,7 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
                                     )
                                 )
                             },
+                            onPostLongPress = { actionPost = it },
                             onFavorite = { scope.launch { toggleFavorite() } },
                             onFavoriteLongPress = {
                                 scope.launch {
@@ -392,7 +429,15 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
                             isFavorited = isFavorited,
                             snackbarHostState = snackbarHostState,
                             scope = scope,
-                            platformContext = platformContext
+                            platformContext = platformContext,
+                            noteContent = detailNote?.content.orEmpty(),
+                            onNoteClick = { showNoteDialog = true },
+                            bookmarkedPostIds = postBookMarkEntries.values
+                                .filter { it.bookmarked }
+                                .mapTo(mutableSetOf()) { it.targetId },
+                            readPostIds = postBookMarkEntries.values
+                                .filter { it.read }
+                                .mapTo(mutableSetOf()) { it.targetId },
                         )
                     }
             }
@@ -537,6 +582,101 @@ if (showFavoriteMultiPathDialog) {
         },
     )
 }
+
+if (showNoteDialog) {
+    DetailNoteEditorDialog(
+        initialContent = detailNote?.content.orEmpty(),
+        onDismiss = { showNoteDialog = false },
+        onSave = { content ->
+            showNoteDialog = false
+            scope.launch {
+                detailNoteRepository.saveNote(
+                    targetType = DetailNoteRepository.TargetType.NovelThread,
+                    targetId = tid.value.toLong(),
+                    authorId = noteAuthorId,
+                    content = content,
+                )
+                reloadNote()
+                snackbarHostState.showSnackbar(
+                    if (content.isBlank()) "已刪除筆記" else "已保存筆記",
+                    duration = SnackbarDuration.Short,
+                )
+            }
+        },
+        onDelete = {
+            showNoteDialog = false
+            scope.launch {
+                detailNoteRepository.deleteNote(
+                    targetType = DetailNoteRepository.TargetType.NovelThread,
+                    targetId = tid.value.toLong(),
+                    authorId = noteAuthorId,
+                )
+                reloadNote()
+                snackbarHostState.showSnackbar("已刪除筆記", duration = SnackbarDuration.Short)
+            }
+        },
+    )
+}
+
+actionPost?.let { post ->
+    val entry = postBookMarkEntries[post.pid.value.toLong()]
+    BookMarkActionDialog(
+        bookmarked = entry?.bookmarked == true,
+        read = entry?.read == true,
+        onDismiss = { actionPost = null },
+        onToggleBookMark = {
+            actionPost = null
+            scope.launch {
+                val next = entry?.bookmarked != true
+                bookMarkRepository.setBookmarked(
+                    targetType = BookMarkRepository.TargetType.ThreadPost,
+                    parentId = tid.value.toLong(),
+                    targetId = post.pid.value.toLong(),
+                    title = post.title.ifBlank { "（無標題）" },
+                    bookmarked = next,
+                )
+                reloadPostBookMarks()
+                snackbarHostState.showSnackbar(
+                    if (next) "已新增書籤" else "已移除書籤",
+                    duration = SnackbarDuration.Short,
+                )
+            }
+        },
+        onToggleRead = {
+            actionPost = null
+            scope.launch {
+                val next = entry?.read != true
+                bookMarkRepository.setRead(
+                    targetType = BookMarkRepository.TargetType.ThreadPost,
+                    parentId = tid.value.toLong(),
+                    targetId = post.pid.value.toLong(),
+                    title = post.title.ifBlank { "（無標題）" },
+                    read = next,
+                )
+                reloadPostBookMarks()
+                snackbarHostState.showSnackbar(
+                    if (next) "已標為已讀" else "已標為未讀",
+                    duration = SnackbarDuration.Short,
+                )
+            }
+        },
+        onClearHistory = {
+            actionPost = null
+            scope.launch {
+                bookMarkRepository.setRead(
+                    targetType = BookMarkRepository.TargetType.ThreadPost,
+                    parentId = tid.value.toLong(),
+                    targetId = post.pid.value.toLong(),
+                    title = post.title.ifBlank { "（無標題）" },
+                    read = false,
+                )
+                readHistory = null
+                reloadPostBookMarks()
+                snackbarHostState.showSnackbar("已清除閱讀紀錄", duration = SnackbarDuration.Short)
+            }
+        },
+    )
+}
 }
 
 /** Thread content body */
@@ -548,6 +688,7 @@ private fun ThreadContent(
     onTogglePage: (Int) -> Unit,
     onLoadPage: (Int) -> Unit,
     onPostClick: (Int, Post) -> Unit,
+    onPostLongPress: (Post) -> Unit,
     onFavorite: () -> Unit,
     onFavoriteLongPress: () -> Unit,
     isFavorited: Boolean,
@@ -555,7 +696,11 @@ private fun ThreadContent(
     readingProgressText: String?,
     snackbarHostState: SnackbarHostState,
     scope: CoroutineScope,
-    platformContext: PlatformContext
+    platformContext: PlatformContext,
+    noteContent: String,
+    onNoteClick: () -> Unit,
+    bookmarkedPostIds: Set<Long>,
+    readPostIds: Set<Long>,
 ) {
     val colors = YamiboTheme.colors
     val thread = threadPage.thread
@@ -576,6 +721,8 @@ private fun ThreadContent(
                 },
                 onContinueRead = onContinueRead,
                 readingProgressText = readingProgressText,
+                noteContent = noteContent,
+                onNoteClick = onNoteClick,
                 onCopy = { message ->
                     scope.launch {
                         snackbarHostState.showSnackbar(
@@ -585,6 +732,15 @@ private fun ThreadContent(
                     }
                 }
             )
+        }
+
+        if (noteContent.isNotBlank()) {
+            item {
+                DetailNoteCard(
+                    content = noteContent,
+                    onEdit = onNoteClick,
+                )
+            }
         }
 
         /** First floor preview */
@@ -610,6 +766,8 @@ private fun ThreadContent(
                 page = page,
                 isExpanded = isExpanded,
                 posts = posts,
+                bookmarkedPostIds = bookmarkedPostIds,
+                readPostIds = readPostIds,
                 isFirstPage = page == 1,
                 onToggle = {
                     onTogglePage(page)
@@ -617,8 +775,54 @@ private fun ThreadContent(
                         onLoadPage(page)
                     }
                 },
-                onPostClick = { post -> onPostClick(page, post) }
+                onPostClick = { post -> onPostClick(page, post) },
+                onPostLongPress = onPostLongPress,
             )
         }
+    }
+}
+
+@Composable
+private fun BookMarkActionDialog(
+    bookmarked: Boolean,
+    read: Boolean,
+    onDismiss: () -> Unit,
+    onToggleBookMark: () -> Unit,
+    onToggleRead: () -> Unit,
+    onClearHistory: () -> Unit,
+) {
+    val colors = YamiboTheme.colors
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("閱讀標記", color = colors.brownDeep) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                YamiboActionRow(if (bookmarked) "移除書籤" else "新增書籤", onToggleBookMark)
+                YamiboActionRow(if (read) "標為未讀" else "標為已讀", onToggleRead)
+                YamiboActionRow("清除閱讀紀錄", onClearHistory)
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("取消", color = colors.brownDeep) }
+        },
+        containerColor = colors.creamSurface,
+    )
+}
+
+@Composable
+private fun YamiboActionRow(text: String, onClick: () -> Unit) {
+    val colors = YamiboTheme.colors
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(12.dp),
+        color = colors.creamBackground,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+            color = colors.textDark,
+        )
     }
 }

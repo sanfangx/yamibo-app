@@ -1,8 +1,11 @@
 package me.thenano.yamibo.yamibo_app.thread.detail.tag
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -23,6 +26,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.thenano.yamibo.yamibo_app.LocalAppSettingsRepository
+import me.thenano.yamibo.yamibo_app.LocalBookMarkRepository
+import me.thenano.yamibo.yamibo_app.LocalDetailNoteRepository
 import me.thenano.yamibo.yamibo_app.LocalFavoriteRepository
 import me.thenano.yamibo.yamibo_app.LocalFavoriteSyncRepository
 import me.thenano.yamibo.yamibo_app.LocalReadHistoryRepository
@@ -38,11 +43,14 @@ import me.thenano.yamibo.yamibo_app.favorite.getFavoriteLocationSelection
 import me.thenano.yamibo.yamibo_app.favorite.removeFavoriteWithSync
 import me.thenano.yamibo.yamibo_app.favorite.saveFavorite
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
+import me.thenano.yamibo.yamibo_app.repository.LocalBookMarkRepository as BookMarkRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
+import me.thenano.yamibo.yamibo_app.repository.DetailNoteRepository
 import me.thenano.yamibo.yamibo_app.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.util.state
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.INovelThreadDetailScreen
+import me.thenano.yamibo.yamibo_app.thread.detail.components.DetailNoteEditorDialog
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.components.ThreadErrorContent
 import me.thenano.yamibo.yamibo_app.thread.detail.tag.components.TagDetailContent
 import me.thenano.yamibo.yamibo_app.thread.detail.tag.components.TagDetailTopBar
@@ -70,6 +78,8 @@ internal fun TagDetailScreen(
     val tagRepository = LocalTagRepository.current
     val favoriteRepository = LocalFavoriteRepository.current
     val favoriteSyncRepository = LocalFavoriteSyncRepository.current
+    val detailNoteRepository = LocalDetailNoteRepository.current
+    val bookMarkRepository = LocalBookMarkRepository.current
     val historyRepo = LocalReadHistoryRepository.current
     val platformContext = LocalPlatformContext.current
 
@@ -95,9 +105,34 @@ internal fun TagDetailScreen(
     var pendingFavoriteRemovalSelection by remember { mutableStateOf<FavoriteLocationSelection?>(null) }
     var showFavoriteRemovalConfirm by remember { mutableStateOf(false) }
     var showFavoriteMultiPathDialog by remember { mutableStateOf(false) }
+    var detailNote by remember { mutableStateOf<DetailNoteRepository.DetailNote?>(null) }
+    var showNoteDialog by remember { mutableStateOf(false) }
+    var threadBookMarkEntries by remember { mutableStateOf<Map<Long, BookMarkRepository.Entry>>(emptyMap()) }
+    var actionThread by remember { mutableStateOf<ThreadSummary?>(null) }
 
     val appSettingsRepo = LocalAppSettingsRepository.current
     val isMangaMode = appSettingsRepo.isMangaMode.state()
+
+    suspend fun reloadThreadBookMarks() {
+        threadBookMarkEntries = bookMarkRepository
+            .getEntriesByParent(BookMarkRepository.TargetType.TagMangaThread, tagId.value.toLong())
+            .associateBy { it.targetId }
+    }
+
+    suspend fun reloadNote() {
+        detailNote = detailNoteRepository.getNote(
+            targetType = DetailNoteRepository.TargetType.TagManga,
+            targetId = tagId.value.toLong(),
+        )
+    }
+
+    LaunchedEffect(tagId) {
+        reloadNote()
+    }
+
+    LaunchedEffect(tagId) {
+        reloadThreadBookMarks()
+    }
 
     // Reading history
     var mangaTagHistory by remember {
@@ -382,6 +417,8 @@ internal fun TagDetailScreen(
                                 val url = YamiboRoute.TagPage(tagId).build()
                                 shareText(platformContext, url, currentTagName)
                             },
+                            noteContent = detailNote?.content.orEmpty(),
+                            onNoteClick = { showNoteDialog = true },
                             onPageChange = { page ->
                                 state = TagDetailState.Loading
                                 scope.launch { loadPage(page) }
@@ -393,7 +430,14 @@ internal fun TagDetailScreen(
                                     currentState.page.threadSummaries,
                                     currentState.page.pageNav
                                 )
-                            }
+                            },
+                            bookmarkedThreadIds = threadBookMarkEntries.values
+                                .filter { it.bookmarked }
+                                .mapTo(mutableSetOf()) { it.targetId },
+                            readThreadIds = threadBookMarkEntries.values
+                                .filter { it.read }
+                                .mapTo(mutableSetOf()) { it.targetId },
+                            onThreadLongPress = { actionThread = it },
                         )
                     }
                 }
@@ -496,6 +540,146 @@ internal fun TagDetailScreen(
                     pendingFavoriteRemovalSelection = null
                 }
             },
+        )
+    }
+
+    if (showNoteDialog) {
+        DetailNoteEditorDialog(
+            initialContent = detailNote?.content.orEmpty(),
+            onDismiss = { showNoteDialog = false },
+            onSave = { content ->
+                showNoteDialog = false
+                scope.launch {
+                    detailNoteRepository.saveNote(
+                        targetType = DetailNoteRepository.TargetType.TagManga,
+                        targetId = tagId.value.toLong(),
+                        content = content,
+                    )
+                    reloadNote()
+                    snackbarHostState.showSnackbar(
+                        if (content.isBlank()) "已刪除筆記" else "已保存筆記",
+                        duration = SnackbarDuration.Short,
+                    )
+                }
+            },
+            onDelete = {
+                showNoteDialog = false
+                scope.launch {
+                    detailNoteRepository.deleteNote(
+                        targetType = DetailNoteRepository.TargetType.TagManga,
+                        targetId = tagId.value.toLong(),
+                    )
+                    reloadNote()
+                    snackbarHostState.showSnackbar("已刪除筆記", duration = SnackbarDuration.Short)
+                }
+            },
+        )
+    }
+
+    actionThread?.let { thread ->
+        val entry = threadBookMarkEntries[thread.tid.value.toLong()]
+        BookMarkActionDialog(
+            bookmarked = entry?.bookmarked == true,
+            read = entry?.read == true,
+            onDismiss = { actionThread = null },
+            onToggleBookMark = {
+                actionThread = null
+                scope.launch {
+                    val next = entry?.bookmarked != true
+                    bookMarkRepository.setBookmarked(
+                        targetType = BookMarkRepository.TargetType.TagMangaThread,
+                        parentId = tagId.value.toLong(),
+                        targetId = thread.tid.value.toLong(),
+                        title = thread.title,
+                        bookmarked = next,
+                    )
+                    reloadThreadBookMarks()
+                    snackbarHostState.showSnackbar(
+                        if (next) "已新增書籤" else "已移除書籤",
+                        duration = SnackbarDuration.Short,
+                    )
+                }
+            },
+            onToggleRead = {
+                actionThread = null
+                scope.launch {
+                    val next = entry?.read != true
+                    bookMarkRepository.setRead(
+                        targetType = BookMarkRepository.TargetType.TagMangaThread,
+                        parentId = tagId.value.toLong(),
+                        targetId = thread.tid.value.toLong(),
+                        title = thread.title,
+                        read = next,
+                    )
+                    reloadThreadBookMarks()
+                    snackbarHostState.showSnackbar(
+                        if (next) "已標為已讀" else "已標為未讀",
+                        duration = SnackbarDuration.Short,
+                    )
+                }
+            },
+            onClearHistory = {
+                actionThread = null
+                scope.launch {
+                    bookMarkRepository.setRead(
+                        targetType = BookMarkRepository.TargetType.TagMangaThread,
+                        parentId = tagId.value.toLong(),
+                        targetId = thread.tid.value.toLong(),
+                        title = thread.title,
+                        read = false,
+                    )
+                    if (mangaTagHistory?.threadId == thread.tid) {
+                        mangaTagHistory = null
+                    }
+                    reloadThreadBookMarks()
+                    snackbarHostState.showSnackbar("已清除閱讀紀錄", duration = SnackbarDuration.Short)
+                }
+            },
+        )
+    }
+}
+
+@Composable
+private fun BookMarkActionDialog(
+    bookmarked: Boolean,
+    read: Boolean,
+    onDismiss: () -> Unit,
+    onToggleBookMark: () -> Unit,
+    onToggleRead: () -> Unit,
+    onClearHistory: () -> Unit,
+) {
+    val colors = YamiboTheme.colors
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("閱讀標記", color = colors.brownDeep) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                YamiboActionRow(if (bookmarked) "移除書籤" else "新增書籤", onToggleBookMark)
+                YamiboActionRow(if (read) "標為未讀" else "標為已讀", onToggleRead)
+                YamiboActionRow("清除閱讀紀錄", onClearHistory)
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("取消", color = colors.brownDeep) }
+        },
+        containerColor = colors.creamSurface,
+    )
+}
+
+@Composable
+private fun YamiboActionRow(text: String, onClick: () -> Unit) {
+    val colors = YamiboTheme.colors
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(12.dp),
+        color = colors.creamBackground,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+            color = colors.textDark,
         )
     }
 }

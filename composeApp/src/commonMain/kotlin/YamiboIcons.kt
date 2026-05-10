@@ -9,7 +9,57 @@ import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
 
 object YamiboIcons {
-    val Storage: ImageVector =
+    val Bookmark: ImageVector by lazy { buildBookmark() }
+    val Storage: ImageVector by lazy { buildStorage() }
+    val Home: ImageVector by lazy { buildHome() }
+    val Message: ImageVector by lazy { buildMessage() }
+    val Profile: ImageVector by lazy { buildProfile() }
+    val EditOrSign: ImageVector by lazy { buildEditOrSign() }
+    val Search: ImageVector by lazy { buildSearch() }
+    val Plus: ImageVector by lazy { buildPlus() }
+    val Views: ImageVector by lazy { buildViews() }
+    val Comment: ImageVector by lazy { buildComment() }
+    val PersonFill: ImageVector by lazy { buildPersonFill() }
+    val StarOutline: ImageVector by lazy { buildStarOutline() }
+    val StarFilled: ImageVector by lazy { buildStarFilled() }
+    val Share: ImageVector by lazy { buildShare() }
+    val Explore: ImageVector by lazy { buildExplore() }
+    val ThreeDots: ImageVector by lazy { buildThreeDots() }
+    val Heart: ImageVector by lazy { buildHeart() }
+    val History: ImageVector by lazy { buildHistory() }
+    val Trashcan: ImageVector by lazy { buildTrashcan() }
+    val Reload: ImageVector by lazy { buildReload() }
+    val Sync: ImageVector by lazy { buildSync() }
+    val Reply: ImageVector by lazy { buildReply() }
+    val Setting: ImageVector by lazy { buildSetting() }
+    val Book: ImageVector by lazy { buildBook() }
+    val Copy: ImageVector by lazy { buildCopy() }
+    val Save: ImageVector by lazy { buildSave() }
+
+    private fun buildBookmark(): ImageVector =
+        ImageVector.Builder(
+            name = "Bookmark",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 22f,
+            viewportHeight = 30f,
+        ).apply {
+            path(fill = SolidColor(Color.Black)) {
+                moveTo(18f, 0f)
+                horizontalLineTo(4f)
+                curveTo(1.791f, 0f, 0f, 1.791f, 0f, 4f)
+                verticalLineTo(26f)
+                curveTo(0f, 28.209f, 1.791f, 30f, 4f, 30f)
+                lineTo(11f, 23f)
+                lineTo(18f, 30f)
+                curveTo(20.209f, 30f, 22f, 28.209f, 22f, 26f)
+                verticalLineTo(4f)
+                curveTo(22f, 1.791f, 20.209f, 0f, 18f, 0f)
+                close()
+            }
+        }.build()
+
+    private fun buildStorage(): ImageVector =
         ImageVector.Builder(
             name = "Storage",
             defaultWidth = 24.dp,
@@ -56,7 +106,7 @@ object YamiboIcons {
             }
         }.build()
 
-    val Home =
+    private fun buildHome(): ImageVector =
         ImageVector.Builder(
             name = "Home",
             defaultWidth = 24.0.dp,
@@ -91,7 +141,7 @@ object YamiboIcons {
             }
         }.build()
 
-    val Message =
+    private fun buildMessage(): ImageVector =
         ImageVector.Builder(
             name = "Message",
             defaultWidth = 24.0.dp,
@@ -130,7 +180,7 @@ object YamiboIcons {
             }
         }.build()
 
-    val Profile =
+    private fun buildProfile(): ImageVector =
         ImageVector.Builder(
             name = "Profile",
             defaultWidth = 24.0.dp,
@@ -165,7 +215,7 @@ object YamiboIcons {
             }
         }.build()
 
-    val EditOrSign: ImageVector =
+    private fun buildEditOrSign(): ImageVector =
         ImageVector.Builder(
             name = "EditOrSign",
             defaultWidth = 24.dp,
@@ -231,7 +281,7 @@ object YamiboIcons {
             }
         }.build()
 
-    val Search: ImageVector =
+    private fun buildSearch(): ImageVector =
         ImageVector.Builder(
             name = "Search",
             defaultWidth = 24.dp,
@@ -265,7 +315,7 @@ object YamiboIcons {
             }
         }.build()
 
-    val Plus: ImageVector =
+    private fun buildPlus(): ImageVector =
         ImageVector.Builder(
             name = "Plus",
             defaultWidth = 24.dp,
@@ -291,7 +341,7 @@ object YamiboIcons {
             }
         }.build()
 
-    val Views: ImageVector =
+    private fun buildViews(): ImageVector =
         ImageVector.Builder(
             name = "Views",
             defaultWidth = 24.dp,
@@ -386,7 +436,7 @@ object YamiboIcons {
             }
         }.build()
 
-    val Comment: ImageVector =
+    private fun buildComment(): ImageVector =
         ImageVector.Builder(
             name = "Comment",
             defaultWidth = 24.dp,
@@ -433,7 +483,7 @@ object YamiboIcons {
             }
         }.build()
 
-    val PersonFill: ImageVector =
+    private fun buildPersonFill(): ImageVector =
         ImageVector.Builder(
             name = "PersonFill",
             defaultWidth = 24.dp,
@@ -477,7 +527,7 @@ object YamiboIcons {
             }
         }.build()
 
-    val StarOutline: ImageVector =
+    private fun buildStarOutline(): ImageVector =
         ImageVector.Builder(
             name = "StarOutline",
             defaultWidth = 24.dp,
@@ -537,7 +587,7 @@ object YamiboIcons {
             }
         }.build()
 
-    val StarFilled: ImageVector =
+    private fun buildStarFilled(): ImageVector =
         ImageVector.Builder(
             name = "StarFilled",
             defaultWidth = 24.dp,
@@ -575,7 +625,7 @@ object YamiboIcons {
             }
         }.build()
 
-    val Share: ImageVector =
+    private fun buildShare(): ImageVector =
         ImageVector.Builder(
             name = "Share",
             defaultWidth = 24.dp,
@@ -623,7 +673,7 @@ object YamiboIcons {
             }
         }.build()
 
-    val Explore =
+    private fun buildExplore(): ImageVector =
         ImageVector.Builder(
             name = "Explore",
             defaultWidth = 24.dp,
@@ -653,7 +703,7 @@ object YamiboIcons {
             }
         }.build()
 
-    val ThreeDots =
+    private fun buildThreeDots(): ImageVector =
         ImageVector.Builder(
             name = "ThreeDots",
             defaultWidth = 16.dp,
@@ -677,7 +727,7 @@ object YamiboIcons {
             }
         }.build()
 
-    val Heart =
+    private fun buildHeart(): ImageVector =
         ImageVector.Builder(
             name = "Heart",
             defaultWidth = 24.dp,
@@ -697,7 +747,7 @@ object YamiboIcons {
             }
         }.build()
 
-    val History =
+    private fun buildHistory(): ImageVector =
         ImageVector.Builder(
             name = "History",
             defaultWidth = 24.dp,
@@ -841,7 +891,7 @@ object YamiboIcons {
             }
         }.build()
 
-    val Trashcan: ImageVector =
+    private fun buildTrashcan(): ImageVector =
         ImageVector.Builder(
             name = "Trashcan",
             defaultWidth = 24.dp,
@@ -892,7 +942,7 @@ object YamiboIcons {
             }
         }.build()
 
-    val Reload =
+    private fun buildReload(): ImageVector =
         ImageVector.Builder(
             name = "Reload",
             defaultWidth = 24.0.dp,
@@ -920,7 +970,7 @@ object YamiboIcons {
             }
         }.build()
 
-    val Sync =
+    private fun buildSync(): ImageVector =
         ImageVector.Builder(
             name = "Sync",
             defaultWidth = 24.dp,
@@ -1003,7 +1053,7 @@ object YamiboIcons {
             }
         }.build()
 
-    val Reply =
+    private fun buildReply(): ImageVector =
         ImageVector.Builder(
             name = "Reply",
             defaultWidth = 24.0.dp,
@@ -1031,7 +1081,7 @@ object YamiboIcons {
             }
         }.build()
 
-    val Setting =
+    private fun buildSetting(): ImageVector =
         ImageVector.Builder(
             name = "Setting",
             defaultWidth = 24.0.dp,
@@ -1115,7 +1165,7 @@ object YamiboIcons {
             }
         }.build()
 
-    val Book =
+    private fun buildBook(): ImageVector =
         ImageVector.Builder(
             name = "Book",
             defaultWidth = 16.0.dp,
@@ -1173,7 +1223,7 @@ object YamiboIcons {
             }
         }.build()
 
-    val Copy: ImageVector =
+    private fun buildCopy(): ImageVector =
         ImageVector.Builder(
             name = "Copy",
             defaultWidth = 24.dp,
@@ -1220,7 +1270,7 @@ object YamiboIcons {
             }
         }.build()
 
-    val Save: ImageVector =
+    private fun buildSave(): ImageVector =
         ImageVector.Builder(
             name = "Save",
             defaultWidth = 24.dp,

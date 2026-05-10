@@ -4,10 +4,13 @@ import androidx.compose.runtime.compositionLocalOf
 import me.thenano.yamibo.yamibo_app.core.cache.DiskCacheFactory
 import me.thenano.yamibo.yamibo_app.repository.AuthRepository
 import me.thenano.yamibo.yamibo_app.repository.BlogRepository
+import me.thenano.yamibo.yamibo_app.repository.DetailNoteRepository
 import me.thenano.yamibo.yamibo_app.repository.FavoriteRepository
 import me.thenano.yamibo.yamibo_app.repository.FavoriteSyncRepository
 import me.thenano.yamibo.yamibo_app.repository.FavoriteUpdateRepository
 import me.thenano.yamibo.yamibo_app.repository.ForumRepository
+import me.thenano.yamibo.yamibo_app.repository.InAppLinkNavigationRepository
+import me.thenano.yamibo.yamibo_app.repository.LocalBookMarkRepository as LocalBookMarkRepositoryType
 import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository as LocalFavoriteRepositoryType
 import me.thenano.yamibo.yamibo_app.repository.NovelPrePostCommentsCacheRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
@@ -32,11 +35,20 @@ val LocalForumRepository =
 val LocalThreadRepository =
     compositionLocalOf<ThreadRepository> { error("LocalThreadRepository not provided") }
 
+val LocalInAppLinkNavigationRepository =
+    compositionLocalOf<InAppLinkNavigationRepository> { error("LocalInAppLinkNavigationRepository not provided") }
+
 val LocalUserSpaceRepository =
     compositionLocalOf<UserSpaceRepository> { error("LocalUserSpaceRepository not provided") }
 
 val LocalBlogRepository =
     compositionLocalOf<BlogRepository> { error("LocalBlogRepository not provided") }
+
+val LocalDetailNoteRepository =
+    compositionLocalOf<DetailNoteRepository> { error("LocalDetailNoteRepository not provided") }
+
+val LocalBookMarkRepository =
+    compositionLocalOf<LocalBookMarkRepositoryType> { error("LocalBookMarkRepository not provided") }
 
 val LocalFavoriteRepository =
     compositionLocalOf<LocalFavoriteRepositoryType> { error("LocalFavoriteRepository not provided") }
