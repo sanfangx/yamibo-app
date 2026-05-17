@@ -11,6 +11,10 @@ getByParent:
 SELECT * FROM LocalBookMark
 WHERE targetType = ? AND parentId = ?;
 
+getAll:
+SELECT * FROM LocalBookMark
+ORDER BY updatedAt DESC;
+
 deleteByTarget:
 DELETE FROM LocalBookMark
 WHERE targetType = ? AND parentId = ? AND targetId = ?;

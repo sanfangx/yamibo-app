@@ -1,9 +1,10 @@
-package me.thenano.yamibo.yamibo_app.forum
+﻿package me.thenano.yamibo.yamibo_app.forum
 
 import androidx.compose.runtime.Composable
 import io.github.littlesurvival.dto.value.ForumId
 import kotlinx.serialization.Serializable
 import me.thenano.yamibo.yamibo_app.navigation.RestorableNavigatable
+import me.thenano.yamibo.yamibo_app.navigation.RestorableScreenEntry
 import me.thenano.yamibo.yamibo_app.navigation.RestorableScreenSnapshot
 import me.thenano.yamibo.yamibo_app.navigation.TypedRestorableNavigatableDecoder
 import me.thenano.yamibo.yamibo_app.navigation.decodeRestorePayload
@@ -16,6 +17,7 @@ private data class ForumScreenRestorePayload(
 )
 
 /** Navigatable screen for a specific forum page. */
+@RestorableScreenEntry
 class IForumScreen(
     val fid: ForumId,
     val name: String

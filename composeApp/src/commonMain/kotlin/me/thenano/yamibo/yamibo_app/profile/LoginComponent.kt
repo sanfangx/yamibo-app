@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.profile
+﻿package me.thenano.yamibo.yamibo_app.profile
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.animateFloatAsState
@@ -37,6 +37,7 @@ import me.thenano.yamibo.yamibo_app.event.events.LoginSuccessEvent
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.navigation.Navigatable
 import me.thenano.yamibo.yamibo_app.navigation.RestorableNavigatable
+import me.thenano.yamibo.yamibo_app.navigation.RestorableScreenEntry
 import me.thenano.yamibo.yamibo_app.navigation.RestorableScreenSnapshot
 import me.thenano.yamibo.yamibo_app.navigation.TypedRestorableNavigatableDecoder
 import me.thenano.yamibo.yamibo_app.navigation.emptyRestoreSnapshot
@@ -48,7 +49,7 @@ import me.thenano.yamibo.yamibo_app.webview.PlatformWebViewScreen
 
 @Serializable
 private data object LoginScreenRestorePayload
-
+@RestorableScreenEntry
 class ILoginScreen : RestorableNavigatable {
     override val id: String = buildId("login")
     override val restoreDecoder = Decoder

@@ -38,6 +38,7 @@ import me.thenano.yamibo.yamibo_app.LocalAuthRepository
 import me.thenano.yamibo.yamibo_app.LocalForumRepository
 import me.thenano.yamibo.yamibo_app.MainTab
 import me.thenano.yamibo.yamibo_app.forum.components.*
+import me.thenano.yamibo.yamibo_app.forum.search.ISearchScreen
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
@@ -67,7 +68,6 @@ fun ForumPageScreen(fid: ForumId, name: String) {
     var state by remember { mutableStateOf<ForumState>(ForumState.Loading) }
     var currentPage by remember { mutableIntStateOf(1) }
     var isRefreshing by remember { mutableStateOf(false) }
-    var showSearch by remember { mutableStateOf(false) }
     var selectedOrderType by remember { mutableStateOf<OrderType?>(null) }
     var selectedFilterType by remember { mutableStateOf<FilterType?>(null) }
     var showOrderDialog by remember { mutableStateOf(false) }
@@ -124,7 +124,7 @@ fun ForumPageScreen(fid: ForumId, name: String) {
             ForumTopBar(
                 title = forumName,
                 onBack = { navigator.pop() },
-                onSearch = { showSearch = true },
+                onSearch = { navigator.navigate(ISearchScreen(fid)) },
                 onPostThread = {
                     navigator.navigate(
                         IActionWebView(
@@ -277,55 +277,6 @@ fun ForumPageScreen(fid: ForumId, name: String) {
                     }
             }
         }
-    }
-
-    /** Search modal overlay */
-    if (showSearch) {
-        SearchModal(
-            fid = fid,
-            onDismiss = {
-                /** Just for making ide ignore this issue, the code works well */
-                showSearch = false
-            },
-            onThreadClick = { thread ->
-                showSearch = false
-                if (YamiboForum.isNovelForum(fid)) {
-                    navigator.navigate(
-                        INovelThreadDetailScreen(
-                            thread.tid,
-                            thread.title,
-                            thread.author?.uid
-                        )
-                    )
-                } else {
-                    navigator.navigate(
-                        IThreadReaderScreen(
-                            tid = thread.tid,
-                            title = thread.title
-                        )
-                    )
-                }
-            },
-            onDirectThreadClick = { target ->
-                showSearch = false
-                if (target.isNovel) {
-                    navigator.navigate(
-                        INovelThreadDetailScreen(
-                            target.tid,
-                            target.title,
-                            target.authorId
-                        )
-                    )
-                } else {
-                    navigator.navigate(
-                        IThreadReaderScreen(
-                            tid = target.tid,
-                            title = target.title
-                        )
-                    )
-                }
-            }
-        )
     }
 
     val currentForumPage = (state as? ForumState.Success)?.page

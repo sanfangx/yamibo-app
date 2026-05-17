@@ -31,8 +31,11 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.TextUnitType
 import coil3.compose.AsyncImage
 import io.github.littlesurvival.dto.value.ThreadId
+import me.thenano.yamibo.yamibo_app.components.rememberConvertedText
 import me.thenano.yamibo.yamibo_app.LocalNovelReaderSettingsRepository
 import me.thenano.yamibo.yamibo_app.navigation.IInAppLinkResolvingScreen
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
@@ -92,6 +95,29 @@ private fun applyThemedLinkStyle(text: AnnotatedString, linkColor: Color): Annot
     return builder.toAnnotatedString()
 }
 
+private fun htmlTextLineHeightSp(
+    baseFontSizeSp: Float,
+    lineSpacing: Float,
+    text: AnnotatedString,
+): Float {
+    val largestSpanFontSizeSp = text.spanStyles
+        .mapNotNull { it.item.fontSize.toAbsoluteSpOrNull(baseFontSizeSp) }
+        .maxOrNull()
+        ?: baseFontSizeSp
+    val largestFontSizeSp = maxOf(baseFontSizeSp, largestSpanFontSizeSp)
+    val configuredLineHeightSp = baseFontSizeSp * lineSpacing
+    val requiredLineHeightSp = largestFontSizeSp * maxOf(lineSpacing, 1.2f)
+    return maxOf(configuredLineHeightSp, requiredLineHeightSp)
+}
+
+private fun TextUnit.toAbsoluteSpOrNull(baseFontSizeSp: Float): Float? {
+    return when (type) {
+        TextUnitType.Sp -> value
+        TextUnitType.Em -> value * baseFontSizeSp
+        else -> null
+    }
+}
+
 @Composable
 fun HtmlRenderer(
     html: String,
@@ -109,7 +135,8 @@ fun HtmlRenderer(
     onImageAspectRatioChanged: ((String, Float) -> Unit)? = null,
 ) {
     DebugRecomposeProbe("HtmlRenderer", html.hashCode().toString())
-    val rawBlocks = remember(html) { HtmlParser.parseHtml(html) }
+    val convertedHtml = rememberConvertedText(html)
+    val rawBlocks = remember(convertedHtml) { HtmlParser.parseHtml(convertedHtml) }
     val blocks = remember(rawBlocks) { normalizeHtmlBlocks(rawBlocks) }
     HtmlBlocksRenderer(
         blocks = blocks,
@@ -234,6 +261,13 @@ private fun HtmlBlockRenderer(
             val adjustedAnnotatedString = remember(baseAdjustedAnnotatedString, colors.htmlTextDark) {
                 applyThemedLinkStyle(baseAdjustedAnnotatedString, colors.htmlTextDark)
             }
+            val lineHeightSp = remember(adjustedAnnotatedString, fontSize, lineSpacing) {
+                htmlTextLineHeightSp(
+                    baseFontSizeSp = fontSize.toFloat(),
+                    lineSpacing = lineSpacing,
+                    text = adjustedAnnotatedString,
+                )
+            }
             val inlineContent = remember(block.rubies, fontSize, colors.htmlTextDark) {
                 block.rubies.associate { ruby ->
                     val widthEm = maxOf(
@@ -351,7 +385,7 @@ private fun HtmlBlockRenderer(
                     color = colors.htmlTextDark,
                     fontFamily = HtmlDefaultFontFamily,
                     fontSize = fontSize.sp,
-                    lineHeight = (fontSize * lineSpacing).sp,
+                    lineHeight = lineHeightSp.sp,
                     textAlign = block.textAlign
                 ),
                 modifier = textModifier,
@@ -828,13 +862,20 @@ private fun HtmlBlockRenderer(
                                                 cell.blocks.forEach { innerBlock ->
                                                     when (innerBlock) {
                                                         is HtmlBlock.Text -> {
+                                                            val tableFontSize = (fontSize - 3).coerceAtLeast(10)
+                                                            val adjustedTableText = adjustAnnotatedString(innerBlock.annotatedString)
+                                                            val tableLineHeightSp = htmlTextLineHeightSp(
+                                                                baseFontSizeSp = tableFontSize.toFloat(),
+                                                                lineSpacing = lineSpacing,
+                                                                text = adjustedTableText,
+                                                            )
                                                             Text(
-                                                                text = adjustAnnotatedString(innerBlock.annotatedString),
+                                                                text = adjustedTableText,
                                                                 style = TextStyle(
                                                                     color = cellTextColor,
                                                                     fontFamily = HtmlDefaultFontFamily,
-                                                                    fontSize = (fontSize - 3).coerceAtLeast(10).sp,
-                                                                    lineHeight = ((fontSize - 3).coerceAtLeast(10) * lineSpacing).sp,
+                                                                    fontSize = tableFontSize.sp,
+                                                                    lineHeight = tableLineHeightSp.sp,
                                                                     fontWeight = if (cell.isHeader) FontWeight.Bold else FontWeight.Normal,
                                                                     textAlign = innerBlock.textAlign
                                                                 )

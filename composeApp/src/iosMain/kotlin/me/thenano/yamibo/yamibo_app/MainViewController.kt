@@ -15,6 +15,7 @@ import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.navigation.rememberRestorableNavigator
 import me.thenano.yamibo.yamibo_app.profile.settings.access.IOSBackgroundAccessRepository
 import me.thenano.yamibo.yamibo_app.repository.*
+import me.thenano.yamibo.yamibo_app.repository.chineseconversion.createChineseConversionRepository
 import me.thenano.yamibo.yamibo_app.repository.favorite.FavoriteSyncRepositoryImpl
 import me.thenano.yamibo.yamibo_app.repository.favorite.FavoriteUpdateRepositoryImpl
 import me.thenano.yamibo.yamibo_app.repository.inapplinknavigation.DefaultInAppLinkNavigationRepository
@@ -58,6 +59,7 @@ fun MainViewController() = ComposeUIViewController {
     val threadRepository = remember { IOSThreadRepository(cookieStore, yamiboClient, diskCacheFactory) }
     val userSpaceRepository = remember { UserSpaceRepositoryImpl(cookieStore, yamiboClient, diskCacheFactory) }
     val blogRepository = remember { BlogRepositoryImpl(cookieStore, yamiboClient, diskCacheFactory) }
+    val chineseConversionRepository = remember { createChineseConversionRepository() }
     val tagRepository = remember { IOSTagRepository(cookieStore, yamiboClient, diskCacheFactory) }
     val favoriteRepository = remember { IOSLocalFavoriteRepository(dbFactory) }
     val detailNoteRepository = remember { IOSDetailNoteRepository(dbFactory) }
@@ -91,7 +93,14 @@ fun MainViewController() = ComposeUIViewController {
         DefaultInAppLinkNavigationRepository(threadRepository, novelCacheRepository)
     }
     val readHistoryRepository = remember { IOSReadHistoryRepository(dbFactory) }
-    val signRepository = remember { IOSSignRepository(dbFactory, authRepository, appSettingsRepository) }
+    val signRepository = remember {
+        IOSSignRepository(
+            dbFactory = dbFactory,
+            authRepository = authRepository,
+            appSettingsRepository = appSettingsRepository,
+            yamiboClient = yamiboClient,
+        )
+    }
     val themeRepository = remember { IOSThemeRepository() }
 
     /** Provide Repositories */
@@ -103,6 +112,7 @@ fun MainViewController() = ComposeUIViewController {
         LocalInAppLinkNavigationRepository provides inAppLinkNavigationRepository,
         LocalUserSpaceRepository provides userSpaceRepository,
         LocalBlogRepository provides blogRepository,
+        LocalChineseConversionRepository provides chineseConversionRepository,
         LocalDetailNoteRepository provides detailNoteRepository,
         LocalBookMarkRepository provides bookMarkRepository,
         LocalFavoriteRepository provides favoriteRepository,

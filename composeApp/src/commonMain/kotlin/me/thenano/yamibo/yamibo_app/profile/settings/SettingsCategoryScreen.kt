@@ -59,6 +59,7 @@ import me.thenano.yamibo.yamibo_app.profile.settings.access.IBackgroundAccessSet
 import me.thenano.yamibo.yamibo_app.profile.settings.bound.MangaReadingModeSetting
 import me.thenano.yamibo.yamibo_app.profile.settings.bound.MangaTouchZoneSetting
 import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelContentWidthSetting
+import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelChineseConversionSetting
 import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelFontSizeSetting
 import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelLineSpacingSetting
 import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelReaderPreviewSetting
@@ -184,6 +185,10 @@ private fun NovelReaderContent() {
 
     SectionLabel("系統列")
     NovelSystemBarsBackgroundSetting()
+    Spacer(Modifier.height(24.dp))
+
+    SectionLabel("簡繁轉換")
+    NovelChineseConversionSetting()
 }
 
 @Composable

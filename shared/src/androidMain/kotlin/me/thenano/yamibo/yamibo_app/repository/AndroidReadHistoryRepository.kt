@@ -7,6 +7,7 @@ import io.github.littlesurvival.dto.value.ThreadId
 import io.github.littlesurvival.dto.value.UserId
 import me.thenano.yamibo.yamibo_app.Database
 import me.thenano.yamibo.yamibo_app.db.DatabaseFactory
+import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
 import me.thenano.yamibo.yamiboapp.MangaTagReadingHistory
 import me.thenano.yamibo.yamiboapp.ReadingHistory
 
@@ -18,6 +19,7 @@ class AndroidReadHistoryRepository(dbFactory: DatabaseFactory) : ReadHistoryRepo
 
     private val db = Database(dbFactory.createDriver())
     private val queries = db.readingHistoryQueries
+    private val readingTimeQueries = db.readingTimeStatQueries
 
     override suspend fun savePosition(history: ReadHistoryRepository.ThreadReadingHistory) {
         queries.upsert(
@@ -340,6 +342,29 @@ class AndroidReadHistoryRepository(dbFactory: DatabaseFactory) : ReadHistoryRepo
     override suspend fun deleteAllCombinedHistory() {
         queries.deleteAll()
         mangaTagQueries.deleteAll()
+    }
+
+    override suspend fun recordReadingDuration(dateKey: String, durationMillis: Long) {
+        if (durationMillis <= 0L) return
+        readingTimeQueries.addDuration(dateKey, durationMillis, currentTimeMillis())
+    }
+
+    override suspend fun getReadingDurationDays(
+        startDateKey: String,
+        endDateKey: String,
+    ): List<ReadHistoryRepository.ReadingDurationDay> {
+        return readingTimeQueries.getRange(startDateKey, endDateKey)
+            .executeAsList()
+            .map {
+                ReadHistoryRepository.ReadingDurationDay(
+                    dateKey = it.dateKey,
+                    durationMillis = it.durationMillis,
+                )
+            }
+    }
+
+    override suspend fun getReadingDurationTotal(startDateKey: String, endDateKey: String): Long {
+        return readingTimeQueries.getTotalDuration(startDateKey, endDateKey).executeAsOne()
     }
 
     private fun loadAllThreadHistory(query: String? = null): List<ReadHistoryRepository.ThreadReadingHistory> {

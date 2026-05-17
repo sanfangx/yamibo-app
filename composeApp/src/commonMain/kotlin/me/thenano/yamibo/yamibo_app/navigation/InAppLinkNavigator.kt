@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.navigation
+﻿package me.thenano.yamibo.yamibo_app.navigation
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -51,6 +51,7 @@ import me.thenano.yamibo.yamibo_app.thread.reader.IThreadReaderScreen
 import me.thenano.yamibo.yamibo_app.userspace.IUserSpaceScreen
 import me.thenano.yamibo.yamibo_app.userspace.blog.IBlogReaderScreen
 import me.thenano.yamibo.yamibo_app.webview.IPlatformWebView
+import me.thenano.yamibo.yamibo_app.navigation.RestorableScreenEntry
 
 @Serializable
 private data class InAppLinkResolvingRestorePayload(
@@ -61,7 +62,7 @@ private data class InAppLinkResolvingRestorePayload(
     val currentAuthorId: Int? = null,
     val currentThreadTypeName: String? = null,
 )
-
+@RestorableScreenEntry
 class IInAppLinkResolvingScreen(
     val url: String,
     val context: InAppLinkContext = InAppLinkContext(),

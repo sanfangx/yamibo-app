@@ -237,6 +237,12 @@ fun ProfilePage() {
                 onClick = { navigator.navigate(ISettingsScreen()) }
             )
 
+            EntryCard(
+                title = "閱讀統計",
+                icon = YamiboIcons.Statistics,
+                onClick = { navigator.navigate(IProfileStatisticsScreen()) }
+            )
+
             Spacer(Modifier.height(24.dp))
         }
 

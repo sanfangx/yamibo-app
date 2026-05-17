@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.favorite.sync
+﻿package me.thenano.yamibo.yamibo_app.favorite.sync
 
 import YamiboIcons
 import androidx.compose.foundation.BorderStroke
@@ -26,6 +26,7 @@ import me.thenano.yamibo.yamibo_app.LocalFavoriteRepository
 import me.thenano.yamibo.yamibo_app.LocalFavoriteSyncRunner
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.navigation.RestorableNavigatable
+import me.thenano.yamibo.yamibo_app.navigation.RestorableScreenEntry
 import me.thenano.yamibo.yamibo_app.navigation.RestorableScreenSnapshot
 import me.thenano.yamibo.yamibo_app.navigation.TypedRestorableNavigatableDecoder
 import me.thenano.yamibo.yamibo_app.navigation.decodeRestorePayload
@@ -39,7 +40,7 @@ import kotlin.time.Duration.Companion.milliseconds
 private data class FavoriteSyncProgressRestorePayload(
     val runId: String,
 )
-
+@RestorableScreenEntry
 class IFavoriteSyncProgressScreen(
     val runId: String,
 ) : RestorableNavigatable {

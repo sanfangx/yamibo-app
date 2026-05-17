@@ -4,6 +4,7 @@ import androidx.compose.runtime.compositionLocalOf
 import me.thenano.yamibo.yamibo_app.core.cache.DiskCacheFactory
 import me.thenano.yamibo.yamibo_app.repository.AuthRepository
 import me.thenano.yamibo.yamibo_app.repository.BlogRepository
+import me.thenano.yamibo.yamibo_app.repository.ChineseConversionRepository
 import me.thenano.yamibo.yamibo_app.repository.DetailNoteRepository
 import me.thenano.yamibo.yamibo_app.repository.FavoriteRepository
 import me.thenano.yamibo.yamibo_app.repository.FavoriteSyncRepository
@@ -43,6 +44,9 @@ val LocalUserSpaceRepository =
 
 val LocalBlogRepository =
     compositionLocalOf<BlogRepository> { error("LocalBlogRepository not provided") }
+
+val LocalChineseConversionRepository =
+    compositionLocalOf<ChineseConversionRepository> { error("LocalChineseConversionRepository not provided") }
 
 val LocalDetailNoteRepository =
     compositionLocalOf<DetailNoteRepository> { error("LocalDetailNoteRepository not provided") }

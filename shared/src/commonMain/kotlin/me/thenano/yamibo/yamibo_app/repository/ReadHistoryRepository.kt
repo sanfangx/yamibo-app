@@ -30,6 +30,11 @@ interface ReadHistoryRepository {
         val count: Long,
     )
 
+    data class ReadingDurationDay(
+        val dateKey: String,
+        val durationMillis: Long,
+    )
+
     enum class ThreadEntryType {
         Normal,
         Novel;
@@ -134,6 +139,12 @@ interface ReadHistoryRepository {
 
     /** Delete all history entries across all types */
     suspend fun deleteAllCombinedHistory()
+
+    suspend fun recordReadingDuration(dateKey: String, durationMillis: Long)
+
+    suspend fun getReadingDurationDays(startDateKey: String, endDateKey: String): List<ReadingDurationDay>
+
+    suspend fun getReadingDurationTotal(startDateKey: String, endDateKey: String): Long
 
     /** Full reading history entry specifically for image posts (manga forum) */
     data class ImageReadingHistory(

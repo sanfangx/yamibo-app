@@ -20,6 +20,11 @@ kotlin {
     }
 
     sourceSets {
+        val generatedRestorableRegistryDir = layout.buildDirectory.dir("generated/restorableScreenRegistry/commonMain/kotlin")
+        commonMain {
+            kotlin.srcDir(generatedRestorableRegistryDir)
+        }
+
         androidMain.dependencies {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
@@ -45,6 +50,18 @@ kotlin {
         }
         commonTest.dependencies { implementation(libs.kotlin.test) }
     }
+}
+
+val generateRestorableScreenRegistry by tasks.registering(GenerateRestorableScreenRegistryTask::class) {
+    val sourceDir = layout.projectDirectory.dir("src/commonMain/kotlin")
+    this.sourceDir.set(sourceDir)
+    outputFile.set(layout.buildDirectory.file("generated/restorableScreenRegistry/commonMain/kotlin/me/thenano/yamibo/yamibo_app/navigation/GeneratedRestorableScreenRegistry.kt"))
+}
+
+tasks.matching { task ->
+    task.name.startsWith("compile") && task.name.contains("Kotlin")
+}.configureEach {
+    dependsOn(generateRestorableScreenRegistry)
 }
 
 android {

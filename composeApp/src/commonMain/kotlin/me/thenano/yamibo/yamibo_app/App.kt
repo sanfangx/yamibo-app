@@ -17,11 +17,16 @@ import coil3.network.ktor3.KtorNetworkFetcherFactory
 import me.thenano.yamibo.yamibo_app.home.HomePageScreen
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.navigation.NavAction
+import me.thenano.yamibo.yamibo_app.repository.chineseconversion.ChineseConversionMode
+import me.thenano.yamibo.yamibo_app.repository.settings.ReaderChineseConversionOption
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.util.state
 
 @Composable
-fun HomeScreenContent() {
-    HomePageScreen()
+fun HomeScreenContent(
+    onNewMessageStatusChange: (Boolean) -> Unit = {},
+) {
+    HomePageScreen(onNewMessageStatusChange = onNewMessageStatusChange)
 }
 
 @Composable
@@ -43,6 +48,7 @@ fun App() {
     val navigator = LocalNavigator.current
     val holder = rememberSaveableStateHolder()
     navigator.stateHolder = holder
+    ChineseConversionModeSync()
 
     val stack = navigator.stack
     val poppingIdx by navigator.poppingIndex
@@ -99,5 +105,22 @@ fun App() {
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ChineseConversionModeSync() {
+    val conversionRepository = LocalChineseConversionRepository.current
+    val novelSettingsRepository = LocalNovelReaderSettingsRepository.current
+    val option = novelSettingsRepository.chineseConversion.state()
+
+    LaunchedEffect(option) {
+        conversionRepository.setConversionMode(
+            when (option) {
+                ReaderChineseConversionOption.DEFAULT -> null
+                ReaderChineseConversionOption.SIMPLIFIED -> ChineseConversionMode.Simplified
+                ReaderChineseConversionOption.TRADITIONAL -> ChineseConversionMode.Traditional
+            }
+        )
     }
 }

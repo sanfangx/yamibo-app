@@ -1,29 +1,8 @@
 package me.thenano.yamibo.yamibo_app.navigation
 
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import me.thenano.yamibo.yamibo_app.IMainScreen
 import me.thenano.yamibo.yamibo_app.Logger
-import me.thenano.yamibo.yamibo_app.favorite.IFavoriteCategoryEditorScreen
-import me.thenano.yamibo.yamibo_app.favorite.IFavoriteCategoryManageScreen
-import me.thenano.yamibo.yamibo_app.favorite.sync.IFavoriteSyncProgressScreen
-import me.thenano.yamibo.yamibo_app.forum.IForumScreen
-import me.thenano.yamibo.yamibo_app.message.IMessageCenterScreen
-import me.thenano.yamibo.yamibo_app.message.IPrivateMessageScreen
-import me.thenano.yamibo.yamibo_app.navigation.IInAppLinkResolvingScreen
-import me.thenano.yamibo.yamibo_app.profile.ILoginScreen
-import me.thenano.yamibo.yamibo_app.profile.settings.ISettingsCategoryScreen
-import me.thenano.yamibo.yamibo_app.profile.settings.ISettingsScreen
-import me.thenano.yamibo.yamibo_app.profile.settings.access.IBackgroundAccessSetupScreen
-import me.thenano.yamibo.yamibo_app.thread.detail.novel.INovelThreadDetailScreen
-import me.thenano.yamibo.yamibo_app.thread.detail.tag.ITagDetailScreen
-import me.thenano.yamibo.yamibo_app.thread.reader.ICommentReaderScreen
-import me.thenano.yamibo.yamibo_app.thread.reader.IImageReaderScreen
-import me.thenano.yamibo.yamibo_app.thread.reader.IThreadReaderScreen
-import me.thenano.yamibo.yamibo_app.thread.reader.components.tag.ITagListScreen
-import me.thenano.yamibo.yamibo_app.userspace.IUserSpaceScreen
-import me.thenano.yamibo.yamibo_app.userspace.blog.IBlogReaderScreen
 import kotlin.reflect.KClass
 
 @Serializable
@@ -47,6 +26,28 @@ interface RestorableNavigatableDecoder {
 abstract class TypedRestorableNavigatableDecoder<T : RestorableNavigatable>(
     final override val screenClass: KClass<T>,
 ) : RestorableNavigatableDecoder
+
+/**
+ * Marks a screen whose `Decoder` companion should be included in the generated restore registry.
+ *
+ * Use this on every `RestorableNavigatable` screen that must survive process recreation:
+ *
+ * ```
+ * @RestorableScreenEntry
+ * class IForumScreen(...) : RestorableNavigatable {
+ *     override val restoreDecoder get() = Decoder
+ *
+ *     companion object Decoder : TypedRestorableNavigatableDecoder<IForumScreen>(IForumScreen::class)
+ * }
+ * ```
+ *
+ * The generated registry expects a statically addressable `Decoder` symbol on the annotated class.
+ * Anonymous instance decoders such as `override val restoreDecoder = object : ...` are intentionally
+ * unsupported because restore needs a decoder before any screen instance exists.
+ */
+@Target(AnnotationTarget.CLASS)
+@Retention(AnnotationRetention.SOURCE)
+annotation class RestorableScreenEntry
 
 interface NavigationRestoreLogger {
     fun onSnapshotStart(stackSize: Int)
@@ -132,28 +133,19 @@ internal inline fun <reified T> decodeRestorePayload(payload: String): T =
     navigationRestoreJson.decodeFromString(payload)
 
 internal object RestorableScreenRegistry {
-    private val decoders: Map<String, RestorableNavigatableDecoder> = listOf(
-        IMainScreen.Decoder,
-        IForumScreen.Decoder,
-        INovelThreadDetailScreen.Decoder,
-        IThreadReaderScreen.Decoder,
-        IImageReaderScreen.Decoder,
-        ICommentReaderScreen.Decoder,
-        IFavoriteCategoryManageScreen.Decoder,
-        IFavoriteCategoryEditorScreen.Decoder,
-        ISettingsScreen.Decoder,
-        ISettingsCategoryScreen.Decoder,
-        IBackgroundAccessSetupScreen.Decoder,
-        ILoginScreen.Decoder,
-        IFavoriteSyncProgressScreen.Decoder,
-        ITagDetailScreen.Decoder,
-        ITagListScreen.Decoder,
-        IUserSpaceScreen.Decoder,
-        IMessageCenterScreen.Decoder,
-        IBlogReaderScreen.Decoder,
-        IPrivateMessageScreen.Decoder,
-        IInAppLinkResolvingScreen.Decoder,
-    ).associateBy { it.type }
+    private val decoders: Map<String, RestorableNavigatableDecoder> = generatedRestorableScreenDecoders
+        .also(::requireNoDuplicateRestoreTypes)
+        .associateBy { it.type }
+
+    private fun requireNoDuplicateRestoreTypes(decoders: List<RestorableNavigatableDecoder>) {
+        val duplicateTypes = decoders
+            .groupBy { it.type }
+            .filterValues { it.size > 1 }
+            .keys
+        require(duplicateTypes.isEmpty()) {
+            "Duplicate restorable screen decoder type(s): ${duplicateTypes.joinToString()}"
+        }
+    }
 
     fun decode(
         snapshot: RestorableScreenSnapshot,

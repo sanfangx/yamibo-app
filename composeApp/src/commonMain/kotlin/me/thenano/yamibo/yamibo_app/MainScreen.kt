@@ -9,6 +9,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
@@ -30,6 +31,7 @@ import me.thenano.yamibo.yamibo_app.message.MessageCenterTab
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.navigation.Navigatable
 import me.thenano.yamibo.yamibo_app.navigation.RestorableNavigatable
+import me.thenano.yamibo.yamibo_app.navigation.RestorableScreenEntry
 import me.thenano.yamibo.yamibo_app.navigation.RestorableScreenSnapshot
 import me.thenano.yamibo.yamibo_app.navigation.TypedRestorableNavigatableDecoder
 import me.thenano.yamibo.yamibo_app.navigation.decodeRestorePayload
@@ -49,7 +51,7 @@ enum class MainTab(val title: String, val icon: ImageVector) {
 private data class MainScreenRestorePayload(
     val initialTabName: String = MainTab.Home.name,
 )
-
+@RestorableScreenEntry
 class IMainScreen(val initialTab: MainTab = MainTab.Home) : RestorableNavigatable {
     override val id = buildId(initialTab.name)
     override val restoreDecoder = Decoder
@@ -72,7 +74,11 @@ class IMainScreen(val initialTab: MainTab = MainTab.Home) : RestorableNavigatabl
     }
 }
 
-data class BottomNavItem(val title: String, val icon: ImageVector)
+data class BottomNavItem(
+    val title: String,
+    val icon: ImageVector,
+    val showBadge: Boolean = false,
+)
 
 @Composable
 fun MainScreen(initialTab: MainTab = MainTab.Home) {
@@ -80,6 +86,7 @@ fun MainScreen(initialTab: MainTab = MainTab.Home) {
     val navigator = LocalNavigator.current
     var currentTab by rememberSaveable { mutableStateOf(initialTab) }
     var reTapHistoryToken by remember { mutableIntStateOf(0) }
+    var hasNewMessage by rememberSaveable { mutableStateOf(false) }
 
     DisposableEffect(currentTab) {
         val handler = {
@@ -100,8 +107,18 @@ fun MainScreen(initialTab: MainTab = MainTab.Home) {
         contentWindowInsets = WindowInsets(0.dp),
         bottomBar = {
             MainScreenBottomBar(
-                tabs = MainTab.entries.map { BottomNavItem(it.title, it.icon) },
-                currentTab = BottomNavItem(currentTab.title, currentTab.icon),
+                tabs = MainTab.entries.map {
+                    BottomNavItem(
+                        title = it.title,
+                        icon = it.icon,
+                        showBadge = it == MainTab.Message && hasNewMessage,
+                    )
+                },
+                currentTab = BottomNavItem(
+                    title = currentTab.title,
+                    icon = currentTab.icon,
+                    showBadge = currentTab == MainTab.Message && hasNewMessage,
+                ),
                 onTabSelected = { selected ->
                     val newTab = MainTab.entries.first { it.title == selected.title }
                     if (newTab == MainTab.History && currentTab == MainTab.History) {
@@ -135,11 +152,14 @@ fun MainScreen(initialTab: MainTab = MainTab.Home) {
                         }
                 ) {
                     when (tab) {
-                        MainTab.Home -> HomeScreenContent()
+                        MainTab.Home -> HomeScreenContent(
+                            onNewMessageStatusChange = { hasNewMessage = it },
+                        )
                         MainTab.History -> ReadHistoryPage(reTapHistoryToken)
                         MainTab.Message -> MessageCenterScreen(
                             initialTab = MessageCenterTab.PrivateMessages,
                             mainTabTopBar = true,
+                            onPrivateMessageUnreadChange = { hasNewMessage = it },
                         )
                         MainTab.Favorite -> FavoritePage()
                         MainTab.Profile -> ProfilePage()
@@ -184,12 +204,23 @@ fun MainScreenBottomBar(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                Icon(
-                    imageVector = tab.icon,
-                    contentDescription = tab.title,
-                    tint = color,
-                    modifier = Modifier.size(24.dp)
-                )
+                Box {
+                    Icon(
+                        imageVector = tab.icon,
+                        contentDescription = tab.title,
+                        tint = color,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    if (tab.showBadge) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .offset(x = 3.dp, y = (-2).dp)
+                                .size(8.dp)
+                                .background(colors.redAccent, CircleShape)
+                        )
+                    }
+                }
                 Text(text = tab.title, color = color, fontSize = 12.sp)
             }
         }

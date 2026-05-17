@@ -30,7 +30,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import io.github.littlesurvival.YamiboForum
 import io.github.littlesurvival.core.YamiboResult
 import io.github.littlesurvival.dto.model.ForumSummary
 import io.github.littlesurvival.dto.page.ForumCategory
@@ -38,12 +37,10 @@ import io.github.littlesurvival.dto.page.HomePage
 import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.LocalForumRepository
 import me.thenano.yamibo.yamibo_app.forum.IForumScreen
-import me.thenano.yamibo.yamibo_app.forum.components.SearchModal
+import me.thenano.yamibo.yamibo_app.forum.search.ISearchScreen
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
-import me.thenano.yamibo.yamibo_app.thread.detail.novel.INovelThreadDetailScreen
-import me.thenano.yamibo.yamibo_app.thread.reader.IThreadReaderScreen
 import org.jetbrains.compose.resources.painterResource
 import yamibo_app.composeapp.generated.resources.Res
 import yamibo_app.composeapp.generated.resources.logo_homepage
@@ -60,7 +57,9 @@ private sealed interface HomeState {
 /** Main Entry */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomePageScreen() {
+fun HomePageScreen(
+    onNewMessageStatusChange: (Boolean) -> Unit = {},
+) {
     val colors = YamiboTheme.colors
     val forumRepository = LocalForumRepository.current
     val navigator = LocalNavigator.current
@@ -69,7 +68,6 @@ fun HomePageScreen() {
 
     var state by remember { mutableStateOf<HomeState>(HomeState.Loading) }
     var isRefreshing by remember { mutableStateOf(false) }
-    var showSearch by remember { mutableStateOf(false) }
 
     suspend fun mapFetchResultState() {
         val result = forumRepository.fetchHomePage()
@@ -80,11 +78,15 @@ fun HomePageScreen() {
             }
     }
 
-    /** initial load — use cache if available, only fetch on first cold start */
+    /** Initial load: show cache immediately, then refresh once so message badge is current. */
     LaunchedEffect(Unit) {
         val cached = forumRepository.getCachedHomePage()
         if (cached != null) {
             state = HomeState.Success(cached)
+            when (val result = forumRepository.fetchHomePage()) {
+                is YamiboResult.Success -> state = HomeState.Success(result.value)
+                else -> Unit
+            }
         } else {
             mapFetchResultState()
         }
@@ -102,6 +104,11 @@ fun HomePageScreen() {
                 isRefreshing = false
             }
         }
+    }
+
+    LaunchedEffect(state) {
+        val page = (state as? HomeState.Success)?.page ?: return@LaunchedEffect
+        onNewMessageStatusChange(page.hasNewMessage)
     }
 
     Box(modifier = Modifier.fillMaxSize().background(colors.creamBackground)) {
@@ -138,54 +145,8 @@ fun HomePageScreen() {
                     },
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    HomeContent(homePage = currentState.page, onSearch = { showSearch = true })
+                    HomeContent(homePage = currentState.page, onSearch = { navigator.navigate(ISearchScreen()) })
                 }
-        }
-
-        /** Search modal overlay */
-        if (showSearch) {
-            SearchModal(
-                fid = null,
-                onDismiss = { showSearch = false },
-                onThreadClick = { thread ->
-                    if (YamiboForum.isNovelForum(thread.tag ?: "")) {
-                        navigator.navigate(
-                            INovelThreadDetailScreen(
-                                thread.tid,
-                                thread.title,
-                                thread.author?.uid
-                            )
-                        )
-                    } else {
-                        navigator.navigate(
-                            IThreadReaderScreen(
-                                tid = thread.tid,
-                                title = thread.title
-                            )
-                        )
-                    }
-                    showSearch = false
-                },
-                onDirectThreadClick = { target ->
-                    if (target.isNovel) {
-                        navigator.navigate(
-                            INovelThreadDetailScreen(
-                                target.tid,
-                                target.title,
-                                target.authorId
-                            )
-                        )
-                    } else {
-                        navigator.navigate(
-                            IThreadReaderScreen(
-                                tid = target.tid,
-                                title = target.title
-                            )
-                        )
-                    }
-                    showSearch = false
-                }
-            )
         }
 
         /** Snackbar overlay */

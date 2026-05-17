@@ -33,6 +33,7 @@ kotlin {
             implementation(libs.androidx.security.crypto)
             implementation(libs.ktor.client.okhttp)
             implementation(libs.sqldelight.android.driver)
+            implementation(libs.opencc4j)
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)

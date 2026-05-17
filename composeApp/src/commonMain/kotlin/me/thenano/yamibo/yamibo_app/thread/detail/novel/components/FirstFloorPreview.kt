@@ -23,16 +23,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.littlesurvival.dto.page.Post
+import me.thenano.yamibo.yamibo_app.components.rememberConvertedText
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 
 /** First floor body preview — scrollable with max half-screen height */
 @Composable
 internal fun FirstFloorPreview(post: Post) {
     val colors = YamiboTheme.colors
+    val convertedHtml = rememberConvertedText(post.contentHtml)
 
     /** Strip HTML tags for plain text display */
-    val plainText = remember(post.contentHtml) {
-        post.contentHtml.replace(Regex("</div>", RegexOption.IGNORE_CASE), "\n")
+    val plainText = remember(convertedHtml) {
+        convertedHtml.replace(Regex("</div>", RegexOption.IGNORE_CASE), "\n")
             .replace(Regex("<br\\s*/?>\r?\n?", RegexOption.IGNORE_CASE), "\n").replace(Regex("<[^>]*>"), "")
             .replace("&nbsp;", " ").replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">")
             .replace("&quot;", "\"")

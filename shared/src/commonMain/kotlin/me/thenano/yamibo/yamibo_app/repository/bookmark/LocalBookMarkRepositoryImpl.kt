@@ -25,6 +25,10 @@ class LocalBookMarkRepositoryImpl(
         return queries.getByParent(targetType.name, parentId).executeAsList().map { it.toEntry() }
     }
 
+    override suspend fun getAllEntries(): List<LocalBookMarkRepository.Entry> {
+        return queries.getAll().executeAsList().map { it.toEntry() }
+    }
+
     override suspend fun setBookmarked(
         targetType: LocalBookMarkRepository.TargetType,
         parentId: Long,
@@ -84,7 +88,7 @@ class LocalBookMarkRepositoryImpl(
 
     private fun LocalBookMark.toEntry(): LocalBookMarkRepository.Entry {
         return LocalBookMarkRepository.Entry(
-            targetType = LocalBookMarkRepository.TargetType.valueOf(targetType),
+            targetType = LocalBookMarkRepository.TargetType.fromStorage(targetType),
             parentId = parentId,
             targetId = targetId,
             title = title,

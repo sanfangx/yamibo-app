@@ -1,0 +1,17 @@
+addDuration:
+INSERT OR REPLACE INTO ReadingTimeStat(dateKey, durationMillis, updatedAt)
+VALUES (
+    :dateKey,
+    COALESCE((SELECT durationMillis FROM ReadingTimeStat WHERE dateKey = :dateKey), 0) + :durationMillis,
+    :updatedAt
+);
+
+getRange:
+SELECT * FROM ReadingTimeStat
+WHERE dateKey >= ? AND dateKey <= ?
+ORDER BY dateKey ASC;
+
+getTotalDuration:
+SELECT COALESCE(SUM(durationMillis), 0) AS totalDuration
+FROM ReadingTimeStat
+WHERE dateKey >= ? AND dateKey <= ?;

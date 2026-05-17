@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.sp
 import me.thenano.yamibo.yamibo_app.repository.settings.AppSettingsRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.NovelReaderSettingsRepository
 import me.thenano.yamibo.yamibo_app.profile.settings.components.ThemeSelectorContent
+import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelChineseConversionSetting
 import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelFontSizeSetting
 import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelLineSpacingSetting
 import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelSystemBarsBackgroundSetting
@@ -73,6 +74,11 @@ fun NovelReaderSettingsPanel(
 
                 Spacer(Modifier.height(16.dp))
                 NovelSystemBarsBackgroundSetting()
+
+                Spacer(Modifier.height(24.dp))
+
+                SectionTitle("簡繁轉換", color = colors.textDark)
+                NovelChineseConversionSetting()
 
                 Spacer(Modifier.height(24.dp))
 

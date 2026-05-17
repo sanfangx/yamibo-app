@@ -1,8 +1,9 @@
-package me.thenano.yamibo.yamibo_app.message
+﻿package me.thenano.yamibo.yamibo_app.message
 
 import androidx.compose.runtime.Composable
 import kotlinx.serialization.Serializable
 import me.thenano.yamibo.yamibo_app.navigation.RestorableNavigatable
+import me.thenano.yamibo.yamibo_app.navigation.RestorableScreenEntry
 import me.thenano.yamibo.yamibo_app.navigation.RestorableScreenSnapshot
 import me.thenano.yamibo.yamibo_app.navigation.TypedRestorableNavigatableDecoder
 import me.thenano.yamibo.yamibo_app.navigation.decodeRestorePayload
@@ -13,7 +14,7 @@ private data class MessageCenterRestorePayload(
     val initialTabName: String = MessageCenterTab.PrivateMessages.name,
     val mainTabTopBar: Boolean = false,
 )
-
+@RestorableScreenEntry
 class IMessageCenterScreen(
     val initialTab: MessageCenterTab = MessageCenterTab.PrivateMessages,
     val mainTabTopBar: Boolean = false,

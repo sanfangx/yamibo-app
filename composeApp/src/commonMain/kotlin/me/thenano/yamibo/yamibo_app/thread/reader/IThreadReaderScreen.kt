@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.thread.reader
+﻿package me.thenano.yamibo.yamibo_app.thread.reader
 
 import androidx.compose.runtime.Composable
 import io.github.littlesurvival.dto.value.PostId
@@ -6,6 +6,7 @@ import io.github.littlesurvival.dto.value.ThreadId
 import io.github.littlesurvival.dto.value.UserId
 import kotlinx.serialization.Serializable
 import me.thenano.yamibo.yamibo_app.navigation.RestorableNavigatable
+import me.thenano.yamibo.yamibo_app.navigation.RestorableScreenEntry
 import me.thenano.yamibo.yamibo_app.navigation.RestorableScreenSnapshot
 import me.thenano.yamibo.yamibo_app.navigation.TypedRestorableNavigatableDecoder
 import me.thenano.yamibo.yamibo_app.navigation.decodeRestorePayload
@@ -23,6 +24,7 @@ private data class ThreadReaderRestorePayload(
 )
 
 /** Navigatable screen for reading a novel thread in continuous mode. */
+@RestorableScreenEntry
 class IThreadReaderScreen(
     val tid: ThreadId,
     val title: String,

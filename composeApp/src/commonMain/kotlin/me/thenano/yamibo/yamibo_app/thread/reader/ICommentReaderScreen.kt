@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.thread.reader
+﻿package me.thenano.yamibo.yamibo_app.thread.reader
 
 import androidx.compose.runtime.Composable
 import io.github.littlesurvival.dto.value.PostId
@@ -6,6 +6,7 @@ import io.github.littlesurvival.dto.value.ThreadId
 import io.github.littlesurvival.dto.value.UserId
 import kotlinx.serialization.Serializable
 import me.thenano.yamibo.yamibo_app.navigation.RestorableNavigatable
+import me.thenano.yamibo.yamibo_app.navigation.RestorableScreenEntry
 import me.thenano.yamibo.yamibo_app.navigation.RestorableScreenSnapshot
 import me.thenano.yamibo.yamibo_app.navigation.TypedRestorableNavigatableDecoder
 import me.thenano.yamibo.yamibo_app.navigation.decodeRestorePayload
@@ -21,6 +22,7 @@ private data class CommentReaderRestorePayload(
 )
 
 /** Navigatable screen for viewing comments of a specific author post. */
+@RestorableScreenEntry
 class ICommentReaderScreen(
     val tid: ThreadId,
     val postTitle: String,

@@ -49,6 +49,7 @@ import me.thenano.yamibo.yamibo_app.LocalReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.LocalMangaReaderSettingsRepository
 import me.thenano.yamibo.yamibo_app.LocalTagRepository
 import me.thenano.yamibo.yamibo_app.LocalThreadRepository
+import me.thenano.yamibo.yamibo_app.components.ReadingTimeTracker
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.theme.YamiboSnackbarHost
@@ -95,6 +96,7 @@ fun ImagesReaderScreen(
     val historyRepo = LocalReadHistoryRepository.current
     val threadRepository = LocalThreadRepository.current
     val platformContext = LocalPlatformContext.current
+    ReadingTimeTracker()
 
     // Tag specific state
     var currentTagPage by remember { mutableStateOf(tagPage ?: 1) }

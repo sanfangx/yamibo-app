@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.userspace
+﻿package me.thenano.yamibo.yamibo_app.userspace
 
 import androidx.compose.runtime.Composable
 import io.github.littlesurvival.dto.value.UserId
@@ -6,6 +6,7 @@ import kotlinx.serialization.Serializable
 import me.thenano.yamibo.yamibo_app.message.IMessageCenterScreen
 import me.thenano.yamibo.yamibo_app.message.MessageCenterTab
 import me.thenano.yamibo.yamibo_app.navigation.RestorableNavigatable
+import me.thenano.yamibo.yamibo_app.navigation.RestorableScreenEntry
 import me.thenano.yamibo.yamibo_app.navigation.RestorableScreenSnapshot
 import me.thenano.yamibo.yamibo_app.navigation.TypedRestorableNavigatableDecoder
 import me.thenano.yamibo.yamibo_app.navigation.decodeRestorePayload
@@ -18,7 +19,7 @@ private data class UserSpaceScreenRestorePayload(
     val groupName: String = UserSpaceSection.Space.name,
     val initialTabName: String = UserSpaceSubPage.Profile.name,
 )
-
+@RestorableScreenEntry
 class IUserSpaceScreen(
     val userId: UserId? = null,
     val titleHint: String? = null,

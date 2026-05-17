@@ -9,6 +9,7 @@ import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
 
 object YamiboIcons {
+    val Statistics: ImageVector by lazy { buildStatistics() }
     val Bookmark: ImageVector by lazy { buildBookmark() }
     val Storage: ImageVector by lazy { buildStorage() }
     val Home: ImageVector by lazy { buildHome() }
@@ -35,6 +36,86 @@ object YamiboIcons {
     val Book: ImageVector by lazy { buildBook() }
     val Copy: ImageVector by lazy { buildCopy() }
     val Save: ImageVector by lazy { buildSave() }
+
+    private fun buildStatistics(): ImageVector =
+        ImageVector.Builder(
+            name = "Statistics",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 32f,
+            viewportHeight = 32f,
+        ).apply {
+            path(fill = SolidColor(Color.Black)) {
+                moveTo(1f, 25f)
+                horizontalLineTo(31f)
+                verticalLineTo(28f)
+                curveTo(31f, 29.66f, 29.66f, 31f, 28f, 31f)
+                horizontalLineTo(4f)
+                curveTo(2.34f, 31f, 1f, 29.66f, 1f, 28f)
+                close()
+            }
+            path(fill = SolidColor(Color.Black)) {
+                moveTo(2f, 20f)
+                horizontalLineTo(6f)
+                curveTo(6.55f, 20f, 7f, 20.45f, 7f, 21f)
+                verticalLineTo(27f)
+                horizontalLineTo(1f)
+                verticalLineTo(21f)
+                curveTo(1f, 20.45f, 1.45f, 20f, 2f, 20f)
+                close()
+                moveTo(10f, 15f)
+                horizontalLineTo(14f)
+                curveTo(14.55f, 15f, 15f, 15.45f, 15f, 16f)
+                verticalLineTo(27f)
+                horizontalLineTo(9f)
+                verticalLineTo(16f)
+                curveTo(9f, 15.45f, 9.45f, 15f, 10f, 15f)
+                close()
+                moveTo(18f, 17f)
+                horizontalLineTo(22f)
+                curveTo(22.55f, 17f, 23f, 17.45f, 23f, 18f)
+                verticalLineTo(27f)
+                horizontalLineTo(17f)
+                verticalLineTo(18f)
+                curveTo(17f, 17.45f, 17.45f, 17f, 18f, 17f)
+                close()
+                moveTo(26f, 11f)
+                horizontalLineTo(30f)
+                curveTo(30.55f, 11f, 31f, 11.45f, 31f, 12f)
+                verticalLineTo(27f)
+                horizontalLineTo(25f)
+                verticalLineTo(12f)
+                curveTo(25f, 11.45f, 25.45f, 11f, 26f, 11f)
+                close()
+            }
+            path(fill = SolidColor(Color.Black)) {
+                moveTo(12f, 3f)
+                curveTo(13.66f, 3f, 15f, 4.34f, 15f, 6f)
+                curveTo(15f, 7.66f, 13.66f, 9f, 12f, 9f)
+                curveTo(10.34f, 9f, 9f, 7.66f, 9f, 6f)
+                curveTo(9f, 4.34f, 10.34f, 3f, 12f, 3f)
+                close()
+                moveTo(20f, 9f)
+                curveTo(21.66f, 9f, 23f, 10.34f, 23f, 12f)
+                curveTo(23f, 13.66f, 21.66f, 15f, 20f, 15f)
+                curveTo(18.34f, 15f, 17f, 13.66f, 17f, 12f)
+                curveTo(17f, 10.34f, 18.34f, 9f, 20f, 9f)
+                close()
+            }
+            path(
+                stroke = SolidColor(Color.Black),
+                strokeLineWidth = 2f,
+                strokeLineCap = StrokeCap.Round,
+                strokeLineJoin = StrokeJoin.Round,
+            ) {
+                moveTo(2f, 16f)
+                lineTo(4f, 16f)
+                lineTo(10.8f, 7.5f)
+                lineTo(20f, 12f)
+                lineTo(28.5f, 2f)
+                lineTo(30f, 2f)
+            }
+        }.build()
 
     private fun buildBookmark(): ImageVector =
         ImageVector.Builder(

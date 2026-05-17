@@ -27,6 +27,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.littlesurvival.dto.page.Post
+import me.thenano.yamibo.yamibo_app.components.rememberConvertedText
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 
 /** Expandable page section with post titles */
@@ -134,6 +135,7 @@ private fun PostTitleRow(
     onLongPress: () -> Unit,
 ) {
     val colors = YamiboTheme.colors
+    val displayTitle = rememberConvertedText(post.title.ifBlank { "（無標題）" })
 
     Surface(
         modifier = Modifier
@@ -177,7 +179,7 @@ private fun PostTitleRow(
 
             /** Post title or fallback */
             Text(
-                text = post.title.ifBlank { "（無標題）" },
+                text = displayTitle,
                 modifier = Modifier.weight(1f),
                 fontSize = 13.sp,
                 color = colors.textDark,

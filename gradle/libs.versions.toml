@@ -15,10 +15,11 @@ ktor = "3.4.2"
 ktorClientCore = "3.4.2"
 coil3 = "3.4.0"
 securityCrypto = "1.1.0"
-yamiboApi = "1.1.6"
+yamiboApi = "1.1.8"
 androidx-work = "2.11.0"
 sqldelight = "2.2.1"
 okio = "3.17.0"
+opencc4j = "1.14.0"
 
 [libraries]
 androidx-security-crypto = { module = "androidx.security:security-crypto", version.ref = "securityCrypto" }
@@ -43,6 +44,7 @@ sqldelight-android-driver = { module = "app.cash.sqldelight:android-driver", ver
 sqldelight-native-driver = { module = "app.cash.sqldelight:native-driver", version.ref = "sqldelight" }
 sqldelight-coroutines = { module = "app.cash.sqldelight:coroutines-extensions", version.ref = "sqldelight" }
 okio = { module = "com.squareup.okio:okio", version.ref = "okio" }
+opencc4j = { module = "com.github.houbb:opencc4j", version.ref = "opencc4j" }
 
 [plugins]
 sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }

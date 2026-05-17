@@ -29,6 +29,7 @@ import androidx.compose.ui.window.Dialog
 import coil3.compose.AsyncImage
 import io.github.littlesurvival.dto.page.Post
 import io.github.littlesurvival.dto.value.PollOptionId
+import me.thenano.yamibo.yamibo_app.components.rememberConvertedText
 import me.thenano.yamibo.yamibo_app.LocalNovelReaderSettingsRepository
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.inapplinknavigation.InAppLinkContext
@@ -94,6 +95,7 @@ fun PostRenderer(
         Modifier
     }
     val blocksToRender = bodyBlocks
+    val convertedThreadTitle = if (threadTitle != null) rememberConvertedText(threadTitle) else null
     if (!showHeader && !showFooter && !blocksToRender.isNullOrEmpty()) {
         Box(
             modifier = modifier
@@ -133,9 +135,9 @@ fun PostRenderer(
         Column(modifier = Modifier.fillMaxWidth(contentWidthFraction).padding(horizontal = 16.dp, vertical = verticalPadding)) {
             if (showHeader) {
                 // Title
-                if (post.floor == 1 && !threadTitle.isNullOrEmpty()) {
+                if (post.floor == 1 && !convertedThreadTitle.isNullOrEmpty()) {
                     Text(
-                        text = threadTitle,
+                        text = convertedThreadTitle,
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
                         color = YamiboTheme.colors.textDark,

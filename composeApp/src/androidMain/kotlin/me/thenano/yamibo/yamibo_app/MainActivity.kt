@@ -31,6 +31,7 @@ import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.navigation.rememberRestorableNavigator
 import me.thenano.yamibo.yamibo_app.profile.settings.access.AndroidBackgroundAccessRepository
 import me.thenano.yamibo.yamibo_app.repository.*
+import me.thenano.yamibo.yamibo_app.repository.chineseconversion.createChineseConversionRepository
 import me.thenano.yamibo.yamibo_app.repository.favorite.FavoriteSyncRepositoryImpl
 import me.thenano.yamibo.yamibo_app.repository.favorite.FavoriteUpdateRepositoryImpl
 import me.thenano.yamibo.yamibo_app.repository.inapplinknavigation.DefaultInAppLinkNavigationRepository
@@ -112,6 +113,7 @@ class MainActivity : ComponentActivity() {
             val threadRepository = remember { AndroidThreadRepository(cookieStore, yamiboClient, diskCacheFactory) }
             val userSpaceRepository = remember { UserSpaceRepositoryImpl(cookieStore, yamiboClient, diskCacheFactory) }
             val blogRepository = remember { BlogRepositoryImpl(cookieStore, yamiboClient, diskCacheFactory) }
+            val chineseConversionRepository = remember { createChineseConversionRepository() }
             val tagRepository = remember { AndroidTagRepository(cookieStore, yamiboClient, diskCacheFactory) }
             val favoriteRepository = remember { AndroidLocalFavoriteRepository(dbFactory) }
             val detailNoteRepository = remember { AndroidDetailNoteRepository(dbFactory) }
@@ -147,7 +149,14 @@ class MainActivity : ComponentActivity() {
                 DefaultInAppLinkNavigationRepository(threadRepository, novelCacheRepository)
             }
             val readHistoryRepository = remember { AndroidReadHistoryRepository(dbFactory) }
-            val signRepository = remember { AndroidSignRepository(dbFactory, authRepository, appSettingsRepository) }
+            val signRepository = remember {
+                AndroidSignRepository(
+                    dbFactory = dbFactory,
+                    authRepository = authRepository,
+                    appSettingsRepository = appSettingsRepository,
+                    yamiboClient = yamiboClient,
+                )
+            }
             val themeRepository = remember { AndroidThemeRepository() }
 
             /** Provide Repositories */
@@ -159,6 +168,7 @@ class MainActivity : ComponentActivity() {
                 LocalInAppLinkNavigationRepository provides inAppLinkNavigationRepository,
                 LocalUserSpaceRepository provides userSpaceRepository,
                 LocalBlogRepository provides blogRepository,
+                LocalChineseConversionRepository provides chineseConversionRepository,
                 LocalDetailNoteRepository provides detailNoteRepository,
                 LocalBookMarkRepository provides bookMarkRepository,
                 LocalFavoriteRepository provides favoriteRepository,

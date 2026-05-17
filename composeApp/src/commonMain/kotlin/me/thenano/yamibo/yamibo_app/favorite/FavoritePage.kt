@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.favorite
+﻿package me.thenano.yamibo.yamibo_app.favorite
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -29,6 +29,7 @@ import me.thenano.yamibo.yamibo_app.navigation.ComposableNavigator
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.navigation.Navigatable
 import me.thenano.yamibo.yamibo_app.navigation.RestorableNavigatable
+import me.thenano.yamibo.yamibo_app.navigation.RestorableScreenEntry
 import me.thenano.yamibo.yamibo_app.navigation.RestorableScreenSnapshot
 import me.thenano.yamibo.yamibo_app.navigation.TypedRestorableNavigatableDecoder
 import me.thenano.yamibo.yamibo_app.navigation.decodeRestorePayload
@@ -92,7 +93,7 @@ sealed interface FavoriteGridEntry {
 private data class FavoriteCategoryEditorRestorePayload(
     val categoryId: Long? = null,
 )
-
+@RestorableScreenEntry
 class IFavoriteCategoryManageScreen : RestorableNavigatable {
     override val id = buildId()
     override val restoreDecoder = Decoder
@@ -103,7 +104,7 @@ class IFavoriteCategoryManageScreen : RestorableNavigatable {
         override fun decode(payload: String): RestorableNavigatable = IFavoriteCategoryManageScreen()
     }
 }
-
+@RestorableScreenEntry
 class IFavoriteCategoryEditorScreen(val categoryId: Long? = null) : RestorableNavigatable {
     override val id = buildId(categoryId ?: "new")
     override val restoreDecoder = Decoder

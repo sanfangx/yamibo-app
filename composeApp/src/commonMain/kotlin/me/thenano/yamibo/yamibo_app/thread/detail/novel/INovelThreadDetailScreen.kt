@@ -1,10 +1,11 @@
-package me.thenano.yamibo.yamibo_app.thread.detail.novel
+﻿package me.thenano.yamibo.yamibo_app.thread.detail.novel
 
 import androidx.compose.runtime.Composable
 import io.github.littlesurvival.dto.value.ThreadId
 import io.github.littlesurvival.dto.value.UserId
 import kotlinx.serialization.Serializable
 import me.thenano.yamibo.yamibo_app.navigation.RestorableNavigatable
+import me.thenano.yamibo.yamibo_app.navigation.RestorableScreenEntry
 import me.thenano.yamibo.yamibo_app.navigation.RestorableScreenSnapshot
 import me.thenano.yamibo.yamibo_app.navigation.TypedRestorableNavigatableDecoder
 import me.thenano.yamibo.yamibo_app.navigation.decodeRestorePayload
@@ -18,6 +19,7 @@ private data class NovelThreadDetailRestorePayload(
 )
 
 /** Navigatable screen for viewing a novel thread. */
+@RestorableScreenEntry
 class INovelThreadDetailScreen(
     val tid: ThreadId,
     val title: String,

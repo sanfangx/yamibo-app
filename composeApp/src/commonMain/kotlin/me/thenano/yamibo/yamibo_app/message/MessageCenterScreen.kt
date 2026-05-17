@@ -79,6 +79,7 @@ internal sealed interface MessageCenterContent {
 fun MessageCenterScreen(
     initialTab: MessageCenterTab = MessageCenterTab.PrivateMessages,
     mainTabTopBar: Boolean = false,
+    onPrivateMessageUnreadChange: (Boolean) -> Unit = {},
 ) {
     val colors = YamiboTheme.colors
     val userSpaceRepository = LocalUserSpaceRepository.current
@@ -117,14 +118,21 @@ fun MessageCenterScreen(
             cachedContent(userSpaceRepository, tab, page)?.let {
                 currentPage = page
                 state = MessageCenterState.Success(it)
+                if (it is MessageCenterContent.PrivateMessages) {
+                    onPrivateMessageUnreadChange(it.page.hasUnreadMessages())
+                }
                 return
             }
         }
         val result = fetchContent(userSpaceRepository, tab, page)
         state = when (result) {
             is YamiboResult.Success -> {
-                currentPage = result.value.pageNumber() ?: page
-                MessageCenterState.Success(result.value)
+                val content = result.value
+                currentPage = content.pageNumber() ?: page
+                if (content is MessageCenterContent.PrivateMessages) {
+                    onPrivateMessageUnreadChange(content.page.hasUnreadMessages())
+                }
+                MessageCenterState.Success(content)
             }
             else -> MessageCenterState.Error(result.message())
         }
@@ -435,6 +443,9 @@ private fun MessageCenterContent.pageNumber(): Int? = when (this) {
     is MessageCenterContent.PrivateMessages -> page.pageNav?.currentPage
     is MessageCenterContent.Notices -> page.pageNav?.currentPage
 }
+
+private fun UserSpacePrivateMessagePage.hasUnreadMessages(): Boolean =
+    (unreadCount ?: 0) > 0 || messages.any { (it.unreadCount ?: 0) > 0 }
 
 private fun FavoriteUpdateRepository.RunState.refreshKey(): String = when (this) {
     FavoriteUpdateRepository.RunState.Idle -> "idle"

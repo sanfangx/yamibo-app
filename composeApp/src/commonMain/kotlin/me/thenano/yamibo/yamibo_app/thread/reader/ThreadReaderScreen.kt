@@ -34,6 +34,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import me.thenano.yamibo.yamibo_app.*
 import me.thenano.yamibo.yamibo_app.favorite.*
+import me.thenano.yamibo.yamibo_app.components.ReadingTimeTracker
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.inapplinknavigation.InAppLinkContext
 import me.thenano.yamibo.yamibo_app.repository.LocalBookMarkRepository as BookMarkRepository
@@ -105,10 +106,10 @@ private data class ReaderListEntry(
         get() = kind == ReaderEntryKind.WholePost || kind == ReaderEntryKind.SegmentedBody
 }
 
-private fun buildReaderBodySegments(post: Post): List<ReaderBodySegment>? {
+private fun buildReaderBodySegments(post: Post, contentHtml: String): List<ReaderBodySegment>? {
     if (post.images.size < 6) return null
 
-    val blocks = normalizeHtmlBlocks(HtmlParser.parseHtml(post.contentHtml))
+    val blocks = normalizeHtmlBlocks(HtmlParser.parseHtml(contentHtml))
     if (blocks.none { it is HtmlBlock.Image }) return null
 
     val segments = mutableListOf<ReaderBodySegment>()
@@ -162,6 +163,7 @@ internal fun ThreadReaderScreen(
     val favoriteSyncRepository = LocalFavoriteSyncRepository.current
     val readHistoryRepo = LocalReadHistoryRepository.current
     val bookMarkRepository = LocalBookMarkRepository.current
+    ReadingTimeTracker()
     val navigator = LocalNavigator.current
     val platformContext = LocalPlatformContext.current
     val scope = rememberCoroutineScope()
@@ -481,13 +483,30 @@ internal fun ThreadReaderScreen(
             currentThreadType = threadType,
         )
     }
+    val chineseConversionRepository = LocalChineseConversionRepository.current
+    val chineseConversionMode by chineseConversionRepository.currentMode.collectAsState()
+    val convertedContentByPid = remember { mutableStateMapOf<Long, String>() }
+    var convertedContentVersion by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(posts, chineseConversionMode) {
+        convertedContentByPid.clear()
+        convertedContentVersion++
+        if (chineseConversionMode != null) {
+            posts.forEach { post ->
+                convertedContentByPid[post.pid.value.toLong()] = chineseConversionRepository.convert(post.contentHtml)
+            }
+            convertedContentVersion++
+        }
+    }
+
     val isMangaForum = forumId?.let { YamiboForum.isMangaForum(it) } == true
     val isNovelForum = forumId?.let { YamiboForum.isNovelForum(it) } == true
     val showRegularFirstPostTagBanner = isMangaForum || (!isNovelForum && !isNovelThread)
     val showNovelFirstPostTagBanner = isNovelThread && isNovelForum
-    val segmentedBodyByPostId = remember(posts) {
+    val segmentedBodyByPostId = remember(posts, convertedContentVersion) {
         posts.associate { post ->
-            post.pid.value.toLong() to buildReaderBodySegments(post)
+            val pid = post.pid.value.toLong()
+            pid to buildReaderBodySegments(post, convertedContentByPid[pid] ?: post.contentHtml)
         }
     }
     val readerEntries = remember(

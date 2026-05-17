@@ -1,9 +1,10 @@
-package me.thenano.yamibo.yamibo_app.thread.detail.tag
+﻿package me.thenano.yamibo.yamibo_app.thread.detail.tag
 
 import androidx.compose.runtime.Composable
 import io.github.littlesurvival.dto.value.TagId
 import kotlinx.serialization.Serializable
 import me.thenano.yamibo.yamibo_app.navigation.RestorableNavigatable
+import me.thenano.yamibo.yamibo_app.navigation.RestorableScreenEntry
 import me.thenano.yamibo.yamibo_app.navigation.RestorableScreenSnapshot
 import me.thenano.yamibo.yamibo_app.navigation.TypedRestorableNavigatableDecoder
 import me.thenano.yamibo.yamibo_app.navigation.decodeRestorePayload
@@ -15,7 +16,7 @@ private data class TagDetailRestorePayload(
     val title: String,
     val page: Int? = null,
 )
-
+@RestorableScreenEntry
 class ITagDetailScreen(
     val tagId: TagId,
     val title: String,

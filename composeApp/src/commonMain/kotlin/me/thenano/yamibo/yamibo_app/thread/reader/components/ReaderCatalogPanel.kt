@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.littlesurvival.dto.page.Post
 import io.github.littlesurvival.dto.value.PostId
+import me.thenano.yamibo.yamibo_app.components.rememberConvertedText
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 
 /** Catalog drawer panel showing pages and post-entries */
@@ -132,6 +133,7 @@ internal fun ReaderCatalogPanel(
                                     val isCurrentPost = post.pid == currentPid
                                     val isBookmarked = post.pid.value.toLong() in bookmarkedPostIds
                                     val isRead = post.pid.value.toLong() in readPostIds
+                                    val displayTitle = rememberConvertedText(post.title.ifEmpty { "..." })
                                     Surface(
                                         color = if (isCurrentPost) colors.brownLight.copy(alpha = 0.15f) else colors.creamSurface,
                                         modifier = Modifier
@@ -179,7 +181,7 @@ internal fun ReaderCatalogPanel(
                                                 Spacer(Modifier.width(6.dp))
                                             }
                                             Text(
-                                                text = post.title.ifEmpty { "..." },
+                                                text = displayTitle,
                                                 color = if (isCurrentPost) colors.brownDeep else colors.textDark,
                                                 fontWeight = if (isCurrentPost) FontWeight.ExtraBold else FontWeight.Normal,
                                                 fontSize = if (isCurrentPost) 16.sp else 14.sp,

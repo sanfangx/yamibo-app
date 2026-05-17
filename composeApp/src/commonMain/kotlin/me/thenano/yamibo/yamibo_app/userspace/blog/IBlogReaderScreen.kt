@@ -1,10 +1,11 @@
-package me.thenano.yamibo.yamibo_app.userspace.blog
+﻿package me.thenano.yamibo.yamibo_app.userspace.blog
 
 import androidx.compose.runtime.Composable
 import io.github.littlesurvival.dto.value.BlogId
 import io.github.littlesurvival.dto.value.UserId
 import kotlinx.serialization.Serializable
 import me.thenano.yamibo.yamibo_app.navigation.RestorableNavigatable
+import me.thenano.yamibo.yamibo_app.navigation.RestorableScreenEntry
 import me.thenano.yamibo.yamibo_app.navigation.RestorableScreenSnapshot
 import me.thenano.yamibo.yamibo_app.navigation.TypedRestorableNavigatableDecoder
 import me.thenano.yamibo.yamibo_app.navigation.decodeRestorePayload
@@ -16,7 +17,7 @@ private data class BlogReaderRestorePayload(
     val userId: Int? = null,
     val titleHint: String? = null,
 )
-
+@RestorableScreenEntry
 class IBlogReaderScreen(
     val blogId: BlogId,
     val userId: UserId? = null,

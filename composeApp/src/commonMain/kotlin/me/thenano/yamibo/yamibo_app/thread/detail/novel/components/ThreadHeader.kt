@@ -43,6 +43,7 @@ import coil3.compose.SubcomposeAsyncImage
 import io.github.littlesurvival.YamiboRoute
 import io.github.littlesurvival.dto.page.ThreadPage
 import me.thenano.yamibo.yamibo_app.favorite.FavoriteActionButton
+import me.thenano.yamibo.yamibo_app.components.rememberConvertedText
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.thread.detail.components.DetailNoteActionButton
@@ -72,6 +73,7 @@ internal fun ThreadHeader(
     val colors = YamiboTheme.colors
     val thread = threadPage.thread
     val firstPost = threadPage.posts.firstOrNull { it.floor == 1 } ?: threadPage.posts.firstOrNull()
+    val convertedThreadTitle = rememberConvertedText(thread.title)
 
     val coverUrl = remember(firstPost) {
         val attachedImage = firstPost?.images?.firstOrNull()?.url ?: return@remember null
@@ -159,12 +161,12 @@ internal fun ThreadHeader(
 
                 Column(modifier = Modifier.weight(1f)) {
                     CopyableLabel(
-                        text = thread.title,
+                        text = convertedThreadTitle,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = colors.textDark,
                         onCopy = {
-                            clipboardManager.setText(AnnotatedString(thread.title))
+                            clipboardManager.setText(AnnotatedString(convertedThreadTitle))
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             onCopy("已複製標題")
                         }

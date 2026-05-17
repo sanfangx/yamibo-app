@@ -22,7 +22,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import me.thenano.yamibo.yamibo_app.LocalNovelReaderSettingsRepository
+import me.thenano.yamibo.yamibo_app.components.rememberConvertedText
+import me.thenano.yamibo.yamibo_app.profile.settings.components.SettingsChipRow
 import me.thenano.yamibo.yamibo_app.profile.settings.components.SettingsSlider
+import me.thenano.yamibo.yamibo_app.repository.settings.NovelReaderSettingsRepository
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.util.state
 
@@ -37,6 +40,7 @@ fun NovelReaderPreviewSetting() {
     val fontSize = novelSettingsRepo.fontSize.state()
     val lineSpacing = novelSettingsRepo.lineSpacing.state()
     val contentWidthFraction = novelSettingsRepo.contentWidthFraction.state()
+    val previewText = rememberConvertedText(PREVIEW_TEXT)
 
     Box(
         modifier = Modifier
@@ -51,7 +55,7 @@ fun NovelReaderPreviewSetting() {
                 .fillMaxWidth(contentWidthFraction)
         ) {
             Text(
-                text = PREVIEW_TEXT,
+                text = previewText,
                 fontSize = fontSize.sp,
                 lineHeight = (fontSize * lineSpacing).sp,
                 color = colors.textDark
@@ -145,4 +149,17 @@ fun NovelSystemBarsBackgroundSetting() {
             ),
         )
     }
+}
+
+@Composable
+fun NovelChineseConversionSetting() {
+    val novelSettingsRepo = LocalNovelReaderSettingsRepository.current
+    val chineseConversion = novelSettingsRepo.chineseConversion.state()
+
+    SettingsChipRow(
+        options = NovelReaderSettingsRepository.chineseConversionOptions,
+        selectedValue = chineseConversion,
+        onSelect = { novelSettingsRepo.chineseConversion.setValue(it) },
+        modifier = Modifier.padding(horizontal = 4.dp),
+    )
 }
