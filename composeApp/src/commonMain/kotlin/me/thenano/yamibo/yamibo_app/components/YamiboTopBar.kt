@@ -1,4 +1,8 @@
-package me.thenano.yamibo.yamibo_app.components
+﻿package me.thenano.yamibo.yamibo_app.components
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import YamiboIcons
 import androidx.compose.foundation.layout.Arrangement
@@ -38,8 +42,8 @@ import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
  * Typical usage:
  * ```
  * YamiboMainTabTopBar(
- *     title = "閱讀歷史",
- *     actions = { YamiboMainTabIconAction(YamiboIcons.Search, "搜尋", onSearch) }
+ *     title = appString(Res.string.read_history_title),
+ *     actions = { YamiboMainTabIconAction(YamiboIcons.Search, appString(Res.string.read_history_search), onSearch) }
  * )
  * ```
  *
@@ -133,9 +137,9 @@ fun YamiboMainTabIconAction(
  * Typical usage:
  * ```
  * YamiboTopBar(
- *     title = "日志",
+ *     title = appString(Res.string.auto_456d29ef8b),
  *     onBack = navigator::pop,
- *     actions = { YamiboTopBarIconAction(YamiboIcons.Home, "首頁", navigator::popToRoot) }
+ *     actions = { YamiboTopBarIconAction(YamiboIcons.Home, appString(Res.string.main_home), navigator::popToRoot) }
  * )
  * ```
  *
@@ -224,3 +228,4 @@ fun YamiboTopBarIconAction(
         )
     }
 }
+

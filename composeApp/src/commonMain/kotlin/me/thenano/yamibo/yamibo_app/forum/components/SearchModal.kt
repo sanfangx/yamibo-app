@@ -1,4 +1,9 @@
-package me.thenano.yamibo.yamibo_app.forum.components
+﻿package me.thenano.yamibo.yamibo_app.forum.components
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import me.thenano.yamibo.yamibo_app.i18n.localizedMessage
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import YamiboIcons
 import androidx.compose.animation.AnimatedContent
@@ -92,7 +97,7 @@ fun SearchModal(
             val looksLikeUrl = trimmed.startsWith("http://") || trimmed.startsWith("https://")
             if (page == 1 && looksLikeUrl) {
                 if (directThreadId == null) {
-                    state = SearchState.Error("無法識別的百合會帖子連結")
+                    state = SearchState.Error(appString(Res.string.auto_28b382476b))
                     return@launch
                 }
                 state = when (val result = threadRepository.fetchThread(directThreadId)) {
@@ -109,14 +114,14 @@ fun SearchModal(
                         SearchState.Idle
                     }
 
-                    else -> SearchState.Error(result.message())
+                    else -> SearchState.Error(result.localizedMessage())
                 }
                 return@launch
             }
 
             val formHash = authRepository.currentUser()?.formHash
             if (formHash == null) {
-                state = SearchState.Error("目前未登入，無法使用站內搜尋")
+                state = SearchState.Error(appString(Res.string.auto_20506b0bba))
                 return@launch
             }
 
@@ -130,7 +135,7 @@ fun SearchModal(
                 when (result) {
                     is YamiboResult.Success -> {
                         if (result.value.threads.isEmpty()) {
-                            SearchState.Error("沒有找到相關主題")
+                            SearchState.Error(appString(Res.string.auto_823a19b790))
                         } else {
                             if (page == 1) {
                                 currentSearchId = result.value.searchId
@@ -139,7 +144,7 @@ fun SearchModal(
                         }
                     }
 
-                    else -> SearchState.Error(result.message())
+                    else -> SearchState.Error(result.localizedMessage())
                 }
         }
     }
@@ -172,7 +177,7 @@ fun SearchModal(
                         modifier = Modifier.weight(1f).focusRequester(focusRequester),
                         placeholder = {
                             Text(
-                                text = "搜尋帖子...",
+                                text = appString(Res.string.auto_b7634416b4),
                                 color = Color.White.copy(alpha = 0.5f),
                                 fontSize = 15.sp
                             )
@@ -203,7 +208,7 @@ fun SearchModal(
                         color = colors.orangeAccent
                     ) {
                         Text(
-                            text = "搜尋",
+                            text = appString(Res.string.read_history_search),
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                             color = Color.White,
                             fontSize = 14.sp,
@@ -249,7 +254,7 @@ private fun SearchIdleContent() {
             )
             Spacer(Modifier.height(12.dp))
             Text(
-                text = "輸入關鍵字或網址搜尋帖子",
+                text = appString(Res.string.auto_2b4ac902e7),
                 color = colors.brownPrimary.copy(alpha = 0.6f),
                 fontSize = 15.sp
             )
@@ -269,7 +274,7 @@ private fun SearchLoadingContent() {
                 modifier = Modifier.size(36.dp)
             )
             Spacer(Modifier.height(12.dp))
-            Text(text = "搜尋中...", color = colors.brownPrimary.copy(alpha = 0.7f), fontSize = 14.sp)
+            Text(text = appString(Res.string.auto_51e2752c28), color = colors.brownPrimary.copy(alpha = 0.7f), fontSize = 14.sp)
         }
     }
 }
@@ -317,7 +322,7 @@ private fun SearchResultContent(
         /** result count header */
         item {
             Text(
-                text = "找到 ${searchPage.totalCount} 個相關內容",
+                text = appString(Res.string.search_related_count, searchPage.totalCount),
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 color = colors.brownPrimary.copy(alpha = 0.7f),
                 fontSize = 13.sp,
@@ -340,3 +345,6 @@ private fun SearchResultContent(
         }
     }
 }
+
+
+

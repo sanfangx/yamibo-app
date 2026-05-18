@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.history.components
+﻿package me.thenano.yamibo.yamibo_app.history.components
 
 import YamiboIcons
 import androidx.compose.foundation.layout.Arrangement
@@ -32,6 +32,9 @@ import androidx.compose.ui.unit.sp
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.components.YamiboMainTabIconAction
 import me.thenano.yamibo.yamibo_app.components.YamiboMainTabTopBar
+import org.jetbrains.compose.resources.stringResource
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 @Composable
 internal fun NormalTopBar(
@@ -39,10 +42,10 @@ internal fun NormalTopBar(
     onMultiSelect: () -> Unit,
 ) {
     YamiboMainTabTopBar(
-        title = "閱讀歷史",
+        title = stringResource(Res.string.read_history_title),
     ) {
-        YamiboMainTabIconAction(YamiboIcons.Search, "搜尋", onSearch, iconSize = 28, iconOffsetY = 4)
-        YamiboMainTabIconAction(YamiboIcons.Trashcan, "多選刪除", onMultiSelect)
+        YamiboMainTabIconAction(YamiboIcons.Search, stringResource(Res.string.read_history_search), onSearch, iconSize = 28, iconOffsetY = 4)
+        YamiboMainTabIconAction(YamiboIcons.Trashcan, stringResource(Res.string.read_history_multi_delete), onMultiSelect)
     }
 }
 
@@ -67,7 +70,7 @@ internal fun SearchTopBar(
             value = query,
             onValueChange = onQueryChange,
             modifier = Modifier.weight(1f).focusRequester(focusRequester),
-            placeholder = { Text("搜尋標題...", color = colors.textDark.copy(alpha = 0.4f), fontSize = 15.sp) },
+            placeholder = { Text(stringResource(Res.string.read_history_search_placeholder), color = colors.textDark.copy(alpha = 0.4f), fontSize = 15.sp) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             keyboardActions = KeyboardActions(onSearch = { onSearch() }),
@@ -86,7 +89,7 @@ internal fun SearchTopBar(
         Spacer(Modifier.width(6.dp))
         Surface(onClick = onSearch, shape = RoundedCornerShape(12.dp), color = colors.brownDeep) {
             Text(
-                text = "搜尋",
+                text = stringResource(Res.string.read_history_search),
                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
                 color = Color.White,
                 fontSize = 14.sp,
@@ -115,25 +118,25 @@ internal fun SelectTopBar(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Text(
-            text = "已選 $selectedCount 項",
+            text = stringResource(Res.string.selected_items, selectedCount),
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold,
             color = colors.brownDeep,
             modifier = Modifier.weight(1f),
         )
         Surface(onClick = onSelectAll, shape = RoundedCornerShape(10.dp), color = colors.brownPrimary.copy(alpha = 0.12f)) {
-            Text("全選", modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), fontSize = 13.sp, fontWeight = FontWeight.Medium, color = colors.brownDeep)
+            Text(stringResource(Res.string.common_select_all), modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), fontSize = 13.sp, fontWeight = FontWeight.Medium, color = colors.brownDeep)
         }
         if (selectedCount > 0) {
             Surface(onClick = onDeleteSelected, shape = RoundedCornerShape(10.dp), color = Color(0xFFE53935).copy(alpha = 0.15f)) {
-                Text("刪除", modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Color(0xFFE53935))
+                Text(stringResource(Res.string.common_delete), modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Color(0xFFE53935))
             }
         }
         Surface(onClick = onClearAll, shape = RoundedCornerShape(10.dp), color = Color(0xFFE53935).copy(alpha = 0.1f)) {
-            Text("清空全選", modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Color(0xFFE53935))
+            Text(stringResource(Res.string.common_clear_selected), modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Color(0xFFE53935))
         }
         Surface(onClick = onCancel, shape = RoundedCornerShape(10.dp), color = colors.brownPrimary.copy(alpha = 0.12f)) {
-            Text("取消", modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), fontSize = 13.sp, fontWeight = FontWeight.Medium, color = colors.brownDeep)
+            Text(stringResource(Res.string.common_cancel), modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), fontSize = 13.sp, fontWeight = FontWeight.Medium, color = colors.brownDeep)
         }
     }
 }

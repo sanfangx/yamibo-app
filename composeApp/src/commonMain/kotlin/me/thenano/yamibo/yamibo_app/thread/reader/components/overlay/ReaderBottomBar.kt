@@ -1,4 +1,8 @@
-package me.thenano.yamibo.yamibo_app.thread.reader.components.overlay
+﻿package me.thenano.yamibo.yamibo_app.thread.reader.components.overlay
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import YamiboIcons
 
@@ -70,7 +74,7 @@ fun ReaderBottomBar(
                         contentAlignment = Alignment.CenterStart,
                         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)
                     ) {
-                        Text("發送回覆", color = colors.textDark.copy(alpha = 0.72f), fontSize = 15.sp)
+                        Text(appString(Res.string.auto_3f929c8d8d), color = colors.textDark.copy(alpha = 0.72f), fontSize = 15.sp)
                     }
                 }
 
@@ -89,7 +93,7 @@ fun ReaderBottomBar(
                 ) {
                     Icon(
                         imageVector = YamiboIcons.Share,
-                        contentDescription = "分享",
+                        contentDescription = appString(Res.string.auto_c31f48f84e),
                         tint = Color.White,
                         modifier = Modifier.size(28.dp)
                     )
@@ -98,3 +102,4 @@ fun ReaderBottomBar(
         }
     }
 }
+

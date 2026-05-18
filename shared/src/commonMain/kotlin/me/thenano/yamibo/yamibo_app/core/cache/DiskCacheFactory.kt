@@ -8,6 +8,7 @@ import kotlinx.serialization.json.Json
 import me.thenano.yamibo.yamibo_app.Database
 import me.thenano.yamibo.yamibo_app.Logger
 import me.thenano.yamibo.yamibo_app.db.DatabaseFactory
+import me.thenano.yamibo.yamibo_app.i18n.AppMessage
 import okio.FileSystem
 import okio.Path.Companion.toPath
 import okio.SYSTEM
@@ -71,10 +72,10 @@ class DiskCacheFactory(
 
     suspend fun getCacheStorageBreakdown(): CacheStorageBreakdown = withContext(Dispatchers.IO) {
         val grouped = linkedMapOf(
-            "images" to CacheStorageUsage("images", "圖片", 0L),
-            "pages" to CacheStorageUsage("pages", "帖子/論壇頁面", 0L),
-            "userspace" to CacheStorageUsage("userspace", "用戶空間/日志", 0L),
-            "other" to CacheStorageUsage("other", "其他", 0L),
+            "images" to CacheStorageUsage("images", AppMessage.of("storage.images"), 0L),
+            "pages" to CacheStorageUsage("pages", AppMessage.of("storage.pages"), 0L),
+            "userspace" to CacheStorageUsage("userspace", AppMessage.of("storage.userspace"), 0L),
+            "other" to CacheStorageUsage("other", AppMessage.of("storage.other"), 0L),
         )
 
         fun addUsage(key: String, bytes: Long) {

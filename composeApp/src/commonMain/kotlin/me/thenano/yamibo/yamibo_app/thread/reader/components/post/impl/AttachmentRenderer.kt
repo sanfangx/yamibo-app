@@ -1,4 +1,8 @@
-package me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl
+﻿package me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -21,7 +25,7 @@ fun AttachmentRenderer(attachments: List<Attachment>, modifier: Modifier = Modif
 
     Column(modifier = modifier.fillMaxWidth().padding(vertical = 8.dp)) {
         Text(
-            text = "📎 附件",
+            text = appString(Res.string.auto_0b8e71b9f2),
             color = colors.textDark,
             fontWeight = FontWeight.Bold,
             fontSize = 15.sp,
@@ -55,7 +59,7 @@ fun AttachmentRenderer(attachments: List<Attachment>, modifier: Modifier = Modif
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "${attachment.fileSize} · ${attachment.downloadTimes} 次下載",
+                        text = appString(Res.string.common_download_count, attachment.fileSize, attachment.downloadTimes),
                         color = colors.textDark.copy(alpha = 0.7f),
                         fontSize = 12.sp
                     )
@@ -66,3 +70,5 @@ fun AttachmentRenderer(attachments: List<Attachment>, modifier: Modifier = Modif
         }
     }
 }
+
+

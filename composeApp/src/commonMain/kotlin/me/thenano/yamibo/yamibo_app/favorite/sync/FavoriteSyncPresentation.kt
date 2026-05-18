@@ -1,4 +1,8 @@
-package me.thenano.yamibo.yamibo_app.favorite.sync
+﻿package me.thenano.yamibo.yamibo_app.favorite.sync
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import me.thenano.yamibo.yamibo_app.repository.FavoriteSyncRepository.FavoriteSyncPhase
 import me.thenano.yamibo.yamibo_app.repository.FavoriteSyncRepository.FavoriteSyncSnapshot
@@ -22,11 +26,11 @@ internal fun FavoriteSyncState.snapshotOrNull(): FavoriteSyncSnapshot? {
 
 internal fun FavoriteSyncState.title(): String {
     return when (this) {
-        FavoriteSyncState.Idle -> "尚未開始同步"
-        is FavoriteSyncState.Running -> "背景同步中"
-        is FavoriteSyncState.Interrupted -> "同步已中斷"
-        is FavoriteSyncState.Failed -> "同步失敗"
-        is FavoriteSyncState.Completed -> "同步完成"
+        FavoriteSyncState.Idle -> appString(Res.string.auto_0d7fe90a73)
+        is FavoriteSyncState.Running -> appString(Res.string.auto_5b2af01686)
+        is FavoriteSyncState.Interrupted -> appString(Res.string.auto_416d31ec7e)
+        is FavoriteSyncState.Failed -> appString(Res.string.auto_c599384c8a)
+        is FavoriteSyncState.Completed -> appString(Res.string.auto_02f667de32)
     }
 }
 
@@ -57,16 +61,16 @@ internal fun FavoriteSyncSnapshot.toProgressUi(): SyncProgressUi {
     return when (phase) {
         FavoriteSyncPhase.PREPARING -> SyncProgressUi(
             progress = progress,
-            label = "準備同步任務",
-            lines = listOf("狀態" to "正在建立同步任務"),
+            label = appString(Res.string.auto_945847ea7e),
+            lines = listOf(appString(Res.string.auto_bd91f6187b) to appString(Res.string.auto_bd84aa9f93)),
         )
 
         FavoriteSyncPhase.FETCHING_REMOTE -> SyncProgressUi(
             progress = progress,
-            label = "開始同步",
+            label = appString(Res.string.auto_0cd83a34b9),
             lines = buildList {
-                add("頁數" to if (currentPage <= 0) "正在取得收藏頁" else "${currentPage}/${totalPages ?: "?"} 頁")
-                add("已取得" to "$scannedCount 項收藏")
+                add(appString(Res.string.auto_e8202e1ba6) to if (currentPage <= 0) appString(Res.string.auto_640481ba4a) else appString(Res.string.favorite_sync_page_progress, currentPage.toString(), totalPages?.toString() ?: "?"))
+                add(appString(Res.string.auto_5ac0884b60) to appString(Res.string.favorite_sync_scanned_count, scannedCount))
             },
         )
 
@@ -77,11 +81,11 @@ internal fun FavoriteSyncSnapshot.toProgressUi(): SyncProgressUi {
         FavoriteSyncPhase.INTERRUPTED,
         FavoriteSyncPhase.FAILED -> SyncProgressUi(
             progress = progress,
-            label = "匯入網站帖子",
+            label = appString(Res.string.auto_4c41b6645f),
             lines = buildList {
-                add("已匯入到本地" to "$importedCount/${scannedCount.coerceAtLeast(importedCount)}")
-                add("已同步至百合會" to uploadedCount.toString())
-                add("同步失敗" to failedCount.toString())
+                add(appString(Res.string.auto_bdfc325e15) to "$importedCount/${scannedCount.coerceAtLeast(importedCount)}")
+                add(appString(Res.string.auto_c219db0ba3) to uploadedCount.toString())
+                add(appString(Res.string.auto_c599384c8a) to failedCount.toString())
             },
         )
     }
@@ -95,3 +99,5 @@ private fun FavoriteSyncSnapshot.snapshotFrozenProgress(): Float {
         else -> 0.05f
     }
 }
+
+

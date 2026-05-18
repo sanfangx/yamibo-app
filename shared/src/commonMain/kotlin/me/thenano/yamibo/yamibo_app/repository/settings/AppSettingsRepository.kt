@@ -1,20 +1,20 @@
-package me.thenano.yamibo.yamibo_app.repository.settings
+﻿package me.thenano.yamibo.yamibo_app.repository.settings
 
 import me.thenano.yamibo.yamibo_app.repository.scheme.YamiboColorScheme
 import me.thenano.yamibo.yamibo_app.repository.settings.core.SettingsRegistry
 import me.thenano.yamibo.yamibo_app.store.settings.SettingsStore
 
 enum class AppThemeMode(val label: String) {
-    SYSTEM("跟隨系統"),
-    LIGHT("淺色模式"),
-    DARK("深色模式"),
+    SYSTEM("system"),
+    LIGHT("light"),
+    DARK("dark"),
 }
 
 enum class AppThemeScheme(val label: String) {
-    DEFAULT("預設"),
-    DEFAULT_DARK("預設（深色）"),
-    CLASSIC_BLACK("經典黑"),
-    CLASSIC_WHITE("經典白"),
+    DEFAULT("default"),
+    DEFAULT_DARK("default_dark"),
+    CLASSIC_BLACK("classic_black"),
+    CLASSIC_WHITE("classic_white"),
     CATPPUCCIN("Catppuccin"),
     GREEN_APPLE("Green Apple"),
     LAVENDER("Lavender"),
@@ -49,130 +49,141 @@ enum class AppThemeScheme(val label: String) {
 }
 
 enum class FavoriteGridMode(val label: String) {
-    FIXED_GRID("固定網格"),
-    STAGGERED("瀑布貼齊"),
-    ROW_CARD("橫排卡片"),
-    ROW_CARD_TEXT("橫排卡片(無封面)"),
+    FIXED_GRID("fixed_grid"),
+    STAGGERED("staggered"),
+    ROW_CARD("row_card"),
+    ROW_CARD_TEXT("row_card_text"),
 }
 
 enum class FavoriteSortMode(val label: String) {
-    DEFAULT("默認"),
-    UPDATED_AT("更新時間"),
-    FAVORITED_ORDER("收藏順序"),
-    NAME("名稱"),
-    FORUM_NAME("版區"),
-    LAST_READ("最後一次閱讀"),
+    DEFAULT("default"),
+    UPDATED_AT("updated_at"),
+    FAVORITED_ORDER("favorited_order"),
+    NAME("name"),
+    FORUM_NAME("forum_name"),
+    LAST_READ("last_read"),
 }
 
 enum class FavoriteUpdateInterval(val label: String, val hours: Long?, val smart: Boolean = false) {
-    MANUAL("手動刷新", null),
-    HOURS_6("6 小時", 6L),
-    HOURS_12("12 小時", 12L),
-    HOURS_24("24 小時", 24L),
-    DAYS_3("3 天", 72L),
-    DAYS_7("7 天", 168L),
-    SMART("智能更新（TODO）", null, smart = true),
+    MANUAL("manual", null),
+    HOURS_6("6h", 6L),
+    HOURS_12("12h", 12L),
+    HOURS_24("24h", 24L),
+    DAYS_3("3d", 72L),
+    DAYS_7("7d", 168L),
+    SMART("smart_todo", null, smart = true),
 }
 
 enum class SignInMode(val label: String) {
-    SEMI_AUTOMATIC("半自動簽到"),
-    FULL_MANUAL("全手動簽到"),
+    SEMI_AUTOMATIC("semi_automatic"),
+    FULL_MANUAL("full_manual"),
+}
+
+enum class AppLanguage(val label: String, val languageTag: String) {
+    TRADITIONAL_CHINESE("zh-TW", "zh-TW"),
+    SIMPLIFIED_CHINESE("zh-CN", "zh-CN"),
+    ENGLISH("English", "en"),
 }
 
 class AppSettingsRepository(store: SettingsStore) : SettingsRegistry(store, prefix = "appsettings") {
 
     val themeMode by enumSetting(
-        name = "主題模式",
+        name = "theme_mode",
         default = AppThemeMode.SYSTEM,
     )
 
     val themeScheme by enumSetting(
-        name = "配色方案",
+        name = "theme_scheme",
         default = AppThemeScheme.DEFAULT,
     )
 
+    val language by enumSetting(
+        name = "language",
+        default = AppLanguage.TRADITIONAL_CHINESE,
+    )
+
     val isMangaMode by boolSetting(
-        name = "漫畫模式",
+        name = "manga_mode",
         default = false,
     )
 
     val clearCacheOnAppLaunch by boolSetting(
-        name = "App 啟動時清除緩存",
+        name = "clear_cache_on_app_launch",
         default = false,
     )
 
     val skipFavoriteRemovalConfirm by boolSetting(
-        name = "取消收藏時略過確認",
+        name = "skip_favorite_removal_confirm",
         default = false,
     )
 
     val favoriteAddSyncPromptEnabled by boolSetting(
-        name = "新增收藏時詢問是否同步到百合會",
+        name = "favorite_add_sync_prompt_enabled",
         default = true,
     )
 
     val favoriteAddSyncDefault by boolSetting(
-        name = "新增收藏預設同步到百合會",
+        name = "favorite_add_sync_default",
         default = true,
     )
 
     val favoriteRemoveSyncPromptEnabled by boolSetting(
-        name = "完全移除收藏時詢問是否同步刪除網站收藏",
+        name = "favorite_remove_sync_prompt_enabled",
         default = true,
     )
 
     val favoriteRemoveSyncDefault by boolSetting(
-        name = "完全移除收藏預設同步刪除網站收藏",
+        name = "favorite_remove_sync_default",
         default = false,
     )
 
     val favoriteGridMode by enumSetting(
-        name = "收藏排列方式",
+        name = "favorite_grid_mode",
         default = FavoriteGridMode.FIXED_GRID,
     )
 
     val favoriteSortMode by enumSetting(
-        name = "收藏排序方式",
+        name = "favorite_sort_mode",
         default = FavoriteSortMode.DEFAULT,
     )
 
     val favoriteSortDescending by boolSetting(
-        name = "收藏排序是否降序",
+        name = "favorite_sort_descending",
         default = true,
     )
 
     val favoriteLastCategoryId by intSetting(
-        name = "收藏最後打開類別",
+        name = "favorite_last_category_id",
         default = 0,
     )
 
     val favoriteUpdateInterval by enumSetting(
-        name = "收藏更新檢查週期",
+        name = "favorite_update_interval",
         default = FavoriteUpdateInterval.HOURS_12,
     )
 
     val favoriteUpdateHiddenRunId by stringSetting(
-        name = "收藏更新已隱藏任務",
+        name = "favorite_update_hidden_run_id",
         default = "",
     )
 
     val signInMode by enumSetting(
-        name = "簽到模式",
+        name = "sign_in_mode",
         default = SignInMode.SEMI_AUTOMATIC,
     )
 
     val signInAllowRepair by boolSetting(
-        name = "簽到時自動補簽",
+        name = "sign_in_allow_repair",
         default = false,
     )
 
     val signPageHtmlCache by stringSetting(
-        name = "簽到頁緩存HTML",
+        name = "sign_page_html_cache",
         default = "",
     )
 
     val signPageHtmlCacheUpdatedAt by stringSetting(
-        name = "簽到頁緩存更新時間",
+        name = "sign_page_html_cache_updated_at",
         default = "",
     )
 
@@ -186,5 +197,7 @@ class AppSettingsRepository(store: SettingsStore) : SettingsRegistry(store, pref
         val favoriteSortModeOptions = FavoriteSortMode.entries.map { it to it.label }
         val favoriteUpdateIntervalOptions = FavoriteUpdateInterval.entries.map { it to it.label }
         val signInModeOptions = SignInMode.entries.map { it to it.label }
+        val languageOptions = AppLanguage.entries.map { it to it.label }
     }
 }
+

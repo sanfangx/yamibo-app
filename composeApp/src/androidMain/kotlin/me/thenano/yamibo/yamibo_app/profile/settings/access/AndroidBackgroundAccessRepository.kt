@@ -1,4 +1,8 @@
-package me.thenano.yamibo.yamibo_app.profile.settings.access
+﻿package me.thenano.yamibo.yamibo_app.profile.settings.access
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -86,26 +90,26 @@ class AndroidBackgroundAccessRepository(
         val notificationItem = when {
             !notificationPermissionGranted -> {
                 BackgroundAccessRepository.SetupItem(
-                    title = "通知權限",
-                    subtitle = "背景同步必須能在通知欄顯示進度。這項可直接在 App 內授予。",
+                    title = appString(Res.string.auto_5cead0090e),
+                    subtitle = appString(Res.string.auto_9de49d6a14),
                     status = BackgroundAccessRepository.SetupStatus.Required,
-                    actionLabel = "授予",
+                    actionLabel = appString(Res.string.auto_2808aa1a67),
                     action = BackgroundAccessRepository.SetupAction.RequestNotificationPermission,
                 )
             }
             !notificationsEnabled -> {
                 BackgroundAccessRepository.SetupItem(
-                    title = "App 通知開關",
-                    subtitle = "系統目前已關閉這個 App 的通知。請重新打開，不然同步仍然不會顯示在通知欄。",
+                    title = appString(Res.string.auto_5a9f6672a2),
+                    subtitle = appString(Res.string.auto_36d8d41239),
                     status = BackgroundAccessRepository.SetupStatus.Required,
-                    actionLabel = "前往",
+                    actionLabel = appString(Res.string.auto_60233828b6),
                     action = BackgroundAccessRepository.SetupAction.OpenNotificationSettings,
                 )
             }
             else -> {
                 BackgroundAccessRepository.SetupItem(
-                    title = "通知權限",
-                    subtitle = "通知欄可正常顯示背景同步進度與完成結果。",
+                    title = appString(Res.string.auto_5cead0090e),
+                    subtitle = appString(Res.string.auto_60372ee1dd),
                     status = BackgroundAccessRepository.SetupStatus.Granted,
                 )
             }
@@ -113,32 +117,32 @@ class AndroidBackgroundAccessRepository(
 
         val batteryItem = if (!batteryOptimizationIgnored) {
             BackgroundAccessRepository.SetupItem(
-                title = "電池最佳化",
-                subtitle = "部分裝置會因電池最佳化提早中止背景網路。建議將本 App 加入忽略最佳化名單。",
+                title = appString(Res.string.auto_7a331081ad),
+                subtitle = appString(Res.string.auto_d4d511fe98),
                 status = BackgroundAccessRepository.SetupStatus.Recommended,
-                actionLabel = "前往",
+                actionLabel = appString(Res.string.auto_60233828b6),
                 action = BackgroundAccessRepository.SetupAction.OpenBatteryOptimizationSettings,
             )
         } else {
             BackgroundAccessRepository.SetupItem(
-                title = "電池最佳化",
-                subtitle = "系統目前不會因電池最佳化優先中止這個 App 的背景同步。",
+                title = appString(Res.string.auto_7a331081ad),
+                subtitle = appString(Res.string.auto_08ac566c17),
                 status = BackgroundAccessRepository.SetupStatus.Granted,
             )
         }
 
         val appSettingsItem = BackgroundAccessRepository.SetupItem(
-            title = "App 系統設定",
-            subtitle = "若裝置廠商額外限制背景執行，可從這裡進入系統 App 設定再調整。",
+            title = appString(Res.string.auto_18d17b4f1c),
+            subtitle = appString(Res.string.auto_2114b8c90d),
             status = BackgroundAccessRepository.SetupStatus.Info,
-            actionLabel = "前往",
+            actionLabel = appString(Res.string.auto_60233828b6),
             action = BackgroundAccessRepository.SetupAction.OpenAppSettings,
         )
         val dontKillMyAppItem = BackgroundAccessRepository.SetupItem(
-            title = "廠商背景限制說明",
-            subtitle = "部分品牌會額外限制背景同步。若你已開通知與電池最佳化，但任務仍常被中止，請查看對應機型說明。",
+            title = appString(Res.string.auto_c96782a112),
+            subtitle = appString(Res.string.auto_b2f73ce461),
             status = BackgroundAccessRepository.SetupStatus.Info,
-            actionLabel = "查看",
+            actionLabel = appString(Res.string.auto_607e7a4f37),
             action = BackgroundAccessRepository.SetupAction.OpenDontKillMyApp,
         )
 
@@ -149,15 +153,17 @@ class AndroidBackgroundAccessRepository(
             it.status == BackgroundAccessRepository.SetupStatus.Recommended
         }
         val summary = when {
-            requiredMissingCount > 0 -> "目前缺少 $requiredMissingCount 項必要權限。處理完後，背景同步通知才能正常顯示。"
-            recommendedCount > 0 -> "必要權限已具備，但還有 $recommendedCount 項建議設定，可降低背景同步被系統中止的機率。"
-            else -> "目前背景同步所需的主要存取都已就緒。"
+            requiredMissingCount > 0 -> appString(Res.string.background_access_required_missing, requiredMissingCount)
+            recommendedCount > 0 -> appString(Res.string.background_access_recommended_missing, recommendedCount)
+            else -> appString(Res.string.auto_c3dd2b4e97)
         }
 
         return BackgroundAccessRepository.SetupState(
             summary = summary,
             items = listOf(notificationItem, batteryItem, appSettingsItem, dontKillMyAppItem),
-            platformNote = "Android 的背景同步依賴前景通知。開始同步後，只要通知已成功出現，再縮小 App 也能持續執行。",
+            platformNote = appString(Res.string.auto_64afbee29e),
         )
     }
 }
+
+

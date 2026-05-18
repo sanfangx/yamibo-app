@@ -1,4 +1,8 @@
-package me.thenano.yamibo.yamibo_app.history.components
+﻿package me.thenano.yamibo.yamibo_app.history.components
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import YamiboIcons
 import androidx.compose.animation.core.animateFloatAsState
@@ -41,7 +45,6 @@ import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository.TagMangaRea
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.util.rememberImageRequest
 import org.jetbrains.compose.resources.painterResource
-import yamibo_app.composeapp.generated.resources.Res
 import yamibo_app.composeapp.generated.resources.book
 
 @Composable
@@ -60,7 +63,7 @@ fun TagMangaHistoryCard(
     val colors = YamiboTheme.colors
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
-    val timingSummary = "最近閱讀 $timeLabel"
+    val timingSummary = appString(Res.string.history_recent_read_time, timeLabel)
     val scale by animateFloatAsState(
         targetValue = if (isPressed) 0.97f else 1f,
         animationSpec = tween(150)
@@ -149,7 +152,7 @@ fun TagMangaHistoryCard(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
-                val progress = "第 ${history.threadImagePageIndex + 1} / ${history.threadImageTotalPages} 頁"
+                val progress = appString(Res.string.common_current_page_total, history.threadImagePageIndex + 1, history.threadImageTotalPages)
                 Text(
                     text = progress,
                     fontSize = 12.sp,
@@ -188,7 +191,7 @@ fun TagMangaHistoryCard(
                     ) {
                         Icon(
                             imageVector = YamiboIcons.Trashcan,
-                            contentDescription = "刪除",
+                            contentDescription = appString(Res.string.common_delete),
                             modifier = Modifier.size(16.dp),
                             tint = colors.textDark.copy(alpha = 0.4f)
                         )
@@ -198,3 +201,6 @@ fun TagMangaHistoryCard(
         }
     }
 }
+
+
+

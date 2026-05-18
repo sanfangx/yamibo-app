@@ -1,4 +1,8 @@
-package me.thenano.yamibo.yamibo_app.thread.reader.components.overlay
+﻿package me.thenano.yamibo.yamibo_app.thread.reader.components.overlay
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import YamiboIcons
 import androidx.compose.animation.AnimatedVisibility
@@ -51,7 +55,7 @@ fun ReaderFloatButtons(
                         .size(56.dp)
                         .background(colors.brownPrimary.copy(alpha = 0.2f), CircleShape)
                 ) {
-                    Icon(imageVector = YamiboIcons.Reload, contentDescription = "重新整理", tint = colors.brownPrimary, modifier = Modifier.size(24.dp))
+                    Icon(imageVector = YamiboIcons.Reload, contentDescription = appString(Res.string.auto_68ca893a48), tint = colors.brownPrimary, modifier = Modifier.size(24.dp))
                 }
                 IconButton(
                     onClick = onSettings,
@@ -59,7 +63,7 @@ fun ReaderFloatButtons(
                         .size(56.dp)
                         .background(colors.brownPrimary.copy(alpha = 0.2f), CircleShape)
                 ) {
-                    Icon(imageVector = YamiboIcons.Setting, contentDescription = "設定", tint = colors.brownPrimary, modifier = Modifier.size(28.dp))
+                    Icon(imageVector = YamiboIcons.Setting, contentDescription = appString(Res.string.settings_title), tint = colors.brownPrimary, modifier = Modifier.size(28.dp))
                 }
             }
         }
@@ -72,7 +76,7 @@ fun ReaderFloatButtons(
                     .size(56.dp)
                     .background(colors.brownPrimary.copy(alpha = 0.2f), CircleShape)
             ) {
-                Icon(imageVector = YamiboIcons.Book, contentDescription = "漫畫閱讀模式", tint = colors.brownPrimary, modifier = Modifier.size(24.dp))
+                Icon(imageVector = YamiboIcons.Book, contentDescription = appString(Res.string.auto_70a72e1083), tint = colors.brownPrimary, modifier = Modifier.size(24.dp))
             }
         }
     }

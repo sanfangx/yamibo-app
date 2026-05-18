@@ -1,4 +1,8 @@
-package me.thenano.yamibo.yamibo_app.thread.detail.tag.components
+﻿package me.thenano.yamibo.yamibo_app.thread.detail.tag.components
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import YamiboIcons
 import androidx.compose.foundation.layout.Arrangement
@@ -35,7 +39,6 @@ import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.thread.detail.components.DetailNoteActionButton
 import me.thenano.yamibo.yamibo_app.util.rememberImageRequest
 import org.jetbrains.compose.resources.painterResource
-import yamibo_app.composeapp.generated.resources.Res
 import yamibo_app.composeapp.generated.resources.book
 
 @Composable
@@ -120,7 +123,7 @@ fun TagDetailHeaderCard(
                         color = colors.brownDeep.copy(alpha = 0.12f)
                     ) {
                         Text(
-                            text = "#標籤漫畫",
+                            text = appString(Res.string.auto_a87e69de55),
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                             fontSize = 11.sp,
                             color = colors.brownDeep
@@ -131,7 +134,7 @@ fun TagDetailHeaderCard(
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = "漫畫模式",
+                            text = appString(Res.string.auto_2064156d61),
                             fontSize = 13.sp,
                             color = colors.brownPrimary.copy(alpha = 0.85f)
                         )
@@ -178,7 +181,7 @@ fun TagDetailHeaderCard(
                     Box(Modifier.padding(10.dp), contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = YamiboIcons.Share,
-                            contentDescription = "分享",
+                            contentDescription = appString(Res.string.auto_c31f48f84e),
                             modifier = Modifier.size(22.dp),
                             tint = colors.brownDeep
                         )
@@ -198,7 +201,7 @@ fun TagDetailHeaderCard(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = if (hasReadingHistory) "繼續閱讀" else "開始閱讀",
+                            text = if (hasReadingHistory) appString(Res.string.auto_98c70f280f) else appString(Res.string.auto_5d9fd81879),
                             color = Color.White,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.SemiBold
@@ -225,7 +228,7 @@ fun TagDetailHeaderCard(
             }
 
             Text(
-                text = "星星按鈕可直接收藏，長按可指定小集合",
+                text = appString(Res.string.auto_db62dc5b52),
                 modifier = Modifier.padding(top = 8.dp),
                 fontSize = 10.sp,
                 color = colors.brownPrimary.copy(alpha = 0.45f)
@@ -233,3 +236,4 @@ fun TagDetailHeaderCard(
         }
     }
 }
+

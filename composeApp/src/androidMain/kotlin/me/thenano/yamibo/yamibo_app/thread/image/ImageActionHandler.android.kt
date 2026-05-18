@@ -1,4 +1,8 @@
-package me.thenano.yamibo.yamibo_app.thread.image
+﻿package me.thenano.yamibo.yamibo_app.thread.image
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -65,11 +69,11 @@ private suspend fun downloadImage(context: Context, url: String, cookie: String,
                     return@withContext file
                 }
             }
-            withContext(Dispatchers.Main) { Toast.makeText(context, "下載圖片失敗", Toast.LENGTH_SHORT).show() }
+            withContext(Dispatchers.Main) { Toast.makeText(context, appString(Res.string.auto_b957c32311), Toast.LENGTH_SHORT).show() }
             null
         } catch (e: Exception) {
             e.printStackTrace()
-            withContext(Dispatchers.Main) { Toast.makeText(context, "下載圖片失敗", Toast.LENGTH_SHORT).show() }
+            withContext(Dispatchers.Main) { Toast.makeText(context, appString(Res.string.auto_b957c32311), Toast.LENGTH_SHORT).show() }
             null
         }
     }
@@ -81,7 +85,7 @@ actual suspend fun copyImageToClipboard(context: PlatformContext, url: String, c
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     val clip = ClipData.newUri(context.contentResolver, "Image", uri)
     clipboard.setPrimaryClip(clip)
-    withContext(Dispatchers.Main) { Toast.makeText(context, "已複製圖片", Toast.LENGTH_SHORT).show() }
+    withContext(Dispatchers.Main) { Toast.makeText(context, appString(Res.string.auto_77feb8bc3d), Toast.LENGTH_SHORT).show() }
 }
 
 actual suspend fun shareImageToApp(context: PlatformContext, url: String, cookie: String, referer: String) {
@@ -94,7 +98,7 @@ actual suspend fun shareImageToApp(context: PlatformContext, url: String, cookie
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
     // Context from Compose might not be an Activity context, so add FLAG_ACTIVITY_NEW_TASK
-    val chooser = Intent.createChooser(intent, "分享圖片").apply {
+    val chooser = Intent.createChooser(intent, appString(Res.string.auto_c3277e4b35)).apply {
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
     context.startActivity(chooser)
@@ -149,29 +153,30 @@ actual suspend fun saveImageToGallery(context: PlatformContext, url: String, coo
                         
                         if (handled) {
                             withContext(Dispatchers.Main) { 
-                                Toast.makeText(context, "已儲存圖片至相簿", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, appString(Res.string.auto_58ddff1506), Toast.LENGTH_SHORT).show()
                             }
                         } else {
                             withContext(Dispatchers.Main) { 
-                                Toast.makeText(context, "儲存失敗", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, appString(Res.string.auto_24510f9f72), Toast.LENGTH_SHORT).show()
                             }
                         }
                     }
                 } else {
                     withContext(Dispatchers.Main) { 
-                        Toast.makeText(context, "儲存失敗", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, appString(Res.string.auto_24510f9f72), Toast.LENGTH_SHORT).show()
                     }
                 }
             } else {
                 withContext(Dispatchers.Main) { 
-                    Toast.makeText(context, "下載失敗", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, appString(Res.string.auto_68eaa7830f), Toast.LENGTH_SHORT).show()
                 }
             }
         } catch (e: Exception) {
             e.printStackTrace()
             withContext(Dispatchers.Main) { 
-                Toast.makeText(context, "下載失敗", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, appString(Res.string.auto_68eaa7830f), Toast.LENGTH_SHORT).show()
             }
         }
     }
 }
+

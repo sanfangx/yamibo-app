@@ -1,4 +1,9 @@
-package me.thenano.yamibo.yamibo_app.favorite.components
+﻿package me.thenano.yamibo.yamibo_app.favorite.components
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import me.thenano.yamibo.yamibo_app.i18n.localizedAppMessage
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -96,11 +101,11 @@ internal fun CollectionCardUi(collection: FavoriteCollectionWithItems, selected:
             PreviewGrid(collection.items, collection.collection.colorKey)
             Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(collection.collection.name, color = colors.brownDeep, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                Text(localizedAppMessage(collection.collection.name), color = colors.brownDeep, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                 AnimatedVisibility(visible = selected, enter = fadeIn() + scaleIn(), exit = fadeOut() + scaleOut()) { SelectedDot() }
             }
             Spacer(Modifier.height(4.dp))
-            Text("${collection.items.size} 項", color = colors.textDark.copy(alpha = 0.55f), fontSize = 11.sp)
+            Text(appString(Res.string.common_item_count, collection.items.size), color = colors.textDark.copy(alpha = 0.55f), fontSize = 11.sp)
         }
     }
 }
@@ -164,11 +169,11 @@ internal fun ItemCardUi(item: FavoriteItem, selected: Boolean, selecting: Boolea
             Text(item.title, color = colors.textDark, fontSize = 13.sp, fontWeight = FontWeight.Medium)
             val timingSummary = buildString {
                 if (effectiveLastReadAt != null) {
-                    append("最近閱讀 ${formatFavoriteTime(effectiveLastReadAt)}")
+                    append(appString(Res.string.history_recent_read_time, formatFavoriteTime(effectiveLastReadAt)))
                 }
                 if (effectiveLastUpdatedAt != null) {
                     if (isNotEmpty()) append(" / ")
-                    append("最後更新 ${formatFavoriteTime(effectiveLastUpdatedAt)}")
+                    append(appString(Res.string.favorite_last_updated_time, formatFavoriteTime(effectiveLastUpdatedAt)))
                 }
             }.takeIf { it.isNotBlank() }
             if (timingSummary != null) {
@@ -205,8 +210,8 @@ internal fun CollectionRowCardUi(collection: FavoriteCollectionWithItems, showPr
                 }
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(collection.collection.name, color = colors.brownDeep, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Text("${collection.items.size} 項收藏", color = colors.textDark.copy(alpha = 0.62f), fontSize = 13.sp)
+                Text(localizedAppMessage(collection.collection.name), color = colors.brownDeep, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(appString(Res.string.common_favorite_item_count, collection.items.size), color = colors.textDark.copy(alpha = 0.62f), fontSize = 13.sp)
                 collection.items.firstOrNull()?.forumName?.takeIf { it.isNotBlank() }?.let {
                     Text("#$it", color = colors.textDark.copy(alpha = 0.52f), fontSize = 12.sp)
                 }
@@ -223,11 +228,11 @@ internal fun ItemRowCardUi(item: FavoriteItem, showCover: Boolean, selected: Boo
     val effectiveLastUpdatedAt = item.lastUpdatedTime?.takeIf { it > 0L }
     val timingSummary = buildString {
         if (effectiveLastReadAt != null) {
-            append("最近閱讀 ${formatFavoriteTime(effectiveLastReadAt)}")
+            append(appString(Res.string.history_recent_read_time, formatFavoriteTime(effectiveLastReadAt)))
         }
         if (effectiveLastUpdatedAt != null) {
             if (isNotEmpty()) append(" / ")
-            append("最後更新 ${formatFavoriteTime(effectiveLastUpdatedAt)}")
+            append(appString(Res.string.favorite_last_updated_time, formatFavoriteTime(effectiveLastUpdatedAt)))
         }
     }.takeIf { it.isNotBlank() }
     Surface(
@@ -340,10 +345,10 @@ internal fun formatFavoriteTime(timestamp: Long): String {
     val hours = minutes / 60L
     val days = hours / 24L
     return when {
-        days > 0L -> "${days}天前"
-        hours > 0L -> "${hours}小時前"
-        minutes > 0L -> "${minutes}分鐘前"
-        else -> "剛剛"
+        days > 0L -> appString(Res.string.time_days_ago, days)
+        hours > 0L -> appString(Res.string.time_hours_ago, hours)
+        minutes > 0L -> appString(Res.string.time_minutes_ago, minutes)
+        else -> appString(Res.string.auto_7a453f8268)
     }
 }
 
@@ -354,3 +359,6 @@ fun collectionColor(colorKey: String): Color = when (colorKey) {
     "gold" -> Color(0xFFD6B46F)
     else -> Color(0xFFB4977A)
 }
+
+
+

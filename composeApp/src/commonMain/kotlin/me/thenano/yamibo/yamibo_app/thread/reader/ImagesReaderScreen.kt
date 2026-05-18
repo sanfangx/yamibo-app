@@ -1,4 +1,8 @@
-package me.thenano.yamibo.yamibo_app.thread.reader
+﻿package me.thenano.yamibo.yamibo_app.thread.reader
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import YamiboIcons
 import androidx.compose.animation.*
@@ -155,7 +159,7 @@ fun ImagesReaderScreen(
                     activeTid = currentThreads.first().tid
                 }
             } else {
-                snackbarHostState.showSnackbar("無法載入閱讀目錄")
+                snackbarHostState.showSnackbar(appString(Res.string.auto_e98055d239))
             }
         }
     }
@@ -172,7 +176,7 @@ fun ImagesReaderScreen(
                 prevThreadTitle = currentThreads.getOrNull(currentThreadIndex() - 1)?.title
             } else if (currentTagPage > 1) {
                 hasPrevChapter = true
-                prevThreadTitle = if (isLoadingImages) "正在載入上一個分頁..." else "上一個分頁"
+                prevThreadTitle = if (isLoadingImages) appString(Res.string.auto_13ed2d64e1) else appString(Res.string.auto_0d1c6abd83)
             } else {
                 hasPrevChapter = false
                 prevThreadTitle = null
@@ -183,7 +187,7 @@ fun ImagesReaderScreen(
                 nextThreadTitle = currentThreads.getOrNull(currentThreadIndex() + 1)?.title
             } else if (currentTagPage < (tagTotalPages ?: 1)) {
                 hasNextChapter = true
-                nextThreadTitle = if (isLoadingImages) "正在載入下一個分頁..." else "下一個分頁"
+                nextThreadTitle = if (isLoadingImages) appString(Res.string.auto_6344c52428) else appString(Res.string.auto_4b2f47414a)
             } else {
                 hasNextChapter = false
                 nextThreadTitle = null
@@ -420,7 +424,7 @@ fun ImagesReaderScreen(
                         actualImageList = emptyList()
                         actualPostId = null
                     } else {
-                        snackbarHostState.showSnackbar("無法載入下一頁")
+                        snackbarHostState.showSnackbar(appString(Res.string.auto_836c5c49e3))
                     }
                 }
                 delay(600.milliseconds)
@@ -455,7 +459,7 @@ fun ImagesReaderScreen(
                         actualPostId = null
                         startFromLastPage = true
                     } else {
-                        snackbarHostState.showSnackbar("無法載入上一頁")
+                        snackbarHostState.showSnackbar(appString(Res.string.auto_c4a4595f92))
                     }
                 }
                 delay(600.milliseconds)
@@ -803,13 +807,13 @@ fun ImagesReaderScreen(
                                             modifier = Modifier.size(48.dp)
                                         )
                                         Spacer(Modifier.height(16.dp))
-                                        Text(text = "沒有找到圖片", color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp)
+                                        Text(text = appString(Res.string.auto_e612433660), color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp)
                                         Spacer(Modifier.height(16.dp))
                                         OutlinedButton(
                                             onClick = { retryTrigger++ },
                                             colors = outlinedButtonColors(contentColor = Color.White.copy(alpha = 0.8f))
                                         ) {
-                                            Text("重新載入")
+                                            Text(appString(Res.string.auto_d358e48704))
                                         }
                                     }
                                 }
@@ -819,7 +823,7 @@ fun ImagesReaderScreen(
                         itemsIndexed(actualImageList) { index, url ->
                             ImageViewer(
                                 url = url,
-                                contentDescription = "第${index + 1}頁",
+                                contentDescription = appString(Res.string.common_page_number_compact, index + 1),
                                 contentScale = ContentScale.FillWidth,
                                 modifier = Modifier.fillMaxWidth(),
                                 enableContextMenu = false,
@@ -910,13 +914,13 @@ fun ImagesReaderScreen(
                                                 modifier = Modifier.size(48.dp)
                                             )
                                             Spacer(Modifier.height(16.dp))
-                                            Text(text = "沒有找到圖片", color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp)
+                                            Text(text = appString(Res.string.auto_e612433660), color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp)
                                             Spacer(Modifier.height(16.dp))
                                             OutlinedButton(
                                                 onClick = { retryTrigger++ },
                                                 colors = outlinedButtonColors(contentColor = Color.White.copy(alpha = 0.8f))
                                             ) {
-                                                Text("重新載入")
+                                                Text(appString(Res.string.auto_d358e48704))
                                             }
                                         }
                                     }
@@ -924,7 +928,7 @@ fun ImagesReaderScreen(
                             } else {
                                 ImageViewer(
                                     url = actualImageList.getOrElse(page) { "" },
-                                    contentDescription = "第${page + 1}頁",
+                                    contentDescription = appString(Res.string.common_page_number_compact, page + 1),
                                     contentScale = ContentScale.Fit,
                                     modifier = Modifier.fillMaxSize(),
                                     enableContextMenu = false,
@@ -1099,3 +1103,5 @@ fun ImagesReaderScreen(
         )
     }
 }
+
+

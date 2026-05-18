@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app
+﻿package me.thenano.yamibo.yamibo_app
 
 import YamiboIcons
 import androidx.compose.animation.animateColorAsState
@@ -38,13 +38,17 @@ import me.thenano.yamibo.yamibo_app.navigation.decodeRestorePayload
 import me.thenano.yamibo.yamibo_app.navigation.restoreSnapshot
 import me.thenano.yamibo.yamibo_app.profile.ProfilePage
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
-enum class MainTab(val title: String, val icon: ImageVector) {
-    Home("首页", YamiboIcons.Home),
-    History("紀錄", YamiboIcons.History),
-    Message("消息", YamiboIcons.Message),
-    Favorite("收藏", YamiboIcons.Explore),
-    Profile("我的", YamiboIcons.Profile)
+enum class MainTab(val icon: ImageVector) {
+    Home(YamiboIcons.Home),
+    History(YamiboIcons.History),
+    Message(YamiboIcons.Message),
+    Favorite(YamiboIcons.Explore),
+    Profile(YamiboIcons.Profile)
 }
 
 @Serializable
@@ -75,6 +79,7 @@ class IMainScreen(val initialTab: MainTab = MainTab.Home) : RestorableNavigatabl
 }
 
 data class BottomNavItem(
+    val tab: MainTab,
     val title: String,
     val icon: ImageVector,
     val showBadge: Boolean = false,
@@ -109,18 +114,20 @@ fun MainScreen(initialTab: MainTab = MainTab.Home) {
             MainScreenBottomBar(
                 tabs = MainTab.entries.map {
                     BottomNavItem(
-                        title = it.title,
+                        tab = it,
+                        title = stringResource(it.titleResource()),
                         icon = it.icon,
                         showBadge = it == MainTab.Message && hasNewMessage,
                     )
                 },
                 currentTab = BottomNavItem(
-                    title = currentTab.title,
+                    tab = currentTab,
+                    title = stringResource(currentTab.titleResource()),
                     icon = currentTab.icon,
                     showBadge = currentTab == MainTab.Message && hasNewMessage,
                 ),
                 onTabSelected = { selected ->
-                    val newTab = MainTab.entries.first { it.title == selected.title }
+                    val newTab = selected.tab
                     if (newTab == MainTab.History && currentTab == MainTab.History) {
                         reTapHistoryToken++
                     }
@@ -167,6 +174,16 @@ fun MainScreen(initialTab: MainTab = MainTab.Home) {
                 }
             }
         }
+    }
+}
+
+private fun MainTab.titleResource(): StringResource {
+    return when (this) {
+        MainTab.Home -> Res.string.main_home
+        MainTab.History -> Res.string.main_history
+        MainTab.Message -> Res.string.main_message
+        MainTab.Favorite -> Res.string.main_favorite
+        MainTab.Profile -> Res.string.main_profile
     }
 }
 

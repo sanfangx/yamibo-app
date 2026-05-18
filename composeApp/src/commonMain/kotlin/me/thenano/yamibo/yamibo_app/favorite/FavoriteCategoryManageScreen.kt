@@ -1,4 +1,9 @@
-package me.thenano.yamibo.yamibo_app.favorite
+﻿package me.thenano.yamibo.yamibo_app.favorite
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import me.thenano.yamibo.yamibo_app.i18n.localizedAppMessage
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import YamiboIcons
 import androidx.compose.foundation.BorderStroke
@@ -109,7 +114,7 @@ internal fun FavoriteCategoryManageScreen() {
                 favoriteRepository.getCategoryDeletePreview(categoryId)
             } ?: return@launch
             if (preview.isDefaultCategory) {
-                snackbarHostState.showSnackbar("${FavoriteRepositoryContract.DEFAULT_CATEGORY_NAME}類別不可刪除")
+                snackbarHostState.showSnackbar(appString(Res.string.favorite_default_category_cannot_delete, FavoriteRepositoryContract.DEFAULT_CATEGORY_NAME))
                 return@launch
             }
             moveItemsToDefaultOnDelete = true
@@ -155,7 +160,7 @@ internal fun FavoriteCategoryManageScreen() {
             TopAppBar(
                 title = {
                     Text(
-                        text = "管理類別",
+                        text = appString(Res.string.auto_314a155d2c),
                         color = Color.White,
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp,
@@ -173,7 +178,7 @@ internal fun FavoriteCategoryManageScreen() {
                         shape = RoundedCornerShape(12.dp),
                     ) {
                         Text(
-                            text = "新增類別",
+                            text = appString(Res.string.auto_dead1fe86c),
                             color = Color.White,
                             modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
                             fontWeight = FontWeight.SemiBold,
@@ -296,7 +301,7 @@ internal fun FavoriteCategoryManageScreen() {
                     shape = RoundedCornerShape(12.dp),
                 ) {
                     Text(
-                        text = "刪除",
+                        text = appString(Res.string.common_delete),
                         color = Color.White,
                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
                         fontWeight = FontWeight.SemiBold,
@@ -311,7 +316,7 @@ internal fun FavoriteCategoryManageScreen() {
                     border = BorderStroke(1.dp, colors.brownPrimary.copy(alpha = 0.18f)),
                 ) {
                     Text(
-                        text = "返回",
+                        text = appString(Res.string.auto_5f411223ca),
                         color = colors.brownDeep,
                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
                         fontWeight = FontWeight.SemiBold,
@@ -319,16 +324,16 @@ internal fun FavoriteCategoryManageScreen() {
                 }
             },
             title = {
-                Text("刪除類別", color = colors.brownDeep, fontWeight = FontWeight.Bold)
+                Text(appString(Res.string.auto_1e98e71518), color = colors.brownDeep, fontWeight = FontWeight.Bold)
             },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
-                        text = "「${preview.categoryName}」目前包含 ${preview.totalDistinctItemCount} 筆收藏與 ${preview.collectionCount} 個集合。",
+                        text = appString(Res.string.favorite_category_preview_summary, localizedAppMessage(preview.categoryName), preview.totalDistinctItemCount, preview.collectionCount),
                         color = colors.textDark,
                     )
                     Text(
-                        text = "直屬收藏 ${preview.directItemCount} 筆，集合內收藏 ${preview.collectionItemCount} 筆。",
+                        text = appString(Res.string.favorite_category_preview_detail, preview.directItemCount, preview.collectionItemCount),
                         color = colors.textDark.copy(alpha = 0.72f),
                         fontSize = 13.sp,
                     )
@@ -346,7 +351,7 @@ internal fun FavoriteCategoryManageScreen() {
                             ),
                         )
                         Text(
-                            text = "將當前所有收藏移動到${FavoriteRepositoryContract.DEFAULT_CATEGORY_NAME}",
+                            text = appString(Res.string.favorite_move_all_to_category, FavoriteRepositoryContract.DEFAULT_CATEGORY_NAME),
                             color = colors.textDark,
                             fontSize = 14.sp,
                         )
@@ -400,9 +405,9 @@ private fun FavoriteCategoryCard(
             Text("⋮⋮", color = colors.brownDeep.copy(alpha = 0.8f), fontSize = 20.sp, fontWeight = FontWeight.Bold)
             Box(modifier = Modifier.size(10.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(category.name, color = colors.textDark, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                Text(localizedAppMessage(category.name), color = colors.textDark, fontWeight = FontWeight.Bold, fontSize = 18.sp)
             }
-            ReorderActionChip(text = "編輯", onClick = onEdit)
+            ReorderActionChip(text = appString(Res.string.auto_aa3a615d69), onClick = onEdit)
             Box(modifier = Modifier.size(8.dp))
             if (isDefaultCategory) {
                 Surface(
@@ -419,8 +424,10 @@ private fun FavoriteCategoryCard(
                     )
                 }
             } else {
-                ReorderActionChip(text = "刪除", onClick = onDelete, emphasized = true)
+                ReorderActionChip(text = appString(Res.string.common_delete), onClick = onDelete, emphasized = true)
             }
         }
     }
 }
+
+

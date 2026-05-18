@@ -1,4 +1,8 @@
-package me.thenano.yamibo.yamibo_app.message
+﻿package me.thenano.yamibo.yamibo_app.message
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -55,7 +59,8 @@ internal fun NoticeCard(item: NoticeItem, onAction: () -> Unit) {
                 }
             }
         }
-        SmallActionButton("屏蔽", onAction)
+        SmallActionButton(appString(Res.string.auto_dd4e0b5788), onAction)
     }
     HorizontalDivider(color = colors.brownLight.copy(alpha = 0.35f))
 }
+

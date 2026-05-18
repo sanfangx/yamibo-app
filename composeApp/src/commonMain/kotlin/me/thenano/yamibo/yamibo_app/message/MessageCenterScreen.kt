@@ -1,4 +1,10 @@
-package me.thenano.yamibo.yamibo_app.message
+﻿package me.thenano.yamibo.yamibo_app.message
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import me.thenano.yamibo.yamibo_app.i18n.localizedMessage
+import me.thenano.yamibo.yamibo_app.i18n.localizedLabel
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import YamiboIcons
 import androidx.compose.animation.AnimatedContent
@@ -53,9 +59,9 @@ import me.thenano.yamibo.yamibo_app.util.state
 import me.thenano.yamibo.yamibo_app.webview.action.IActionWebView
 
 enum class MessageCenterTab(val title: String) {
-    Updates("更新"),
-    PrivateMessages("我的消息"),
-    Notices("我的提醒"),
+    Updates(appString(Res.string.auto_32ac152be1)),
+    PrivateMessages(appString(Res.string.auto_3f5a6da489)),
+    Notices(appString(Res.string.auto_ea5944ab0c)),
 }
 
 private sealed interface MessageCenterState {
@@ -134,7 +140,7 @@ fun MessageCenterScreen(
                 }
                 MessageCenterState.Success(content)
             }
-            else -> MessageCenterState.Error(result.message())
+            else -> MessageCenterState.Error(result.localizedMessage())
         }
     }
 
@@ -234,14 +240,14 @@ fun MessageCenterScreen(
                                 scope.launch {
                                     favoriteUpdateRunner.cancelUpdate(runId)
                                     loadTab(MessageCenterTab.Updates, 1, preferCache = false)
-                                    snackbarHostState.showSnackbar("已取消收藏更新檢查", duration = SnackbarDuration.Short)
+                                    snackbarHostState.showSnackbar(appString(Res.string.auto_f7dfdce6da), duration = SnackbarDuration.Short)
                                 }
                             },
                             onInterruptFavoriteUpdate = { runId ->
                                 scope.launch {
                                     favoriteUpdateRunner.interruptUpdate(runId)
                                     loadTab(MessageCenterTab.Updates, 1, preferCache = false)
-                                    snackbarHostState.showSnackbar("已中斷收藏更新檢查", duration = SnackbarDuration.Short)
+                                    snackbarHostState.showSnackbar(appString(Res.string.auto_b64bd6687a), duration = SnackbarDuration.Short)
                                 }
                             },
                             onResumeFavoriteUpdate = {
@@ -250,13 +256,13 @@ fun MessageCenterScreen(
                                         is FavoriteUpdateRunner.LaunchResult.Started -> {
                                             appSettingsRepository.favoriteUpdateHiddenRunId.setValue("")
                                             loadTab(MessageCenterTab.Updates, 1, preferCache = false)
-                                            snackbarHostState.showSnackbar("繼續檢查收藏更新", duration = SnackbarDuration.Short)
+                                            snackbarHostState.showSnackbar(appString(Res.string.auto_40cf859ed7), duration = SnackbarDuration.Short)
                                         }
                                         is FavoriteUpdateRunner.LaunchResult.Rejected -> {
                                             snackbarHostState.showSnackbar(result.reason, duration = SnackbarDuration.Short)
                                         }
                                         null -> {
-                                            snackbarHostState.showSnackbar("沒有可繼續的收藏更新任務", duration = SnackbarDuration.Short)
+                                            snackbarHostState.showSnackbar(appString(Res.string.auto_68b66b6eb1), duration = SnackbarDuration.Short)
                                         }
                                     }
                                 }
@@ -267,7 +273,7 @@ fun MessageCenterScreen(
                                     appSettingsRepository.favoriteUpdateInterval.setValue(interval)
                                     favoriteUpdateRunner.schedulePeriodicUpdate(interval)
                                     snackbarHostState.showSnackbar(
-                                        "刷新週期已改為 ${interval.label}",
+                                        appString(Res.string.message_update_interval_changed, interval.localizedLabel()),
                                         duration = SnackbarDuration.Short,
                                     )
                                 }
@@ -283,7 +289,7 @@ fun MessageCenterScreen(
                             onOpenPrivateMessage = { user -> navigator.navigate(IPrivateMessageScreen(user.uid, user.name)) },
                             onMessageAction = {
                                 scope.launch {
-                                    snackbarHostState.showSnackbar("TODO: 消息互動尚未接入", duration = SnackbarDuration.Short)
+                                    snackbarHostState.showSnackbar(appString(Res.string.auto_80a906bd32), duration = SnackbarDuration.Short)
                                 }
                             },
                         )
@@ -296,16 +302,16 @@ fun MessageCenterScreen(
     if (showGlobalRefreshConfirm) {
         AlertDialog(
             onDismissRequest = { showGlobalRefreshConfirm = false },
-            title = { Text("全域刷新收藏更新") },
-            text = { Text("將重新檢查所有收藏並建立新的更新任務。網站維護中可能會產生大量錯誤記錄。") },
+            title = { Text(appString(Res.string.auto_dc2668b3dd)) },
+            text = { Text(appString(Res.string.auto_e2e8682fec)) },
             confirmButton = {
-                YamiboActionChip(text = "開始刷新", onClick = {
+                YamiboActionChip(text = appString(Res.string.auto_881d186bab), onClick = {
                     showGlobalRefreshConfirm = false
                     scope.launch {
                         when (val result = favoriteUpdateRunner.startGlobalRefresh()) {
                             is FavoriteUpdateRunner.LaunchResult.Started -> {
                                 appSettingsRepository.favoriteUpdateHiddenRunId.setValue("")
-                                snackbarHostState.showSnackbar("開始全域刷新收藏更新", duration = SnackbarDuration.Short)
+                                snackbarHostState.showSnackbar(appString(Res.string.auto_82daad5e9a), duration = SnackbarDuration.Short)
                             }
                             is FavoriteUpdateRunner.LaunchResult.Rejected -> {
                                 snackbarHostState.showSnackbar(result.reason, duration = SnackbarDuration.Short)
@@ -314,7 +320,7 @@ fun MessageCenterScreen(
                     }
                 })
             },
-            dismissButton = { YamiboActionChip(text = "取消", onClick = { showGlobalRefreshConfirm = false }) },
+            dismissButton = { YamiboActionChip(text = appString(Res.string.common_cancel), onClick = { showGlobalRefreshConfirm = false }) },
             containerColor = colors.creamSurface,
         )
     }
@@ -326,7 +332,7 @@ private fun MessageCenterMainTopBar(
     onSpaceClick: () -> Unit,
 ) {
     val colors = YamiboTheme.colors
-    YamiboMainTabTopBar(title = "我的消息") {
+    YamiboMainTabTopBar(title = appString(Res.string.auto_3f5a6da489)) {
         Surface(onClick = onSpaceClick, shape = RoundedCornerShape(18.dp), color = Color.Transparent) {
             Row(
                 modifier = Modifier.padding(start = 6.dp, end = 2.dp, top = 4.dp, bottom = 4.dp),
@@ -335,7 +341,7 @@ private fun MessageCenterMainTopBar(
             ) {
                 UserAvatar(profile?.avatarUrl, size = 28)
                 Text(
-                    text = "我的空間",
+                    text = appString(Res.string.auto_dc973db60a),
                     color = colors.brownDeep,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -358,7 +364,7 @@ private fun MessageCenterTopBar(
         onBack = onBack,
     ) {
         if (showEdit) {
-            YamiboTopBarIconAction(YamiboIcons.EditOrSign, "編輯", onEdit)
+            YamiboTopBarIconAction(YamiboIcons.EditOrSign, appString(Res.string.auto_aa3a615d69), onEdit)
         }
     }
 }
@@ -423,7 +429,7 @@ private suspend fun fetchContent(
     tab: MessageCenterTab,
     page: Int,
 ): YamiboResult<MessageCenterContent> = when (tab) {
-    MessageCenterTab.Updates -> YamiboResult.Failure("更新頁不需要網路載入")
+    MessageCenterTab.Updates -> YamiboResult.Failure(appString(Res.string.auto_723f6ba455))
     MessageCenterTab.PrivateMessages -> repository.fetchPrivateMessages(page).mapSuccess { MessageCenterContent.PrivateMessages(it) }
     MessageCenterTab.Notices -> repository.fetchNotices(page).mapSuccess { MessageCenterContent.Notices(it) }
 }
@@ -493,7 +499,7 @@ private fun navigateFavoriteUpdateEvent(
 
 private fun sendPrivateMessageWebView(): IActionWebView =
     IActionWebView(
-        title = "發消息",
+        title = appString(Res.string.auto_3c2c2bd849),
         initialUrl = YamiboRoute.SendPrivateMessagePage.build(),
         successCondition = { url -> isMessageListUrl(url) },
     )
@@ -508,3 +514,7 @@ private fun isMessageListUrl(url: String): Boolean {
         url.contains("do=pm") &&
         !url.contains("spacecp")
 }
+
+
+
+

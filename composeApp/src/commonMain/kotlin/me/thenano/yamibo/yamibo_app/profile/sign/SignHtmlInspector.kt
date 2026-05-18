@@ -1,4 +1,8 @@
-package me.thenano.yamibo.yamibo_app.profile.sign
+﻿package me.thenano.yamibo.yamibo_app.profile.sign
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 internal fun isCloudflareChallengeHtml(html: String): Boolean {
     val body = html.lowercase()
@@ -10,22 +14,23 @@ internal fun isCloudflareChallengeHtml(html: String): Boolean {
 }
 
 internal fun isSignPageHtml(html: String): Boolean {
-    return html.contains("点击打卡") ||
-        html.contains("打卡公告") ||
+    return html.contains(appString(Res.string.auto_367ee07acc)) ||
+        html.contains(appString(Res.string.auto_ceb6b09947)) ||
         html.contains("repairday") ||
-        html.contains("我的打卡动态")
+        html.contains(appString(Res.string.auto_4f1054038b))
 }
 
 internal fun isSignResultPageHtml(html: String): Boolean {
-    return html.contains("提示信息") && (
-        html.contains("打卡成功") ||
-            html.contains("已经打过卡") ||
-            html.contains("补签") ||
-            html.contains("返回签详情")
+    return html.contains(appString(Res.string.auto_99c74120cc)) && (
+        html.contains(appString(Res.string.auto_252f8bcda3)) ||
+            html.contains(appString(Res.string.auto_866c9ea11b)) ||
+            html.contains(appString(Res.string.auto_cadfe91096)) ||
+            html.contains(appString(Res.string.auto_226ba80c13))
         )
 }
 
 internal fun isMaintenancePageHtml(html: String): Boolean {
-    return html.contains("<title>百合会每日维护</title>") ||
-        html.contains("""<img class="pic" src="/images/backup01.jpg" alt="每日维护">""")
+    return html.contains(appString(Res.string.auto_48dd943e55)) ||
+        html.contains("""<img class="pic" src="/images/backup01.jpg" alt=appString(Res.string.auto_78838741ff)>""")
 }
+

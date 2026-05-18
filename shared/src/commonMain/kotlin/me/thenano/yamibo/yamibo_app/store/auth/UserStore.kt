@@ -18,7 +18,7 @@ interface UserStore {
             ProfilePage(
                 uid = UserId(656626),
                 username = "thenano",
-                userGroup = "百合花蕾",
+                userGroup = "Baihe",
                 adminGroup = null,
                 points = 239,
                 partner = 0,
@@ -27,7 +27,7 @@ interface UserStore {
                     "https://bbs.yamibo.com/uc_server/data/avatar/000/65/66/26_avatar_middle.jpg?ts=1725126833",
                 avatarBackgroundUrl = null,
                 signatureHtml = null,
-                gender = "保密",
+                gender = "Private",
                 birthday = "-",
                 birthplace = null,
                 education = null,

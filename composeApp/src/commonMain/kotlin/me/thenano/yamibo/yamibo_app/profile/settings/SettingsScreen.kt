@@ -24,6 +24,9 @@ import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.profile.settings.access.IBackgroundAccessSetupScreen
 import me.thenano.yamibo.yamibo_app.profile.settings.components.SettingsItem
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import org.jetbrains.compose.resources.stringResource
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,7 +39,7 @@ internal fun SettingsScreen() {
             TopAppBar(
                 title = {
                     Text(
-                        text = "設定",
+                        text = stringResource(Res.string.settings_title),
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
@@ -65,56 +68,64 @@ internal fun SettingsScreen() {
         ) {
             SettingsItem(
                 icon = YamiboIcons.Views,
-                title = "外觀",
-                subtitle = "主題色、配色與整體顯示風格",
+                title = stringResource(Res.string.settings_appearance_title),
+                subtitle = stringResource(Res.string.settings_appearance_subtitle),
                 onClick = { navigator.navigate(ISettingsCategoryScreen("appearance")) },
             )
             SettingsDivider()
 
             SettingsItem(
+                icon = YamiboIcons.Language,
+                title = stringResource(Res.string.settings_language_title),
+                subtitle = stringResource(Res.string.settings_language_subtitle),
+                onClick = { navigator.navigate(ISettingsCategoryScreen("language")) },
+            )
+            SettingsDivider()
+
+            SettingsItem(
                 icon = YamiboIcons.Book,
-                title = "小說閱讀器",
-                subtitle = "字體大小、行距與版面寬度",
+                title = stringResource(Res.string.settings_novel_reader_title),
+                subtitle = stringResource(Res.string.settings_novel_reader_subtitle),
                 onClick = { navigator.navigate(ISettingsCategoryScreen("novel_reader")) },
             )
             SettingsDivider()
 
             SettingsItem(
                 icon = YamiboIcons.Book,
-                title = "漫畫閱讀器",
-                subtitle = "閱讀模式與觸控區域設定",
+                title = stringResource(Res.string.settings_manga_reader_title),
+                subtitle = stringResource(Res.string.settings_manga_reader_subtitle),
                 onClick = { navigator.navigate(ISettingsCategoryScreen("manga_reader")) },
             )
             SettingsDivider()
 
             SettingsItem(
                 icon = YamiboIcons.Explore,
-                title = "收藏管理",
-                subtitle = "管理類別、整理排序與收藏互動設定",
+                title = stringResource(Res.string.settings_favorite_title),
+                subtitle = stringResource(Res.string.settings_favorite_subtitle),
                 onClick = { navigator.navigate(ISettingsCategoryScreen("favorite")) },
             )
             SettingsDivider()
 
             SettingsItem(
                 icon = YamiboIcons.Sync,
-                title = "通知與背景同步",
-                subtitle = "檢查通知權限、電池最佳化與背景同步所需設定",
+                title = stringResource(Res.string.settings_background_title),
+                subtitle = stringResource(Res.string.settings_background_subtitle),
                 onClick = { navigator.navigate(IBackgroundAccessSetupScreen()) },
             )
             SettingsDivider()
 
             SettingsItem(
                 icon = YamiboIcons.Storage,
-                title = "儲存空間",
-                subtitle = "緩存空間與啟動時清理設定",
+                title = stringResource(Res.string.settings_storage_title),
+                subtitle = stringResource(Res.string.settings_storage_subtitle),
                 onClick = { navigator.navigate(ISettingsCategoryScreen("storage")) },
             )
             SettingsDivider()
 
             SettingsItem(
                 icon = YamiboIcons.EditOrSign,
-                title = "簽到設定",
-                subtitle = "每日簽到模式與補簽偏好",
+                title = stringResource(Res.string.settings_sign_title),
+                subtitle = stringResource(Res.string.settings_sign_subtitle),
                 onClick = { navigator.navigate(ISettingsCategoryScreen("sign")) },
             )
         }

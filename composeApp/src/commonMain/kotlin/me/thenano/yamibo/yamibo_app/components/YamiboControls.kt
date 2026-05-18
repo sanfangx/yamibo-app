@@ -1,4 +1,8 @@
-package me.thenano.yamibo.yamibo_app.components
+﻿package me.thenano.yamibo.yamibo_app.components
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.padding
@@ -59,8 +63,8 @@ fun YamiboActionChip(
 /**
  * Small inline action button used inside cards and list rows.
  *
- * Use for secondary object actions such as "發消息", "刪除", "屏蔽",
- * "收藏", "分享", or "邀請". It is intentionally smaller than full-width
+ * Use for secondary object actions such as appString(Res.string.auto_3c2c2bd849), appString(Res.string.common_delete), appString(Res.string.auto_dd4e0b5788),
+ * appString(Res.string.main_favorite), appString(Res.string.auto_c31f48f84e), or appString(Res.string.auto_89c7338fb6). It is intentionally smaller than full-width
  * submit buttons and should not be used as the main page CTA.
  *
  * @param text Button label.
@@ -161,3 +165,4 @@ fun YamiboSmallBadge(text: String) {
         Text(text, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), color = Color.White, fontSize = 10.sp)
     }
 }
+

@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.repository.scheme
+﻿package me.thenano.yamibo.yamibo_app.repository.scheme
 
 /**
  * Theme color scheme using raw hex color values (Long).
@@ -53,7 +53,7 @@ sealed class YamiboColorScheme {
 
     /** Default Warm Brown (Light) */
     data object Default : YamiboColorScheme() {
-        override val name = "百合會"
+        override val name = "yamibo"
         override val brownDeep = 0xFF4E2A1B
         override val brownPrimary = 0xFF6D3A2B
         override val brownLight = 0xFFCCB8A8
@@ -72,7 +72,7 @@ sealed class YamiboColorScheme {
 
     /** Default Dark — dark version of warm brown */
     data object DefaultDark : YamiboColorScheme() {
-        override val name = "百合會(暗色)"
+        override val name = "yamibo_dark"
         override val brownDeep = 0xFF2C1810
         override val brownPrimary = 0xFF8B5E3C
         override val brownLight = 0xFF6B5545
@@ -90,7 +90,7 @@ sealed class YamiboColorScheme {
 
     /** Classic Black */
     data object ClassicBlack : YamiboColorScheme() {
-        override val name = "傳統黑"
+        override val name = "classic_black"
         override val brownDeep = 0xFF1A1A1A
         override val brownPrimary = 0xFF555555
         override val brownLight = 0xFF666666
@@ -108,7 +108,7 @@ sealed class YamiboColorScheme {
 
     /** Classic White */
     data object ClassicWhite : YamiboColorScheme() {
-        override val name = "傳統白"
+        override val name = "classic_white"
         override val brownDeep = 0xFF2C2C2C
         override val brownPrimary = 0xFF555555
         override val brownLight = 0xFFBBBBBB

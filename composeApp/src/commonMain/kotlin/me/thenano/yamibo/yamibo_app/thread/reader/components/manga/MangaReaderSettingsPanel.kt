@@ -1,4 +1,9 @@
-package me.thenano.yamibo.yamibo_app.thread.reader.components.manga
+﻿package me.thenano.yamibo.yamibo_app.thread.reader.components.manga
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import me.thenano.yamibo.yamibo_app.i18n.localizedLabel
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
@@ -66,22 +71,22 @@ fun MangaReaderSettingsPanel(
                     .verticalScroll(rememberScrollState())
             ) {
                 // Reading mode
-                SectionTitle("閱讀模式")
+                SectionTitle(appString(Res.string.auto_a38439eabc))
                 ChipGroup(
                     options = ReadingMode.entries.toList(),
                     selectedOption = currentReadingMode,
-                    labelExtractor = { it.label },
+                    labelExtractor = { it.localizedLabel() },
                     onSelect = onReadingModeChange
                 )
 
                 Spacer(Modifier.height(20.dp))
 
                 // Touch zone layout
-                SectionTitle("輕觸區域")
+                SectionTitle(appString(Res.string.auto_36a2244b01))
                 ChipGroup(
                     options = TouchZoneLayout.entries.toList(),
                     selectedOption = currentTouchZoneLayout,
-                    labelExtractor = { it.label },
+                    labelExtractor = { it.localizedLabel() },
                     onSelect = onTouchZoneLayoutChange
                 )
 
@@ -153,3 +158,4 @@ private fun <T> Chip(
             .padding(horizontal = 16.dp, vertical = 8.dp)
     )
 }
+

@@ -15,6 +15,7 @@ import coil3.compose.setSingletonImageLoaderFactory
 import coil3.memory.MemoryCache
 import coil3.network.ktor3.KtorNetworkFetcherFactory
 import me.thenano.yamibo.yamibo_app.home.HomePageScreen
+import me.thenano.yamibo.yamibo_app.i18n.AppLocaleProvider
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.navigation.NavAction
 import me.thenano.yamibo.yamibo_app.repository.chineseconversion.ChineseConversionMode
@@ -46,6 +47,8 @@ fun App() {
     }
 
     val navigator = LocalNavigator.current
+    val appSettingsRepository = LocalAppSettingsRepository.current
+    val appLanguage = appSettingsRepository.language.state()
     val holder = rememberSaveableStateHolder()
     navigator.stateHolder = holder
     ChineseConversionModeSync()
@@ -54,52 +57,54 @@ fun App() {
     val poppingIdx by navigator.poppingIndex
     val duration = 250
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = YamiboTheme.colors.creamBackground
-    ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            stack.forEachIndexed { index, navigatable ->
-                val isPopping = index == poppingIdx
-                val isTop = index == stack.lastIndex
-                val isNewPush = navigator.lastAction == NavAction.Push && isTop && !isPopping
+    AppLocaleProvider(appLanguage) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = YamiboTheme.colors.creamBackground
+        ) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                stack.forEachIndexed { index, navigatable ->
+                    val isPopping = index == poppingIdx
+                    val isTop = index == stack.lastIndex
+                    val isNewPush = navigator.lastAction == NavAction.Push && isTop && !isPopping
 
-                key(navigatable.id) {
-                    // New push screens start invisible (false→true), others start visible
-                    val visibleState = remember {
-                        MutableTransitionState(!isNewPush)
-                    }
-
-                    // Drive animation: pop = true→false, otherwise stay/become true
-                    if (isPopping) {
-                        visibleState.targetState = false
-                    } else {
-                        visibleState.targetState = true
-                    }
-
-                    holder.SaveableStateProvider(navigatable.id) {
-                        AnimatedVisibility(
-                            visibleState = visibleState,
-                            enter = slideInHorizontally(
-                                initialOffsetX = { it },
-                                animationSpec = tween(duration)
-                            ) + fadeIn(animationSpec = tween(duration)),
-                            exit = slideOutHorizontally(
-                                targetOffsetX = { it },
-                                animationSpec = tween(duration)
-                            ) + fadeOut(animationSpec = tween(duration)),
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .zIndex(index.toFloat())
-                        ) {
-                            navigatable.Content()
+                    key(navigatable.id) {
+                        // New push screens start invisible (false→true), others start visible
+                        val visibleState = remember {
+                            MutableTransitionState(!isNewPush)
                         }
-                    }
 
-                    // When exit animation finished, actually remove from stack
-                    if (isPopping && visibleState.isIdle && !visibleState.currentState) {
-                        LaunchedEffect(Unit) {
-                            navigator.completePop()
+                        // Drive animation: pop = true→false, otherwise stay/become true
+                        if (isPopping) {
+                            visibleState.targetState = false
+                        } else {
+                            visibleState.targetState = true
+                        }
+
+                        holder.SaveableStateProvider(navigatable.id) {
+                            AnimatedVisibility(
+                                visibleState = visibleState,
+                                enter = slideInHorizontally(
+                                    initialOffsetX = { it },
+                                    animationSpec = tween(duration)
+                                ) + fadeIn(animationSpec = tween(duration)),
+                                exit = slideOutHorizontally(
+                                    targetOffsetX = { it },
+                                    animationSpec = tween(duration)
+                                ) + fadeOut(animationSpec = tween(duration)),
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .zIndex(index.toFloat())
+                            ) {
+                                navigatable.Content()
+                            }
+                        }
+
+                        // When exit animation finished, actually remove from stack
+                        if (isPopping && visibleState.isIdle && !visibleState.currentState) {
+                            LaunchedEffect(Unit) {
+                                navigator.completePop()
+                            }
                         }
                     }
                 }

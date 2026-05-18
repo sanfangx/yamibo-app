@@ -1,4 +1,10 @@
-package me.thenano.yamibo.yamibo_app.favorite
+﻿package me.thenano.yamibo.yamibo_app.favorite
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import me.thenano.yamibo.yamibo_app.i18n.localizedAppMessage
+import me.thenano.yamibo.yamibo_app.i18n.localizedLabel
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import YamiboIcons
 import androidx.compose.animation.AnimatedContent
@@ -133,7 +139,7 @@ internal fun FavoritePageContent(
             when (currentMode) {
                 FavoritePageMode.Normal -> {
                     FavoriteHeaderMenuRow(
-                        title = "我的收藏",
+                        title = appString(Res.string.auto_975ff67ee1),
                         onSearch = onEnterSearch,
                         onCreateCategory = onCreateCategory,
                         onManageCategory = onManageCategory,
@@ -149,17 +155,17 @@ internal fun FavoritePageContent(
                     )
                 }
                 FavoritePageMode.Select -> {
-                    HeaderRow("已選 $selectedCount 項", buildList {
-                        add("全選" to onSelectAll)
+                    HeaderRow(appString(Res.string.selected_items, selectedCount), buildList {
+                        add(appString(Res.string.common_select_all) to onSelectAll)
                         if (selectedItemIds.isNotEmpty() && selectedCollectionIds.isEmpty()) {
-                            add("移動" to onOpenMoveDialog)
-                            add("合成集合" to onOpenMergeDialog)
-                            add("刪除" to onDeleteSelectedItems)
+                            add(appString(Res.string.auto_2cd3598e1e) to onOpenMoveDialog)
+                            add(appString(Res.string.auto_fff8441870) to onOpenMergeDialog)
+                            add(appString(Res.string.common_delete) to onDeleteSelectedItems)
                         }
-                        if (selectedCollectionIds.size == 1 && selectedItemIds.isEmpty()) add("編輯" to onEditSelectedCollection)
-                        if (selectedCollectionIds.isNotEmpty() && selectedItemIds.isEmpty() && openedCollection == null) add("解散" to onDissolveSelectedCollections)
-                        if (selectedCollectionIds.isNotEmpty() && selectedItemIds.isEmpty()) add("清空" to onClearSelection)
-                        add("返回" to onCancelSelection)
+                        if (selectedCollectionIds.size == 1 && selectedItemIds.isEmpty()) add(appString(Res.string.auto_aa3a615d69) to onEditSelectedCollection)
+                        if (selectedCollectionIds.isNotEmpty() && selectedItemIds.isEmpty() && openedCollection == null) add(appString(Res.string.auto_9e37997c32) to onDissolveSelectedCollections)
+                        if (selectedCollectionIds.isNotEmpty() && selectedItemIds.isEmpty()) add(appString(Res.string.auto_288f0c404c) to onClearSelection)
+                        add(appString(Res.string.auto_5f411223ca) to onCancelSelection)
                     })
                 }
             }
@@ -179,7 +185,7 @@ internal fun FavoritePageContent(
                     onClick = { onSelectCategory(category.id) },
                     text = {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(category.name, fontSize = 15.sp, fontWeight = if (category.id == ready.selectedCategoryId) FontWeight.Bold else FontWeight.Medium)
+                            Text(localizedAppMessage(category.name), fontSize = 15.sp, fontWeight = if (category.id == ready.selectedCategoryId) FontWeight.Bold else FontWeight.Medium)
                             if (mode == FavoritePageMode.Search && searchQuery.isNotBlank()) {
                                 Text(
                                     text = searchCategoryMatchCounts[category.id]?.toString() ?: "0",
@@ -219,20 +225,20 @@ internal fun FavoritePageContent(
                 ActionChip(YamiboIcons.Back, onBackToTab)
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(openedCollection.collection.name, color = colors.brownDeep, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                    Text("${openedCollection.items.size} 項", color = colors.textDark.copy(alpha = 0.5f), fontSize = 12.sp)
+                    Text(localizedAppMessage(openedCollection.collection.name), color = colors.brownDeep, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text(appString(Res.string.common_item_count, openedCollection.items.size), color = colors.textDark.copy(alpha = 0.5f), fontSize = 12.sp)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ActionChip("排列: ${favoriteGridMode.label}", onShowGridMode)
-                    ActionChip("排序: ${sortMode.label}${if (sortDescending) " ↓" else " ↑"}", onShowSort)
+                    ActionChip(appString(Res.string.favorite_layout_chip, favoriteGridMode.localizedLabel()), onShowGridMode)
+                    ActionChip(appString(Res.string.favorite_sort_chip, sortMode.localizedLabel(), if (sortDescending) " ↓" else " ↑"), onShowSort)
                 }
             }
         } else {
             Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(ready.categories.firstOrNull { it.id == ready.selectedCategoryId }?.name.orEmpty(), color = colors.textDark.copy(alpha = 0.6f), fontSize = 13.sp, modifier = Modifier.weight(1f))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ActionChip("排列: ${favoriteGridMode.label}", onShowGridMode)
-                    ActionChip("排序: ${sortMode.label}${if (sortDescending) " ↓" else " ↑"}", onShowSort)
+                    ActionChip(appString(Res.string.favorite_layout_chip, favoriteGridMode.localizedLabel()), onShowGridMode)
+                    ActionChip(appString(Res.string.favorite_sort_chip, sortMode.localizedLabel(), if (sortDescending) " ↓" else " ↑"), onShowSort)
                 }
             }
         }
@@ -241,7 +247,7 @@ internal fun FavoritePageContent(
             Box(Modifier.fillMaxSize()) {
                 if (gridEntries.isEmpty()) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("這個集合還沒有內容", color = colors.textDark.copy(alpha = 0.52f), fontSize = 16.sp)
+                        Text(appString(Res.string.auto_6c5e1b3be1), color = colors.textDark.copy(alpha = 0.52f), fontSize = 16.sp)
                     }
                 } else {
                     FavoriteGridLayout(
@@ -288,7 +294,7 @@ internal fun FavoritePageContent(
                 Box(Modifier.fillMaxSize()) {
                     if (gridEntries.isEmpty()) {
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text("目前還沒有收藏", color = colors.textDark.copy(alpha = 0.52f), fontSize = 16.sp)
+                            Text(appString(Res.string.auto_8d25063e63), color = colors.textDark.copy(alpha = 0.52f), fontSize = 16.sp)
                         }
                     } else {
                         FavoriteGridLayout(
@@ -430,3 +436,5 @@ internal fun FavoriteGridLayout(
         }
     }
 }
+
+

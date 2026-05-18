@@ -1,4 +1,8 @@
-package me.thenano.yamibo.yamibo_app.thread.image
+﻿package me.thenano.yamibo.yamibo_app.thread.image
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -33,7 +37,6 @@ import me.thenano.yamibo.yamibo_app.thread.reader.debug.DebugRecomposeProbe
 import me.thenano.yamibo.yamibo_app.thread.reader.debug.debugPerfLog
 import me.thenano.yamibo.yamibo_app.util.rememberImageRequest
 import org.jetbrains.compose.resources.painterResource
-import yamibo_app.composeapp.generated.resources.Res
 import yamibo_app.composeapp.generated.resources.image_icon
 
 val LocalReaderOverlayVisible = compositionLocalOf { false }
@@ -271,7 +274,7 @@ private fun ImageLoadingContent(
             )
             Spacer(Modifier.height(12.dp))
             Text(
-                text = "圖片載入中",
+                text = appString(Res.string.auto_9b0f8bc5ab),
                 color = colors.textDark.copy(alpha = 0.72f),
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium,
@@ -279,7 +282,7 @@ private fun ImageLoadingContent(
             if (onImageRetry != null) {
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    text = "若等待過久可重新載入",
+                    text = appString(Res.string.auto_a4d1155b3f),
                     color = colors.textDark.copy(alpha = 0.48f),
                     fontSize = 11.sp,
                 )
@@ -318,7 +321,7 @@ private fun ImageErrorContent(
         )
         Spacer(Modifier.height(12.dp))
         Text(
-            text = "圖片載入失敗",
+            text = appString(Res.string.auto_ec868abde2),
             color = errorTextColor,
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold
@@ -349,10 +352,11 @@ private fun ImageErrorContent(
             contentPadding = PaddingValues(horizontal = 28.dp, vertical = 8.dp)
         ) {
             Text(
-                text = "重新載入",
+                text = appString(Res.string.auto_d358e48704),
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold
             )
         }
     }
 }
+

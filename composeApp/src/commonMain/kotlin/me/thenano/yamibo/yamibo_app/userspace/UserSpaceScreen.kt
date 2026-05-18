@@ -1,4 +1,9 @@
-package me.thenano.yamibo.yamibo_app.userspace
+﻿package me.thenano.yamibo.yamibo_app.userspace
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import me.thenano.yamibo.yamibo_app.i18n.localizedMessage
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import YamiboIcons
 import androidx.compose.animation.AnimatedContent
@@ -41,16 +46,16 @@ import me.thenano.yamibo.yamibo_app.userspace.blog.IBlogReaderScreen
 import me.thenano.yamibo.yamibo_app.webview.action.IActionWebView
 
 enum class UserSpaceSubPage(val selfTitle: String, val otherTitle: String = selfTitle) {
-    Profile("我的資料", "Ta的資料"),
-    Threads("我的主題", "Ta的主題"),
-    Replies("我的回覆", "Ta的回覆"),
-    MyBlogs("我的日志", "Ta的日志"),
-    FriendBlogs("好友的日志"),
-    ViewAllBlogs("隨便看看"),
-    Friends("我的好友"),
-    Online("在線成員"),
-    Visitors("我的訪客"),
-    Traces("我的足跡");
+    Profile(appString(Res.string.auto_340881558f), appString(Res.string.auto_3c5e693e40)),
+    Threads(appString(Res.string.auto_299587cb9b), appString(Res.string.auto_21af9560e8)),
+    Replies(appString(Res.string.auto_4fed571674), appString(Res.string.auto_f7cae0f8f1)),
+    MyBlogs(appString(Res.string.auto_39889a3751), appString(Res.string.auto_a8a934845e)),
+    FriendBlogs(appString(Res.string.auto_b447cb5466)),
+    ViewAllBlogs(appString(Res.string.auto_bcb18c1ff4)),
+    Friends(appString(Res.string.auto_6555ef98b5)),
+    Online(appString(Res.string.auto_379d88f545)),
+    Visitors(appString(Res.string.auto_ed4d6e181e)),
+    Traces(appString(Res.string.auto_67b5cd0cbb));
 
     fun title(isSelf: Boolean): String = if (isSelf) selfTitle else otherTitle
 }
@@ -80,8 +85,8 @@ private enum class ViewAllBlogFilter(
     val title: String,
     val apiType: YamiboRoute.UserSpace.Blog.ViewAllType,
 ) {
-    Latest("最新發表的日志", YamiboRoute.UserSpace.Blog.ViewAllType.Latest),
-    Hot("推薦閱讀的日志", YamiboRoute.UserSpace.Blog.ViewAllType.Hot),
+    Latest(appString(Res.string.auto_9b57b27dc5), YamiboRoute.UserSpace.Blog.ViewAllType.Latest),
+    Hot(appString(Res.string.auto_9745136ad6), YamiboRoute.UserSpace.Blog.ViewAllType.Hot),
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -127,7 +132,7 @@ fun UserSpaceScreen(
                 currentPage = result.value.pageNumber() ?: page
                 UserSpaceState.Success(result.value)
             }
-            else -> UserSpaceState.Error(result.message())
+            else -> UserSpaceState.Error(result.localizedMessage())
         }
     }
 
@@ -262,12 +267,12 @@ fun UserSpaceScreen(
                                 },
                                 onReplyQuoteClick = {
                                     scope.launch {
-                                        snackbarHostState.showSnackbar("TODO: 回覆定位跳轉尚未接入", duration = SnackbarDuration.Short)
+                                        snackbarHostState.showSnackbar(appString(Res.string.auto_3677234a85), duration = SnackbarDuration.Short)
                                     }
                                 },
                                 onMessageAction = {
                                     scope.launch {
-                                        snackbarHostState.showSnackbar("TODO: 消息互動尚未接入", duration = SnackbarDuration.Short)
+                                        snackbarHostState.showSnackbar(appString(Res.string.auto_80a906bd32), duration = SnackbarDuration.Short)
                                     }
                                 },
                                 onOpenWebView = { title, url ->
@@ -305,10 +310,10 @@ private fun tabsFor(group: UserSpaceSection, isSelf: Boolean): List<UserSpaceSub
 }
 
 private fun UserSpaceSection.mainTitle(): String = when (this) {
-    UserSpaceSection.Space -> "我的資料"
-    UserSpaceSection.Threads -> "我的主題"
-    UserSpaceSection.Blogs -> "我的日志"
-    UserSpaceSection.Friends -> "我的好友"
+    UserSpaceSection.Space -> appString(Res.string.auto_340881558f)
+    UserSpaceSection.Threads -> appString(Res.string.auto_299587cb9b)
+    UserSpaceSection.Blogs -> appString(Res.string.auto_39889a3751)
+    UserSpaceSection.Friends -> appString(Res.string.auto_6555ef98b5)
 }
 
 @Composable
@@ -346,7 +351,7 @@ private fun UserSpaceTopBar(
         onBack = onBack,
     ) {
         if (showEdit) {
-            YamiboTopBarIconAction(YamiboIcons.EditOrSign, "編輯", onEdit)
+            YamiboTopBarIconAction(YamiboIcons.EditOrSign, appString(Res.string.auto_aa3a615d69), onEdit)
         }
     }
 }
@@ -369,7 +374,7 @@ private fun UserSpaceMainTopBar(
             ) {
                 UserAvatar(profile?.avatarUrl, size = 28)
                 Text(
-                    text = "我的空間",
+                    text = appString(Res.string.auto_dc973db60a),
                     color = colors.brownDeep,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -512,11 +517,11 @@ private fun topBarTitle(
     tab: UserSpaceSubPage,
     isSelf: Boolean,
 ): String {
-    val name = profile?.username ?: titleHint ?: "用戶"
+    val name = profile?.username ?: titleHint ?: appString(Res.string.auto_cb27030c7b)
     return when (group) {
-        UserSpaceSection.Space -> if (isSelf) "我的資料" else "${name}的資料"
-        UserSpaceSection.Threads -> if (isSelf) "我的主題" else "$name - Ta的主題"
-        UserSpaceSection.Blogs -> if (isSelf) "我的日志" else "$name - Ta的日志"
+        UserSpaceSection.Space -> if (isSelf) appString(Res.string.auto_340881558f) else appString(Res.string.userspace_other_profile_title, name)
+        UserSpaceSection.Threads -> if (isSelf) appString(Res.string.auto_299587cb9b) else appString(Res.string.userspace_other_threads_title, name)
+        UserSpaceSection.Blogs -> if (isSelf) appString(Res.string.auto_39889a3751) else appString(Res.string.userspace_other_blogs_title, name)
         UserSpaceSection.Friends -> tab.title(isSelf)
     }
 }
@@ -536,7 +541,7 @@ private fun fullYamiboUrl(url: String): String =
 private fun userSpaceEditActionWebView(group: UserSpaceSection): IActionWebView {
     return when (group) {
         UserSpaceSection.Blogs -> IActionWebView(
-            title = "發日志",
+            title = appString(Res.string.auto_92b73212b5),
             initialUrl = YamiboRoute.SendBlogPage.build(),
             successCondition = { url -> isSendBlogSuccessUrl(url) },
         )
@@ -548,3 +553,6 @@ private fun userSpaceEditActionWebView(group: UserSpaceSection): IActionWebView 
 private fun isSendBlogSuccessUrl(url: String): Boolean {
     return url.startsWith("https://bbs.yamibo.com/home.php?mod=spacecp&ac=blog&blogid=")
 }
+
+
+

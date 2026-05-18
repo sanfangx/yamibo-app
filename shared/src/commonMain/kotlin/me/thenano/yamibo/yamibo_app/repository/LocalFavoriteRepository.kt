@@ -165,7 +165,7 @@ interface LocalFavoriteRepository {
     suspend fun deleteFavoriteItems(itemIds: Set<Long>)
 
     companion object {
-        const val DEFAULT_CATEGORY_NAME = "預設"
+        const val DEFAULT_CATEGORY_NAME = "\u9810\u8a2d"
         const val DEFAULT_COLLECTION_COLOR = "brown"
     }
 }

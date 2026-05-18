@@ -1,4 +1,8 @@
-package me.thenano.yamibo.yamibo_app.thread.reader.components.manga
+﻿package me.thenano.yamibo.yamibo_app.thread.reader.components.manga
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -18,9 +22,9 @@ import me.thenano.yamibo.yamibo_app.repository.settings.TouchZoneLayout
 
 /** Describes the action area for a touch zone region */
 enum class TouchAction(val label: String) {
-    PREV("上一頁"),
-    NEXT("下一頁"),
-    MENU("選單")
+    PREV(appString(Res.string.auto_0b5d407fec)),
+    NEXT(appString(Res.string.auto_2ca9eb6d51)),
+    MENU(appString(Res.string.auto_5ce7fc8ea7))
 }
 
 /**
@@ -172,3 +176,4 @@ private fun ZoneCell(action: TouchAction, modifier: Modifier = Modifier) {
         )
     }
 }
+

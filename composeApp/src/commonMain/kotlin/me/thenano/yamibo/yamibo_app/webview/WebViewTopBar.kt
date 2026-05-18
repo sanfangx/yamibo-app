@@ -1,4 +1,8 @@
-package me.thenano.yamibo.yamibo_app.webview
+﻿package me.thenano.yamibo.yamibo_app.webview
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import YamiboIcons
 import androidx.compose.foundation.basicMarquee
@@ -124,14 +128,14 @@ fun WebViewTopBar(
                                 onDismissRequest = { showMenu = false }
                             ) {
                                 DropdownMenuItem(
-                                    text = { Text("重新整理", fontWeight = FontWeight.Bold) },
+                                    text = { Text(appString(Res.string.auto_68ca893a48), fontWeight = FontWeight.Bold) },
                                     onClick = {
                                         onRefreshClick()
                                         showMenu = false
                                     }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("在瀏覽器開啟") },
+                                    text = { Text(appString(Res.string.auto_151e57d907)) },
                                     onClick = {
                                         onOpenBrowserClick()
                                         showMenu = false
@@ -145,3 +149,4 @@ fun WebViewTopBar(
         }
     }
 }
+

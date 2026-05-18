@@ -1,4 +1,8 @@
-package me.thenano.yamibo.yamibo_app.userspace
+﻿package me.thenano.yamibo.yamibo_app.userspace
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -97,18 +101,19 @@ private fun UserSpaceEmptyListMessage(message: String) {
 
 private fun emptyMessage(tab: UserSpaceSubPage, isSelf: Boolean): String = when (tab) {
     UserSpaceSubPage.Profile -> ""
-    UserSpaceSubPage.Threads -> if (isSelf) "沒有找到主題" else "沒有找到Ta的主題"
-    UserSpaceSubPage.Replies -> if (isSelf) "沒有找到回復" else "沒有找到Ta的回復"
-    UserSpaceSubPage.MyBlogs -> if (isSelf) "沒有找到日志" else "沒有找到Ta的日志"
-    UserSpaceSubPage.FriendBlogs -> "沒有找到好友的日志"
-    UserSpaceSubPage.ViewAllBlogs -> "沒有找到日志"
-    UserSpaceSubPage.Friends -> "沒有找到好友"
-    UserSpaceSubPage.Online -> "沒有找到在線成員"
-    UserSpaceSubPage.Visitors -> "沒有找到訪客"
-    UserSpaceSubPage.Traces -> "沒有找到足跡"
+    UserSpaceSubPage.Threads -> if (isSelf) appString(Res.string.auto_c4cf0734d5) else appString(Res.string.auto_dcf657b269)
+    UserSpaceSubPage.Replies -> if (isSelf) appString(Res.string.auto_c4f415a3e0) else appString(Res.string.auto_a2d1cf26ce)
+    UserSpaceSubPage.MyBlogs -> if (isSelf) appString(Res.string.auto_d1a20b1d07) else appString(Res.string.auto_98810a2754)
+    UserSpaceSubPage.FriendBlogs -> appString(Res.string.auto_9f9529d11a)
+    UserSpaceSubPage.ViewAllBlogs -> appString(Res.string.auto_d1a20b1d07)
+    UserSpaceSubPage.Friends -> appString(Res.string.auto_3409bf400f)
+    UserSpaceSubPage.Online -> appString(Res.string.auto_abac6fc9bc)
+    UserSpaceSubPage.Visitors -> appString(Res.string.auto_50597076cd)
+    UserSpaceSubPage.Traces -> appString(Res.string.auto_adab468428)
 }
 
 @Composable
 private fun UserSpacePageNavigation(pageNav: PageNav, currentPage: Int, onPageChange: (Int) -> Unit) {
     YamiboPageNavigation(pageNav = pageNav, currentPage = currentPage, onPageChange = onPageChange)
 }
+

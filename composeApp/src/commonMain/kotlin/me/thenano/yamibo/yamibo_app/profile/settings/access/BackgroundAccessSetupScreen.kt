@@ -1,4 +1,8 @@
-package me.thenano.yamibo.yamibo_app.profile.settings.access
+﻿package me.thenano.yamibo.yamibo_app.profile.settings.access
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import YamiboIcons
 import androidx.compose.foundation.background
@@ -67,7 +71,7 @@ internal fun BackgroundAccessSetupScreen() {
             TopAppBar(
                 title = {
                     Text(
-                        text = "通知與背景同步",
+                        text = appString(Res.string.settings_background_title),
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
@@ -120,7 +124,7 @@ internal fun BackgroundAccessSetupScreen() {
                     contentColor = Color.White,
                 ),
             ) {
-                Text("重新檢查")
+                Text(appString(Res.string.auto_c035c3f753))
             }
 
             Spacer(Modifier.height(24.dp))
@@ -152,10 +156,10 @@ private fun BackgroundAccessItemCard(
 ) {
     val colors = YamiboTheme.colors
     val (statusText, statusColor) = when (item.status) {
-        BackgroundAccessRepository.SetupStatus.Granted -> "已就緒" to colors.brownPrimary
-        BackgroundAccessRepository.SetupStatus.Required -> "必須處理" to Color(0xFFB4573B)
-        BackgroundAccessRepository.SetupStatus.Recommended -> "建議處理" to Color(0xFF8A6A2C)
-        BackgroundAccessRepository.SetupStatus.Info -> "說明" to colors.textDark.copy(alpha = 0.55f)
+        BackgroundAccessRepository.SetupStatus.Granted -> appString(Res.string.auto_63a291add9) to colors.brownPrimary
+        BackgroundAccessRepository.SetupStatus.Required -> appString(Res.string.auto_ecca118d6a) to Color(0xFFB4573B)
+        BackgroundAccessRepository.SetupStatus.Recommended -> appString(Res.string.auto_167b16bcc6) to Color(0xFF8A6A2C)
+        BackgroundAccessRepository.SetupStatus.Info -> appString(Res.string.auto_d244b7ac86) to colors.textDark.copy(alpha = 0.55f)
     }
 
     Column(
@@ -210,3 +214,4 @@ private fun BackgroundAccessItemCard(
         }
     }
 }
+

@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.repository.favorite
+﻿package me.thenano.yamibo.yamibo_app.repository.favorite
 
 import io.github.littlesurvival.YamiboForum
 import io.github.littlesurvival.core.YamiboResult
@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import me.thenano.yamibo.yamibo_app.Database
+import me.thenano.yamibo.yamibo_app.i18n.AppMessage
 import me.thenano.yamibo.yamibo_app.repository.FavoriteUpdateRepository
 import me.thenano.yamibo.yamibo_app.repository.FavoriteUpdateRepository.FidFilter
 import me.thenano.yamibo.yamibo_app.repository.FavoriteUpdateRepository.RunPhase
@@ -71,7 +72,7 @@ class FavoriteUpdateRepositoryImpl(
             skippedCount = 0,
             failedCount = 0,
             detectedCount = 0,
-            currentItem = "準備檢查收藏更新",
+            currentItem = msg("favorite.update.preparing"),
             logMessage = null,
             warningMessage = null,
             errorMessage = null,
@@ -93,7 +94,7 @@ class FavoriteUpdateRepositoryImpl(
                         status = RunStatus.RUNNING,
                         phase = RunPhase.CHECKING,
                         errorMessage = null,
-                        currentItem = latest.currentItem ?: "繼續檢查收藏更新",
+                        currentItem = latest.currentItem ?: msg("favorite.update.continue"),
                     )
                 ).runId
             }
@@ -105,7 +106,7 @@ class FavoriteUpdateRepositoryImpl(
         interruptRequestedRunIds += runId
         val snapshot = runQueries.getByRunId(runId).executeAsOneOrNull()?.toSnapshot() ?: return
         if (snapshot.status == RunStatus.RUNNING) {
-            interruptRun(snapshot, "更新檢查已中斷")
+            interruptRun(snapshot, msg("favorite.update.interrupted"))
         }
     }
 
@@ -118,8 +119,8 @@ class FavoriteUpdateRepositoryImpl(
             phase = RunPhase.CANCELED,
             updatedAt = now,
             finishedAt = now,
-            currentItem = "更新檢查已取消",
-            errorMessage = "更新檢查已取消",
+            currentItem = msg("favorite.update.canceled"),
+            errorMessage = msg("favorite.update.canceled"),
         )
         persistSnapshot(canceled)
         stateFlow.value = RunState.Idle
@@ -141,7 +142,7 @@ class FavoriteUpdateRepositoryImpl(
         interruptRequestedRunIds.remove(runId)
         var current = runQueries.getByRunId(runId).executeAsOneOrNull()?.toSnapshot() ?: return
         if (shouldStop(runId)) {
-            interruptRun(current, "更新檢查已中斷")
+            interruptRun(current, msg("favorite.update.interrupted"))
             return
         }
 
@@ -159,9 +160,9 @@ class FavoriteUpdateRepositoryImpl(
                 phase = RunPhase.CHECKING,
                 totalCount = targets.size,
                 currentItem = if (resumeFrom > 0) {
-                    "已載入 ${targets.size} 個追蹤項目，從第 ${resumeFrom + 1} 項繼續"
+                    msg("favorite.update.loaded_resume", targets.size, resumeFrom + 1)
                 } else {
-                    "已載入 ${targets.size} 個追蹤項目"
+                    msg("favorite.update.loaded", targets.size)
                 },
             )
         )
@@ -176,15 +177,15 @@ class FavoriteUpdateRepositoryImpl(
 
         for ((index, item) in targets.withIndex().drop(resumeFrom)) {
             if (shouldStop(runId)) {
-                interruptRun(current, "更新檢查已中斷")
+                interruptRun(current, msg("favorite.update.interrupted"))
                 return
             }
             current = updateSnapshot(
-                current.copy(currentItem = "[${index + 1}/${targets.size}] 已載入 #${item.targetId} ${item.title}")
+                current.copy(currentItem = msg("favorite.update.item_progress", index + 1, targets.size, item.targetId, item.title))
             )
             val result = checkItem(item)
             if (shouldStop(runId)) {
-                interruptRun(current, "更新檢查已中斷")
+                interruptRun(current, msg("favorite.update.interrupted"))
                 return
             }
             current = when (result) {
@@ -211,7 +212,7 @@ class FavoriteUpdateRepositoryImpl(
             phase = RunPhase.COMPLETED,
             updatedAt = now,
             finishedAt = now,
-            currentItem = "更新檢查完成",
+            currentItem = msg("favorite.update.completed"),
         )
         persistSnapshot(completed)
         stateFlow.value = RunState.Completed(completed)
@@ -253,9 +254,9 @@ class FavoriteUpdateRepositoryImpl(
         val result = threadRepository.fetchThread(threadId, authorId, page = 1, reverse = true)
         return when (result) {
             is YamiboResult.Success -> handleThreadPage(item, mode, result.value, authorId)
-            is YamiboResult.NotLoggedIn -> CheckResult.Failed("登入狀態已失效，無法檢查 ${item.title}")
+            is YamiboResult.NotLoggedIn -> CheckResult.Failed(msg("favorite.update.not_logged_in", item.title))
             is YamiboResult.NoPermission -> CheckResult.Failed(result.reason)
-            is YamiboResult.Maintenance -> CheckResult.Failed("百合會維護中，無法檢查 ${item.title}")
+            is YamiboResult.Maintenance -> CheckResult.Failed(msg("favorite.update.maintenance", item.title))
             is YamiboResult.Failure -> CheckResult.Failed(result.reason)
         }
     }
@@ -334,9 +335,9 @@ class FavoriteUpdateRepositoryImpl(
             val summary = when {
                 changedByImportedTime -> mode.importedUpdateSummary()
                 changedByTime && !changedByPostId -> mode.editedUpdateSummary()
-                ambiguous -> "可能有多筆新內容"
-                mode == TargetMode.NovelThread -> "作者新增 ${newPosts.size} 則內容"
-                else -> "新增 ${newPosts.size} 則回覆"
+                ambiguous -> msg("favorite.update.multiple_new")
+                mode == TargetMode.NovelThread -> msg("favorite.update.author_new_count", newPosts.size)
+                else -> msg("favorite.update.reply_new_count", newPosts.size)
             }
             val detailIds = when {
                 newPosts.isNotEmpty() -> newPosts.map { it.pid.value.toLong() }
@@ -390,15 +391,15 @@ class FavoriteUpdateRepositoryImpl(
     }
 
     private fun TargetMode.importedUpdateSummary(): String = when (this) {
-        TargetMode.NovelThread -> "作者有新的內容"
-        TargetMode.NormalThread -> "帖子有新的內容"
-        TargetMode.TagManga -> "Tag 有新的帖子"
+        TargetMode.NovelThread -> msg("favorite.update.author_new")
+        TargetMode.NormalThread -> msg("favorite.update.thread_new")
+        TargetMode.TagManga -> msg("favorite.update.tag_new")
     }
 
     private fun TargetMode.editedUpdateSummary(): String = when (this) {
-        TargetMode.NovelThread -> "作者更新內容"
-        TargetMode.NormalThread -> "帖子內容已更新"
-        TargetMode.TagManga -> "Tag 內容已更新"
+        TargetMode.NovelThread -> msg("favorite.update.author_edited")
+        TargetMode.NormalThread -> msg("favorite.update.thread_edited")
+        TargetMode.TagManga -> msg("favorite.update.tag_edited")
     }
 
     private suspend fun checkTagManga(item: LocalFavoriteRepository.FavoriteItem): CheckResult {
@@ -407,9 +408,9 @@ class FavoriteUpdateRepositoryImpl(
         val existing = targetQueries.getByTarget(item.targetType.name, item.targetId, authorId).executeAsOneOrNull()
         val pageOne = when (val result = tagRepository.fetchTagPage(TagId(item.targetId.toInt()), 1)) {
             is YamiboResult.Success -> result.value
-            is YamiboResult.NotLoggedIn -> return CheckResult.Failed("登入狀態已失效，無法檢查 ${item.title}")
+            is YamiboResult.NotLoggedIn -> return CheckResult.Failed(msg("favorite.update.not_logged_in", item.title))
             is YamiboResult.NoPermission -> return CheckResult.Failed(result.reason)
-            is YamiboResult.Maintenance -> return CheckResult.Failed("百合會維護中，無法檢查 ${item.title}")
+            is YamiboResult.Maintenance -> return CheckResult.Failed(msg("favorite.update.maintenance", item.title))
             is YamiboResult.Failure -> return CheckResult.Failed(result.reason)
         }
         val knownIds = existing?.knownThreadIds?.csvLongs()?.toMutableSet() ?: linkedSetOf()
@@ -428,7 +429,7 @@ class FavoriteUpdateRepositoryImpl(
         while (cursor < pagesToScan.size && pagesToScan.size <= MAX_TAG_SCAN_PAGES) {
             val pageIndex = pagesToScan.elementAt(cursor++)
             val page = if (pageIndex == 1) pageOne else fetchTagPageOrFailure(item, pageIndex).getOrElse {
-                return CheckResult.Failed(it.message ?: "Tag 頁面載入失敗")
+                return CheckResult.Failed(it.message ?: msg("favorite.update.tag_load_failed"))
             }
             scannedPages[pageIndex] = page
             val pageMax = page.pageNav?.totalPages ?: maxPageSeen
@@ -452,7 +453,7 @@ class FavoriteUpdateRepositoryImpl(
                 insertEvent(
                     item = item,
                     mode = TargetMode.TagManga,
-                    summary = "Tag 新增 ${newThreads.size} 個帖子",
+                    summary = msg("favorite.update.tag_new_count", newThreads.size),
                     latestPostTitle = newThreads.firstOrNull()?.title?.takeIf { it.isNotBlank() },
                     detailIds = newThreads.map { it.tid.value.toLong() },
                     ambiguous = false,
@@ -464,7 +465,7 @@ class FavoriteUpdateRepositoryImpl(
                 insertEvent(
                     item = item,
                     mode = TargetMode.TagManga,
-                    summary = "Tag 頁數變動過大，可能有多個新帖子",
+                    summary = msg("favorite.update.tag_page_ambiguous"),
                     latestPostTitle = null,
                     detailIds = emptyList(),
                     ambiguous = true,
@@ -512,9 +513,9 @@ class FavoriteUpdateRepositoryImpl(
     ): Result<TagPage> {
         return when (val result = tagRepository.fetchTagPage(TagId(item.targetId.toInt()), page)) {
             is YamiboResult.Success -> Result.success(result.value)
-            is YamiboResult.NotLoggedIn -> Result.failure(IllegalStateException("登入狀態已失效，無法檢查 ${item.title}"))
+            is YamiboResult.NotLoggedIn -> Result.failure(IllegalStateException(msg("favorite.update.not_logged_in", item.title)))
             is YamiboResult.NoPermission -> Result.failure(IllegalStateException(result.reason))
-            is YamiboResult.Maintenance -> Result.failure(IllegalStateException("百合會維護中，無法檢查 ${item.title}"))
+            is YamiboResult.Maintenance -> Result.failure(IllegalStateException(msg("favorite.update.maintenance", item.title)))
             is YamiboResult.Failure -> Result.failure(IllegalStateException(result.reason))
         }
     }
@@ -710,6 +711,8 @@ class FavoriteUpdateRepositoryImpl(
     private fun appendLine(existing: String?, line: String): String =
         listOfNotNull(existing, line).joinToString("\n")
 
+    private fun msg(key: String, vararg args: Any?): String = AppMessage.of(key, *args)
+
     private fun shouldStop(runId: String): Boolean {
         if (runId in interruptRequestedRunIds) return true
         val snapshot = runQueries.getByRunId(runId).executeAsOneOrNull()?.toSnapshot() ?: return false
@@ -727,3 +730,4 @@ class FavoriteUpdateRepositoryImpl(
         private const val UPDATE_TIME_TOLERANCE_MILLIS = 60_000L
     }
 }
+

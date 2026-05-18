@@ -1,4 +1,9 @@
-package me.thenano.yamibo.yamibo_app.thread.detail.tag
+﻿package me.thenano.yamibo.yamibo_app.thread.detail.tag
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import me.thenano.yamibo.yamibo_app.i18n.localizedMessage
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -162,7 +167,7 @@ internal fun TagDetailScreen(
                     TagDetailState.Success(correctedTagPage)
                 }
 
-                else -> TagDetailState.Error(result.message())
+                else -> TagDetailState.Error(result.localizedMessage())
             }
     }
 
@@ -214,7 +219,7 @@ internal fun TagDetailScreen(
                 } else {
                     withContext(Dispatchers.Default) { removeFavoriteWithSync(favoriteRepository, favoriteSyncRepository, target) }
                     favoriteRefreshToken += 1
-                    snackbarHostState.showSnackbar("已移除收藏")
+                    snackbarHostState.showSnackbar(appString(Res.string.auto_3b66a4b8b2))
                     pendingFavoriteRemovalSelection = null
                 }
             } else {
@@ -225,7 +230,7 @@ internal fun TagDetailScreen(
 
         favoriteRepository.saveFavorite(target)
         favoriteRefreshToken += 1
-        snackbarHostState.showSnackbar("已加入收藏")
+        snackbarHostState.showSnackbar(appString(Res.string.auto_1512861213))
     }
 
     LaunchedEffect(tagId, currentTagName, favoriteRefreshToken) {
@@ -236,12 +241,13 @@ internal fun TagDetailScreen(
     val readingProgressText = remember(mangaTagHistory, isMangaMode) {
         val h = mangaTagHistory ?: return@remember null
         if (isMangaMode) {
-            "第${h.tagPage} ‧ ${h.threadTitle} ‧ ${h.threadImagePageIndex + 1}/${h.threadImageTotalPages}"
+            appString(Res.string.tag_read_progress_with_image, h.tagPage, h.threadTitle, h.threadImagePageIndex + 1, h.threadImageTotalPages)
         } else {
-            "第${h.tagPage} ‧ ${h.threadTitle}"
+            appString(Res.string.tag_read_progress, h.tagPage, h.threadTitle)
         }
     }
-    /** Handle thread click ??manga mode opens TagMangaReaderScreen */
+
+    /** Handle thread click: manga mode opens TagMangaReaderScreen */
     fun navigateToThread(thread: ThreadSummary, threads: List<ThreadSummary>, pageNav: PageNav?) {
         val fid = thread.fid
         val isManga = fid?.let { YamiboForum.isMangaForum(it) } == true
@@ -270,8 +276,7 @@ internal fun TagDetailScreen(
             navigator.navigate(
                 INovelThreadDetailScreen(
                     tid = thread.tid,
-                    title = thread.title
-                    ,
+                    title = thread.title,
                     authorId = thread.author?.uid
                 )
             )
@@ -290,7 +295,6 @@ internal fun TagDetailScreen(
     fun handleContinueRead(threads: List<ThreadSummary>, pageNav: PageNav?) {
         val history = mangaTagHistory
         if (history != null && isMangaMode) {
-            // 根據模式決定使用 TagMangaReaderScreen 還是 ImagesReaderScreen
             val threadIndex = threads.indexOfFirst { it.tid == history.threadId }
             val authorId = if (threadIndex >= 0) threads[threadIndex].author?.uid else null
             navigator.navigate(
@@ -311,7 +315,6 @@ internal fun TagDetailScreen(
                 )
             )
         } else if (history != null) {
-            // 導航到對應的閱讀畫面
             navigator.navigate(
                 IThreadReaderScreen(
                     tid = history.threadId,
@@ -320,7 +323,6 @@ internal fun TagDetailScreen(
                 )
             )
         } else {
-            // 導航到對應的 thread 閱讀畫面
             val first = threads.firstOrNull() ?: return
             navigateToThread(first, threads, pageNav)
         }
@@ -379,7 +381,7 @@ internal fun TagDetailScreen(
 
                                     else -> {
                                         snackbarHostState.showSnackbar(
-                                            message = "重新整理標籤頁失敗：${result.message()}",
+                                            message = appString(Res.string.tag_refresh_failed, result.localizedMessage()),
                                             duration = SnackbarDuration.Short,
                                         )
                                     }
@@ -472,7 +474,7 @@ internal fun TagDetailScreen(
                         )
                         showFavoriteDialog = false
                         favoriteRefreshToken += 1
-                        snackbarHostState.showSnackbar("已加入收藏")
+                        snackbarHostState.showSnackbar(appString(Res.string.auto_1512861213))
                     } else if (selectedCategories.isEmpty() && selectedCollections.isEmpty()) {
                         showFavoriteDialog = false
                         pendingFavoriteRemovalSelection = favoriteRepository.getFavoriteLocationSelection(target)
@@ -482,7 +484,7 @@ internal fun TagDetailScreen(
                             } else {
                                 withContext(Dispatchers.Default) { removeFavoriteWithSync(favoriteRepository, favoriteSyncRepository, target) }
                                 favoriteRefreshToken += 1
-                                snackbarHostState.showSnackbar("已從所有位置移除收藏")
+                                snackbarHostState.showSnackbar(appString(Res.string.auto_eb73358eb7))
                                 pendingFavoriteRemovalSelection = null
                             }
                         } else {
@@ -492,7 +494,7 @@ internal fun TagDetailScreen(
                         favoriteRepository.setItemLocations(existing.id, selectedCategories, selectedCollections)
                         showFavoriteDialog = false
                         favoriteRefreshToken += 1
-                        snackbarHostState.showSnackbar("收藏位置已更新")
+                        snackbarHostState.showSnackbar(appString(Res.string.auto_6788887252))
                     }
                 }
             }
@@ -515,7 +517,7 @@ internal fun TagDetailScreen(
                     } else {
                         withContext(Dispatchers.Default) { removeFavoriteWithSync(favoriteRepository, favoriteSyncRepository, favoriteTarget()) }
                         favoriteRefreshToken += 1
-                        snackbarHostState.showSnackbar("已移除收藏")
+                        snackbarHostState.showSnackbar(appString(Res.string.auto_3b66a4b8b2))
                         pendingFavoriteRemovalSelection = null
                     }
                 }
@@ -526,7 +528,7 @@ internal fun TagDetailScreen(
     if (showFavoriteMultiPathDialog) {
         FavoriteMultiPathRemoveDialog(
             paths = pendingFavoriteRemovalSelection?.paths.orEmpty(),
-            tip = "tip：長按可詳細編輯收藏路徑",
+            tip = appString(Res.string.auto_96fd606a93),
             onDismiss = {
                 showFavoriteMultiPathDialog = false
                 pendingFavoriteRemovalSelection = null
@@ -536,7 +538,7 @@ internal fun TagDetailScreen(
                 scope.launch {
                         withContext(Dispatchers.Default) { removeFavoriteWithSync(favoriteRepository, favoriteSyncRepository, favoriteTarget()) }
                     favoriteRefreshToken += 1
-                    snackbarHostState.showSnackbar("已從所有位置移除收藏")
+                    snackbarHostState.showSnackbar(appString(Res.string.auto_eb73358eb7))
                     pendingFavoriteRemovalSelection = null
                 }
             },
@@ -557,7 +559,7 @@ internal fun TagDetailScreen(
                     )
                     reloadNote()
                     snackbarHostState.showSnackbar(
-                        if (content.isBlank()) "已刪除筆記" else "已保存筆記",
+                        if (content.isBlank()) appString(Res.string.auto_c092ed8925) else appString(Res.string.auto_d2617b4478),
                         duration = SnackbarDuration.Short,
                     )
                 }
@@ -570,7 +572,7 @@ internal fun TagDetailScreen(
                         targetId = tagId.value.toLong(),
                     )
                     reloadNote()
-                    snackbarHostState.showSnackbar("已刪除筆記", duration = SnackbarDuration.Short)
+                    snackbarHostState.showSnackbar(appString(Res.string.auto_c092ed8925), duration = SnackbarDuration.Short)
                 }
             },
         )
@@ -595,7 +597,7 @@ internal fun TagDetailScreen(
                     )
                     reloadThreadBookMarks()
                     snackbarHostState.showSnackbar(
-                        if (next) "已新增書籤" else "已移除書籤",
+                        if (next) appString(Res.string.auto_18546825fb) else appString(Res.string.auto_2995275617),
                         duration = SnackbarDuration.Short,
                     )
                 }
@@ -613,7 +615,7 @@ internal fun TagDetailScreen(
                     )
                     reloadThreadBookMarks()
                     snackbarHostState.showSnackbar(
-                        if (next) "已標為已讀" else "已標為未讀",
+                        if (next) appString(Res.string.auto_7e65beff49) else appString(Res.string.auto_ef4524ac9f),
                         duration = SnackbarDuration.Short,
                     )
                 }
@@ -632,7 +634,7 @@ internal fun TagDetailScreen(
                         mangaTagHistory = null
                     }
                     reloadThreadBookMarks()
-                    snackbarHostState.showSnackbar("已清除閱讀紀錄", duration = SnackbarDuration.Short)
+                    snackbarHostState.showSnackbar(appString(Res.string.auto_112483893b), duration = SnackbarDuration.Short)
                 }
             },
         )
@@ -651,17 +653,17 @@ private fun BookMarkActionDialog(
     val colors = YamiboTheme.colors
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("閱讀標記", color = colors.brownDeep) },
+        title = { Text(appString(Res.string.auto_760d5e0077), color = colors.brownDeep) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                YamiboActionRow(if (bookmarked) "移除書籤" else "新增書籤", onToggleBookMark)
-                YamiboActionRow(if (read) "標為未讀" else "標為已讀", onToggleRead)
-                YamiboActionRow("清除閱讀紀錄", onClearHistory)
+                YamiboActionRow(if (bookmarked) appString(Res.string.auto_33d65b9d55) else appString(Res.string.auto_e6bd0a4f22), onToggleBookMark)
+                YamiboActionRow(if (read) appString(Res.string.auto_990f638bce) else appString(Res.string.auto_0aad49a7eb), onToggleRead)
+                YamiboActionRow(appString(Res.string.auto_30921bfe20), onClearHistory)
             }
         },
         confirmButton = {},
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("取消", color = colors.brownDeep) }
+            TextButton(onClick = onDismiss) { Text(appString(Res.string.common_cancel), color = colors.brownDeep) }
         },
         containerColor = colors.creamSurface,
     )
@@ -683,4 +685,7 @@ private fun YamiboActionRow(text: String, onClick: () -> Unit) {
         )
     }
 }
+
+
+
 

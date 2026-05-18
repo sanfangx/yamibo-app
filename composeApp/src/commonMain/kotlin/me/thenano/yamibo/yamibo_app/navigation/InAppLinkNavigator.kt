@@ -1,5 +1,10 @@
 ﻿package me.thenano.yamibo.yamibo_app.navigation
 
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import me.thenano.yamibo.yamibo_app.i18n.localizedAppMessage
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -119,23 +124,23 @@ private fun InAppLinkResolvingScreen(url: String, context: InAppLinkContext) {
     val navigator = LocalNavigator.current
     val repository = LocalInAppLinkNavigationRepository.current
     var state by remember(url, context) { mutableStateOf<InAppLinkResolvingState>(InAppLinkResolvingState.Loading) }
-    var progressText by remember(url, context) { mutableStateOf("準備定位") }
+    var progressText by remember(url, context) { mutableStateOf(appString(Res.string.auto_cf2fab1c56)) }
     var attempt by remember(url, context) { mutableIntStateOf(0) }
 
     LaunchedEffect(url, context, attempt) {
         state = InAppLinkResolvingState.Loading
-        progressText = "準備定位"
+        progressText = appString(Res.string.auto_cf2fab1c56)
         when (
-            val result = repository.resolve(url, context) { progressText = it }
+            val result = repository.resolve(url, context) { progressText = localizedAppMessage(it) }
         ) {
             is InAppLinkResolveResult.Resolved -> {
                 val opened = navigator.navigateInAppLinkTarget(result.target, replaceCurrent = true)
                 if (!opened) {
-                    state = InAppLinkResolvingState.Error("此連結暫不支援 App 內開啟", result.target)
+                    state = InAppLinkResolvingState.Error(appString(Res.string.auto_e9e902493a), result.target)
                 }
             }
             is InAppLinkResolveResult.Failed -> {
-                state = InAppLinkResolvingState.Error(result.reason ?: "定位失敗", result.target)
+                state = InAppLinkResolvingState.Error(result.reason?.let(::localizedAppMessage) ?: appString(Res.string.auto_df7d1c40ba), result.target)
             }
         }
     }
@@ -144,7 +149,7 @@ private fun InAppLinkResolvingScreen(url: String, context: InAppLinkContext) {
         containerColor = colors.creamBackground,
         topBar = {
             ThreadTopBar(
-                title = "定位中",
+                title = appString(Res.string.auto_463c427e79),
                 onBack = { navigator.pop() },
             )
         },
@@ -167,7 +172,7 @@ private fun InAppLinkResolvingScreen(url: String, context: InAppLinkContext) {
                             modifier = Modifier.padding(20.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
-                            Text("正在定位連結", color = colors.brownDeep, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            Text(appString(Res.string.auto_d4db282af7), color = colors.brownDeep, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                             Text(progressText, color = colors.brownPrimary, fontSize = 14.sp)
                             LinearProgressIndicator(
                                 modifier = Modifier.fillMaxWidth(),
@@ -194,8 +199,8 @@ private fun InAppLinkResolvingScreen(url: String, context: InAppLinkContext) {
                             modifier = Modifier.padding(20.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
-                            Text("定位失敗", color = colors.brownDeep, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                            Text(current.message, color = colors.brownPrimary, fontSize = 14.sp)
+                            Text(appString(Res.string.auto_df7d1c40ba), color = colors.brownDeep, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            Text(localizedAppMessage(current.message), color = colors.brownPrimary, fontSize = 14.sp)
                             Text(
                                 text = url,
                                 color = colors.textDark.copy(alpha = 0.55f),
@@ -211,7 +216,7 @@ private fun InAppLinkResolvingScreen(url: String, context: InAppLinkContext) {
                             ) {
                                 current.fallbackTarget?.takeIf { it.canOpenInApp() }?.let { target ->
                                     TextButton(onClick = { navigator.navigateInAppLinkTarget(target, replaceCurrent = true) }) {
-                                        Text("開啟替代頁", color = colors.brownPrimary)
+                                        Text(appString(Res.string.auto_b5ab5458e0), color = colors.brownPrimary)
                                     }
                                 }
                                 TextButton(onClick = { navigator.navigate(IPlatformWebView(url)) }) {
@@ -221,7 +226,7 @@ private fun InAppLinkResolvingScreen(url: String, context: InAppLinkContext) {
                                     onClick = { attempt++ },
                                     colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.brownDeep),
                                 ) {
-                                    Text("重試")
+                                    Text(appString(Res.string.auto_3d2b6505a6))
                                 }
                             }
                         }
@@ -307,3 +312,4 @@ fun looksLikeSupportedYamiboInAppLink(rawUrl: String): Boolean {
         path.startsWith("blog-") ||
         (path.contains("misc.php") && path.contains("mod=tag"))
 }
+

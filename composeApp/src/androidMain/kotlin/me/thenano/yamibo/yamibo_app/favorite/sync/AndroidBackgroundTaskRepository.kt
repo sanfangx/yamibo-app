@@ -1,4 +1,8 @@
-package me.thenano.yamibo.yamibo_app.favorite.sync
+﻿package me.thenano.yamibo.yamibo_app.favorite.sync
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import android.content.Context
 import androidx.core.app.NotificationManagerCompat
@@ -16,10 +20,10 @@ class AndroidBackgroundTaskRepository(
 
     override suspend fun startFavoriteSync(runId: String): BackgroundTaskRepository.StartResult {
         if (!AndroidAppForegroundTracker.isForeground()) {
-            return BackgroundTaskRepository.StartResult.Rejected("請保持 App 在前景後再開始同步。")
+            return BackgroundTaskRepository.StartResult.Rejected(appString(Res.string.auto_8e040c66da))
         }
         if (!NotificationManagerCompat.from(appContext).areNotificationsEnabled()) {
-            return BackgroundTaskRepository.StartResult.Rejected("請先允許通知權限，背景同步才會顯示在通知欄。")
+            return BackgroundTaskRepository.StartResult.Rejected(appString(Res.string.auto_2c6e553441))
         }
 
         return try {
@@ -27,7 +31,7 @@ class AndroidBackgroundTaskRepository(
             ContextCompat.startForegroundService(appContext, intent)
             BackgroundTaskRepository.StartResult.Started
         } catch (_: Throwable) {
-            BackgroundTaskRepository.StartResult.Rejected("目前無法啟動背景同步，請在 App 前景時重試。")
+            BackgroundTaskRepository.StartResult.Rejected(appString(Res.string.auto_db648abb65))
         }
     }
 
@@ -36,3 +40,4 @@ class AndroidBackgroundTaskRepository(
         ContextCompat.startForegroundService(appContext, intent)
     }
 }
+

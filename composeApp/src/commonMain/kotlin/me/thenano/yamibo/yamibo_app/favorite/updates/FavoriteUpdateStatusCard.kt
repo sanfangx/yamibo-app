@@ -1,4 +1,9 @@
-package me.thenano.yamibo.yamibo_app.favorite.updates
+﻿package me.thenano.yamibo.yamibo_app.favorite.updates
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import me.thenano.yamibo.yamibo_app.i18n.localizedAppMessage
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
@@ -62,7 +67,7 @@ fun FavoriteUpdateStatusCard(
                         fontSize = 15.sp,
                     )
                     Text(
-                        text = snapshot.currentItem ?: snapshot.phase.name,
+                        text = snapshot.currentItem?.let(::localizedAppMessage) ?: snapshot.phase.name,
                         color = colors.textDark.copy(alpha = 0.68f),
                         fontSize = 12.sp,
                         maxLines = 1,
@@ -85,14 +90,14 @@ fun FavoriteUpdateStatusCard(
             )
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                MetricText("更新", snapshot.detectedCount)
-                MetricText("跳過", snapshot.skippedCount)
-                MetricText("錯誤", snapshot.failedCount)
+                MetricText(appString(Res.string.auto_32ac152be1), snapshot.detectedCount)
+                MetricText(appString(Res.string.auto_fa72799989), snapshot.skippedCount)
+                MetricText(appString(Res.string.auto_e91a6ab98f), snapshot.failedCount)
             }
 
             snapshot.warningMessage?.takeIf { it.isNotBlank() }?.let {
                 Text(
-                    text = it.lineSequence().lastOrNull().orEmpty(),
+                    text = localizedAppMessage(it.lineSequence().lastOrNull().orEmpty()),
                     color = colors.brownDeep,
                     fontSize = 12.sp,
                     maxLines = 1,
@@ -101,7 +106,7 @@ fun FavoriteUpdateStatusCard(
             }
             snapshot.errorMessage?.takeIf { it.isNotBlank() }?.let {
                 Text(
-                    text = it,
+                    text = localizedAppMessage(it),
                     color = Color(0xFFB74D42),
                     fontSize = 12.sp,
                     maxLines = 1,
@@ -112,7 +117,7 @@ fun FavoriteUpdateStatusCard(
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (state is FavoriteUpdateRepository.RunState.Running && onCancel != null) {
                     CompactStatusButton(
-                        text = "取消",
+                        text = appString(Res.string.common_cancel),
                         onClick = { onCancel(snapshot.runId) },
                         containerColor = Color(0xFF8C4B3B),
                         contentColor = Color.White,
@@ -120,7 +125,7 @@ fun FavoriteUpdateStatusCard(
                 }
                 if (state is FavoriteUpdateRepository.RunState.Running && onInterrupt != null) {
                     CompactStatusButton(
-                        text = "中斷",
+                        text = appString(Res.string.auto_66dc8a62b4),
                         onClick = { onInterrupt(snapshot.runId) },
                         containerColor = colors.brownPrimary.copy(alpha = 0.18f),
                         contentColor = colors.brownDeep,
@@ -128,7 +133,7 @@ fun FavoriteUpdateStatusCard(
                 }
                 if (state is FavoriteUpdateRepository.RunState.Interrupted && onResume != null) {
                     CompactStatusButton(
-                        text = "繼續",
+                        text = appString(Res.string.auto_6549c4bcbc),
                         onClick = onResume,
                         containerColor = Color(0xFF8C4B3B),
                         contentColor = Color.White,
@@ -136,7 +141,7 @@ fun FavoriteUpdateStatusCard(
                 }
                 if (state !is FavoriteUpdateRepository.RunState.Running && onHide != null) {
                     CompactStatusButton(
-                        text = "隱藏",
+                        text = appString(Res.string.auto_2671918958),
                         onClick = onHide,
                         containerColor = colors.brownPrimary.copy(alpha = 0.18f),
                         contentColor = colors.brownDeep,
@@ -189,9 +194,10 @@ fun FavoriteUpdateRepository.RunState.snapshotOrNull(): FavoriteUpdateRepository
 
 private fun FavoriteUpdateRepository.RunState.title(): String =
     when (this) {
-        FavoriteUpdateRepository.RunState.Idle -> "收藏更新"
-        is FavoriteUpdateRepository.RunState.Running -> "正在檢查收藏更新"
-        is FavoriteUpdateRepository.RunState.Interrupted -> "收藏更新已中斷"
-        is FavoriteUpdateRepository.RunState.Failed -> "收藏更新失敗"
-        is FavoriteUpdateRepository.RunState.Completed -> "收藏更新完成"
+        FavoriteUpdateRepository.RunState.Idle -> appString(Res.string.auto_0176d04aa4)
+        is FavoriteUpdateRepository.RunState.Running -> appString(Res.string.auto_4e60d9dccc)
+        is FavoriteUpdateRepository.RunState.Interrupted -> appString(Res.string.auto_fd36fd8fc0)
+        is FavoriteUpdateRepository.RunState.Failed -> appString(Res.string.auto_d5afb37135)
+        is FavoriteUpdateRepository.RunState.Completed -> appString(Res.string.auto_8507fc5c96)
     }
+

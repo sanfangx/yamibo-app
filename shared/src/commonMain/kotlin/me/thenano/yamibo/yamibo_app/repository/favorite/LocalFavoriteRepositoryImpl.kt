@@ -15,6 +15,7 @@ import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.FavoriteC
 import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.FavoriteCollectionWithItems
 import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.FavoriteItem
 import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.FavoriteTargetType
+import me.thenano.yamibo.yamibo_app.i18n.AppMessage
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
 import me.thenano.yamibo.yamiboapp.LocalFavoriteCategory
@@ -709,21 +710,21 @@ class LocalFavoriteRepositoryImpl(
         excludeCollectionId: Long? = null,
     ): String {
         val normalizedName = name.trim()
-        require(normalizedName.isNotBlank()) { "名稱不能為空白" }
+        require(normalizedName.isNotBlank()) { AppMessage.of("favorite.category_name_blank") }
 
         val targetKey = normalizedName.lowercase()
         val categoryConflict = getCategories().firstOrNull {
             it.id != excludeCategoryId && it.name.trim().lowercase() == targetKey
         }
         if (categoryConflict != null) {
-            throw IllegalArgumentException("名稱「$normalizedName」已被類別使用")
+            throw IllegalArgumentException(AppMessage.of("favorite.category_name_used", normalizedName))
         }
 
         val collectionConflict = getAllCollections().firstOrNull {
             it.id != excludeCollectionId && it.name.trim().lowercase() == targetKey
         }
         if (collectionConflict != null) {
-            throw IllegalArgumentException("名稱「$normalizedName」已被集合使用")
+            throw IllegalArgumentException(AppMessage.of("favorite.collection_name_used", normalizedName))
         }
 
         return normalizedName

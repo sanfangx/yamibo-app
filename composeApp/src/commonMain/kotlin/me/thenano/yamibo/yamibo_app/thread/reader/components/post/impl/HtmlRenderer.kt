@@ -1,4 +1,8 @@
-package me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl
+﻿package me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.*
@@ -401,7 +405,7 @@ private fun HtmlBlockRenderer(
 
                     AlertDialog(
                         onDismissRequest = { showLongPressMenu = null },
-                        title = { Text("連結選項", style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 20.sp)) },
+                        title = { Text(appString(Res.string.auto_3c01da21d7), style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 20.sp)) },
                         text = {
                             Column(modifier = Modifier.fillMaxWidth()) {
                                 Column(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
@@ -429,23 +433,23 @@ private fun HtmlBlockRenderer(
                                     TextButton(onClick = {
                                         navigator.navigate(IInAppLinkResolvingScreen(fullUrl, linkContext))
                                         showLongPressMenu = null
-                                    }) { Text("App 內打開", color = colors.brownPrimary, fontSize = 16.sp) }
+                                    }) { Text(appString(Res.string.auto_0c44930108), color = colors.brownPrimary, fontSize = 16.sp) }
                                 }
 
                                 TextButton(onClick = {
                                     navigator.navigate(IPlatformWebView(fullUrl))
                                     showLongPressMenu = null
-                                }) { Text("WebView 打開", color = colors.brownPrimary, fontSize = 16.sp) }
+                                }) { Text(appString(Res.string.auto_4d7e0dd771), color = colors.brownPrimary, fontSize = 16.sp) }
 
                                 TextButton(onClick = {
                                     clipboardManager.setText(AnnotatedString(fullUrl))
                                     showLongPressMenu = null
-                                }) { Text("複製連結", color = colors.brownPrimary, fontSize = 16.sp) }
+                                }) { Text(appString(Res.string.auto_936a98ae26), color = colors.brownPrimary, fontSize = 16.sp) }
 
                                 TextButton(onClick = {
                                     clipboardManager.setText(AnnotatedString(menu.linkText))
                                     showLongPressMenu = null
-                                }) { Text("複製文字", color = colors.brownPrimary, fontSize = 16.sp) }
+                                }) { Text(appString(Res.string.auto_d9156479ff), color = colors.brownPrimary, fontSize = 16.sp) }
 
                                 TextButton(onClick = {
                                     try {
@@ -453,13 +457,13 @@ private fun HtmlBlockRenderer(
                                     } catch (_: Exception) {
                                     }
                                     showLongPressMenu = null
-                                }) { Text("外部瀏覽器", color = colors.brownPrimary, fontSize = 16.sp) }
+                                }) { Text(appString(Res.string.auto_a1dc089d03), color = colors.brownPrimary, fontSize = 16.sp) }
                             }
                         },
                         confirmButton = {},
                         dismissButton = {
                             TextButton(onClick = { showLongPressMenu = null }) {
-                                Text("取消", color = colors.textDark.copy(alpha = 0.5f))
+                                Text(appString(Res.string.common_cancel), color = colors.textDark.copy(alpha = 0.5f))
                             }
                         },
                         containerColor = colors.creamSurface,
@@ -590,7 +594,7 @@ private fun HtmlBlockRenderer(
                 DisableSelection {
                     AlertDialog(
                         onDismissRequest = { showAttachmentMenu = false },
-                        title = { Text("附件選項", style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 20.sp)) },
+                        title = { Text(appString(Res.string.auto_88998d60cd), style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 20.sp)) },
                         text = {
                             Column(modifier = Modifier.fillMaxWidth()) {
                                 Column(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
@@ -632,17 +636,17 @@ private fun HtmlBlockRenderer(
                                 TextButton(onClick = {
                                     navigator.navigate(IPlatformWebView(fullUrl))
                                     showAttachmentMenu = false
-                                }) { Text("在應用內開啟連結", color = colors.brownPrimary, fontSize = 16.sp) }
+                                }) { Text(appString(Res.string.auto_249c058c9a), color = colors.brownPrimary, fontSize = 16.sp) }
 
                                 TextButton(onClick = {
                                     clipboardManager.setText(AnnotatedString(fullUrl))
                                     showAttachmentMenu = false
-                                }) { Text("複製連結地址", color = colors.brownPrimary, fontSize = 16.sp) }
+                                }) { Text(appString(Res.string.auto_adb5285529), color = colors.brownPrimary, fontSize = 16.sp) }
 
                                 TextButton(onClick = {
                                     clipboardManager.setText(AnnotatedString(block.fileName))
                                     showAttachmentMenu = false
-                                }) { Text("複製連結文字", color = colors.brownPrimary, fontSize = 16.sp) }
+                                }) { Text(appString(Res.string.auto_9468fabdd2), color = colors.brownPrimary, fontSize = 16.sp) }
 
                                 TextButton(onClick = {
                                     try {
@@ -650,13 +654,13 @@ private fun HtmlBlockRenderer(
                                     } catch (_: Exception) {
                                     }
                                     showAttachmentMenu = false
-                                }) { Text("使用外部瀏覽器開啟", color = colors.brownPrimary, fontSize = 16.sp) }
+                                }) { Text(appString(Res.string.auto_ac6e8014fc), color = colors.brownPrimary, fontSize = 16.sp) }
                             }
                         },
                         confirmButton = {},
                         dismissButton = {
                             TextButton(onClick = { showAttachmentMenu = false }) {
-                                Text("取消", color = colors.textDark.copy(alpha = 0.5f))
+                                Text(appString(Res.string.common_cancel), color = colors.textDark.copy(alpha = 0.5f))
                             }
                         },
                         containerColor = colors.creamSurface,
@@ -685,7 +689,7 @@ private fun HtmlBlockRenderer(
             ) {
                 Column(modifier = Modifier.padding(12.dp).fillMaxWidth()) {
                     Text(
-                        text = if (expanded) "▼ ${block.title ?: "點擊展開 / 收起"}" else "▶ ${block.title ?: "點擊展開 / 收起"}",
+                        text = if (expanded) "▼ ${block.title ?: appString(Res.string.auto_a34db389f3)}" else "▶ ${block.title ?: appString(Res.string.auto_a34db389f3)}",
                         color = colors.brownDeep,
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.sp
@@ -741,7 +745,7 @@ private fun HtmlBlockRenderer(
                             modifier = Modifier.padding(end = 8.dp)
                         )
                         Text(
-                            text = "本帖隱藏內容需要積分: ${block.cost}",
+                            text = appString(Res.string.thread_post_hidden_score, block.cost.toString()),
                             color = Color(0xFFD32F2F),
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp
@@ -924,3 +928,5 @@ private fun HtmlBlockRenderer(
         }
     }
 }
+
+

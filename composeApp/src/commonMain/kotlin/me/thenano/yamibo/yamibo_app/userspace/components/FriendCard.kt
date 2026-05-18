@@ -1,4 +1,8 @@
-package me.thenano.yamibo.yamibo_app.userspace.components
+﻿package me.thenano.yamibo.yamibo_app.userspace.components
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -40,12 +44,13 @@ internal fun FriendCard(
             }
         }
         if (onMessageClick != null) {
-            SmallActionButton("發消息", onMessageClick)
+            SmallActionButton(appString(Res.string.auto_3c2c2bd849), onMessageClick)
             Spacer(Modifier.width(6.dp))
         }
         if (item.deleteUrl != null) {
-            SmallActionButton("刪除", onDeleteClick)
+            SmallActionButton(appString(Res.string.common_delete), onDeleteClick)
         }
     }
     HorizontalDivider(color = colors.brownLight.copy(alpha = 0.35f))
 }
+

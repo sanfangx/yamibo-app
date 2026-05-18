@@ -1,4 +1,8 @@
-package me.thenano.yamibo.yamibo_app.thread.reader.components.manga
+﻿package me.thenano.yamibo.yamibo_app.thread.reader.components.manga
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import YamiboIcons
 import androidx.compose.animation.*
@@ -231,7 +235,7 @@ fun MangaReaderOverlay(
                         ) {
                             Icon(
                                 imageVector = YamiboIcons.Setting,
-                                contentDescription = "設定",
+                                contentDescription = appString(Res.string.settings_title),
                                 tint = Color.White,
                                 modifier = Modifier.size(36.dp)
                             )
@@ -247,7 +251,7 @@ fun MangaReaderOverlay(
                             ) {
                                 Icon(
                                     imageVector = YamiboIcons.Share,
-                                    contentDescription = "分享",
+                                    contentDescription = appString(Res.string.auto_c31f48f84e),
                                     tint = Color.White,
                                     modifier = Modifier.size(28.dp)
                                 )
@@ -271,3 +275,4 @@ fun MangaReaderOverlay(
         }
     }
 }
+

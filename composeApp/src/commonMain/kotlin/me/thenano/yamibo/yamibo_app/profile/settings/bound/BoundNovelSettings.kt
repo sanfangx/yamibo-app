@@ -1,4 +1,9 @@
-package me.thenano.yamibo.yamibo_app.profile.settings.bound
+﻿package me.thenano.yamibo.yamibo_app.profile.settings.bound
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import me.thenano.yamibo.yamibo_app.i18n.localizedLabel
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -25,13 +30,14 @@ import me.thenano.yamibo.yamibo_app.LocalNovelReaderSettingsRepository
 import me.thenano.yamibo.yamibo_app.components.rememberConvertedText
 import me.thenano.yamibo.yamibo_app.profile.settings.components.SettingsChipRow
 import me.thenano.yamibo.yamibo_app.profile.settings.components.SettingsSlider
-import me.thenano.yamibo.yamibo_app.repository.settings.NovelReaderSettingsRepository
+import me.thenano.yamibo.yamibo_app.repository.settings.ReaderChineseConversionOption
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.util.state
 
 import kotlin.math.roundToInt
 
-private const val PREVIEW_TEXT = "我是YamiboApp的作者TheNano，這是一個第三方個人獨立開發的開源App"
+private val PREVIEW_TEXT: String
+    get() = appString(Res.string.auto_256be2c31b)
 
 @Composable
 fun NovelReaderPreviewSetting() {
@@ -70,7 +76,7 @@ fun NovelFontSizeSetting() {
     val fontSize = novelSettingsRepo.fontSize.state()
 
     SettingsSlider(
-        label = "文字大小",
+        label = appString(Res.string.auto_93ab99d761),
         value = fontSize.toFloat(),
         valueRange = 10f..40f,
         steps = 29,
@@ -85,7 +91,7 @@ fun NovelLineSpacingSetting() {
     val lineSpacing = novelSettingsRepo.lineSpacing.state()
 
     SettingsSlider(
-        label = "行距比例",
+        label = appString(Res.string.auto_681797f13b),
         value = lineSpacing,
         valueRange = 1.0f..3.0f,
         steps = 39,
@@ -100,7 +106,7 @@ fun NovelContentWidthSetting() {
     val contentWidthFraction = novelSettingsRepo.contentWidthFraction.state()
 
     SettingsSlider(
-        label = "內容寬度",
+        label = appString(Res.string.auto_748fd8d8ee),
         value = contentWidthFraction,
         valueRange = 0.6f..1.0f,
         steps = 39,
@@ -127,13 +133,13 @@ fun NovelSystemBarsBackgroundSetting() {
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = "保留系統列背景",
+                text = appString(Res.string.auto_f217342710),
                 fontSize = 16.sp,
                 color = colors.textDark,
             )
             Spacer(Modifier.height(2.dp))
             Text(
-                text = "在狀態列與底部導覽列後方使用閱讀背景，避免透明系統列蓋住內容。",
+                text = appString(Res.string.auto_465974851c),
                 fontSize = 13.sp,
                 color = colors.textDark.copy(alpha = 0.6f),
             )
@@ -157,9 +163,10 @@ fun NovelChineseConversionSetting() {
     val chineseConversion = novelSettingsRepo.chineseConversion.state()
 
     SettingsChipRow(
-        options = NovelReaderSettingsRepository.chineseConversionOptions,
+        options = ReaderChineseConversionOption.entries.map { it to it.localizedLabel() },
         selectedValue = chineseConversion,
         onSelect = { novelSettingsRepo.chineseConversion.setValue(it) },
         modifier = Modifier.padding(horizontal = 4.dp),
     )
 }
+

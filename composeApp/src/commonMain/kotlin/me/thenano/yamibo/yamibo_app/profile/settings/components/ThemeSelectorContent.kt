@@ -1,4 +1,9 @@
-package me.thenano.yamibo.yamibo_app.profile.settings.components
+﻿package me.thenano.yamibo.yamibo_app.profile.settings.components
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import me.thenano.yamibo.yamibo_app.i18n.localizedLabel
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -37,7 +42,7 @@ fun ThemeSelectorContent(
 
     Column(modifier = modifier) {
         Text(
-            text = "顏色主題",
+            text = appString(Res.string.auto_13782c0fa9),
             color = colors.textDark,
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold,
@@ -66,7 +71,7 @@ fun ThemeSelectorContent(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = mode.label,
+                        text = mode.localizedLabel(),
                         color = if (isSelected) Color.White else colors.textDark.copy(alpha = 0.7f),
                         fontSize = 13.sp,
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
@@ -86,6 +91,7 @@ fun ThemeSelectorContent(
                 val scheme = schemeEnum.toScheme()
                 ThemeCard(
                     scheme = scheme,
+                    title = schemeEnum.localizedLabel(),
                     isSelected = schemeEnum == currentScheme,
                     onClick = { onSchemeChange(schemeEnum) }
                 )
@@ -97,6 +103,7 @@ fun ThemeSelectorContent(
 @Composable
 private fun ThemeCard(
     scheme: YamiboColorScheme,
+    title: String,
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
@@ -173,7 +180,7 @@ private fun ThemeCard(
 
         Spacer(Modifier.height(8.dp))
         Text(
-            text = scheme.name,
+            text = title,
             color = if (isSelected) colors.textDark else colors.textDark.copy(alpha = 0.5f),
             fontSize = 10.sp,
             maxLines = 1,
@@ -181,3 +188,4 @@ private fun ThemeCard(
         )
     }
 }
+

@@ -12,7 +12,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 
-/** 設定用滑桿 (label + 數值 + slider) */
+/** Slider row used by settings pages. */
 @Composable
 fun SettingsSlider(
     label: String,

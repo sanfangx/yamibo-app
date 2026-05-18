@@ -1,4 +1,9 @@
-package me.thenano.yamibo.yamibo_app.history
+﻿package me.thenano.yamibo.yamibo_app.history
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import me.thenano.yamibo.yamibo_app.i18n.localizedAppMessage
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.slideInVertically
@@ -45,6 +50,7 @@ import androidx.compose.ui.unit.sp
 import io.github.littlesurvival.YamiboForum
 import io.github.littlesurvival.dto.model.PageNav
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.thenano.yamibo.yamibo_app.IMainScreen
@@ -85,6 +91,7 @@ import me.thenano.yamibo.yamibo_app.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.thread.reader.IImageReaderScreen
 import me.thenano.yamibo.yamibo_app.thread.reader.IThreadReaderScreen
+import org.jetbrains.compose.resources.stringResource
 import kotlin.math.ceil
 
 private const val PAGE_SIZE = 20
@@ -100,6 +107,8 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
     val navigator = LocalNavigator.current
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+    val allLabel = stringResource(Res.string.common_all)
+    val filterPrefix = stringResource(Res.string.read_history_filter_prefix)
 
     var state by remember { mutableStateOf<HistoryState>(HistoryState.Loading) }
     var currentPage by remember { mutableIntStateOf(1) }
@@ -123,7 +132,7 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
     var favoriteRefreshToken by remember { mutableIntStateOf(0) }
     var pendingFavoriteRemovalTarget by remember { mutableStateOf<FavoriteTargetPayload?>(null) }
     var pendingFavoriteRemovalSelection by remember { mutableStateOf<FavoriteLocationSelection?>(null) }
-    var pendingFavoriteRemovalSuccessMessage by remember { mutableStateOf("已移除收藏") }
+    var pendingFavoriteRemovalSuccessMessage by remember { mutableStateOf(appString(Res.string.auto_3b66a4b8b2)) }
     var showFavoriteRemovalConfirm by remember { mutableStateOf(false) }
     var showFavoriteMultiPathDialog by remember { mutableStateOf(false) }
     var showFavoriteAddSyncConfirm by remember { mutableStateOf(false) }
@@ -170,7 +179,7 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
                 add(countByFilter[ReadHistoryRepository.HistoryFilter.All]
                     ?: ReadHistoryRepository.HistoryFilterCount(
                         ReadHistoryRepository.HistoryFilter.All,
-                        "全部",
+                        allLabel,
                         readHistoryRepo.getCombinedHistoryCount(),
                     ))
                 val forumCounts = YamiboForum.entries.map { forum ->
@@ -210,7 +219,7 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
             )
             currentPage = page
         } catch (e: Exception) {
-            state = HistoryState.Error(e.message ?: "載入失敗")
+            state = HistoryState.Error(e.message ?: appString(Res.string.auto_0c830cfab7))
         }
     }
 
@@ -231,7 +240,7 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
             )
             currentPage = page
         } catch (e: Exception) {
-            state = HistoryState.Error(e.message ?: "搜尋失敗")
+            state = HistoryState.Error(e.message ?: appString(Res.string.auto_c2d6593769))
         }
     }
 
@@ -263,9 +272,9 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
         }
         favoriteRefreshToken += 1
         val message = when {
-            syncResult == null -> "已加入收藏，預設存入未分類"
-            syncResult.success -> "已加入收藏，${syncResult.message ?: "已同步到百合會。"}"
-            else -> "已加入收藏，但同步失敗：${syncResult.message ?: "請稍後再試"}"
+            syncResult == null -> appString(Res.string.auto_bebbc55cf4)
+            syncResult.success -> appString(Res.string.favorite_add_success, syncResult.message?.let(::localizedAppMessage) ?: appString(Res.string.auto_2938876dc4))
+            else -> appString(Res.string.favorite_add_sync_failed, syncResult.message?.let(::localizedAppMessage) ?: appString(Res.string.auto_17e2a8be07))
         }
         snackbarHostState.showSnackbar(message)
     }
@@ -274,7 +283,7 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
         val syncingSnackbarJob = if (syncToRemote) {
             scope.launch {
                 snackbarHostState.showSnackbar(
-                    message = "正在同步到百合會...",
+                    message = appString(Res.string.auto_af7b64507d),
                     duration = SnackbarDuration.Indefinite,
                 )
             }
@@ -288,9 +297,9 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
         snackbarHostState.currentSnackbarData?.dismiss()
         favoriteRefreshToken += 1
         val message = when {
-            syncResult == null -> "已加入本地收藏，預設存入未分類"
-            syncResult.success -> "已加入本地收藏，${syncResult.message ?: "已同步到百合會。"}"
-            else -> "已加入本地收藏，但同步到百合會失敗：${syncResult.message ?: "請稍後再試"}"
+            syncResult == null -> appString(Res.string.auto_9edff0b173)
+            syncResult.success -> appString(Res.string.favorite_add_local_success, syncResult.message?.let(::localizedAppMessage) ?: appString(Res.string.auto_2938876dc4))
+            else -> appString(Res.string.favorite_add_local_sync_failed, syncResult.message?.let(::localizedAppMessage) ?: appString(Res.string.auto_17e2a8be07))
         }
         snackbarHostState.showSnackbar(message)
     }
@@ -299,7 +308,7 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
         val syncingSnackbarJob = if (removeRemote) {
             scope.launch {
                 snackbarHostState.showSnackbar(
-                    message = "正在從百合會移除收藏...",
+                    message = appString(Res.string.auto_1294f453e8),
                     duration = SnackbarDuration.Indefinite,
                 )
             }
@@ -318,7 +327,7 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
         snackbarHostState.currentSnackbarData?.dismiss()
         favoriteRefreshToken += 1
         snackbarHostState.showSnackbar(
-            if (removeResult.success) pendingFavoriteRemovalSuccessMessage else removeResult.message ?: "移除收藏失敗",
+            if (removeResult.success) pendingFavoriteRemovalSuccessMessage else removeResult.message?.let(::localizedAppMessage) ?: appString(Res.string.auto_4332f902a2),
         )
         pendingFavoriteRemovalTarget = null
         pendingFavoriteRemovalSelection = null
@@ -345,7 +354,7 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
         if (selection.item != null) {
             pendingFavoriteRemovalTarget = target
             pendingFavoriteRemovalSelection = selection
-            pendingFavoriteRemovalSuccessMessage = "已移除收藏"
+            pendingFavoriteRemovalSuccessMessage = appString(Res.string.auto_3b66a4b8b2)
             if (appSettingsRepository.skipFavoriteRemovalConfirm.getValue()) {
                 if (selection.paths.size > 1) {
                     showFavoriteMultiPathDialog = true
@@ -373,6 +382,8 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
 
     LaunchedEffect(navigator.stack.size) {
         if (navigator.currentScreen is IMainScreen) {
+            // Let the popped reader dispose and persist its final visible anchor before reading history again.
+            delay(320)
             if (mode == PageMode.Search && searchQuery.isNotBlank()) {
                 doSearch(searchQuery, currentPage)
             } else if (mode != PageMode.Select) {
@@ -454,7 +465,7 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
                             selectedItems = emptySet()
                             mode = PageMode.Normal
                             state = HistoryState.Empty
-                            snackbarHostState.showSnackbar("已刷新閱讀歷史紀錄")
+                            snackbarHostState.showSnackbar(appString(Res.string.auto_43afedcf5d))
                         }
                     },
                     onCancel = {
@@ -469,7 +480,7 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
                                 selectedItems = emptySet()
                                 mode = PageMode.Normal
                                 loadPage(1)
-                                snackbarHostState.showSnackbar("已刪除 $deletedAmount 項紀錄")
+                                snackbarHostState.showSnackbar(appString(Res.string.favorite_deleted_records, deletedAmount))
                             }
                         }
                     },
@@ -504,8 +515,8 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
                                         modifier = Modifier.weight(1f),
                                     )
                                     if (index == 0 && mode == PageMode.Normal) {
-                                        val filterLabel = filterCounts.firstOrNull { it.filter == selectedFilter }?.label ?: "全部"
-                                        YamiboActionChip("篩選: $filterLabel", onClick = { showFilterDialog = true })
+                                        val filterLabel = filterCounts.firstOrNull { it.filter == selectedFilter }?.label?.let(::localizedAppMessage) ?: allLabel
+                                        YamiboActionChip("$filterPrefix: $filterLabel", onClick = { showFilterDialog = true })
                                     }
                                 }
                             }
@@ -523,7 +534,7 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
                                             scope.launch {
                                                 readHistoryRepo.deleteHistoryBatch(listOf(history))
                                                 loadPage(currentPage)
-                                                snackbarHostState.showSnackbar("已刪除這筆紀錄")
+                                                snackbarHostState.showSnackbar(appString(Res.string.auto_65ab864397))
                                             }
                                         },
                                         onFavorite = {
@@ -557,7 +568,7 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
                                             scope.launch {
                                                 readHistoryRepo.deleteMangaTagHistory(history.tagId)
                                                 loadPage(currentPage)
-                                                snackbarHostState.showSnackbar("已刪除這筆紀錄")
+                                                snackbarHostState.showSnackbar(appString(Res.string.auto_65ab864397))
                                             }
                                         },
                                         onFavorite = {
@@ -654,7 +665,7 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
                         favoriteDialogTarget = null
                         pendingFavoriteRemovalTarget = target
                         pendingFavoriteRemovalSelection = favoriteRepository.getFavoriteLocationSelection(target)
-                        pendingFavoriteRemovalSuccessMessage = "已從所有位置移除收藏"
+                        pendingFavoriteRemovalSuccessMessage = appString(Res.string.auto_eb73358eb7)
                         if (appSettingsRepository.skipFavoriteRemovalConfirm.getValue()) {
                             if ((pendingFavoriteRemovalSelection?.paths?.size ?: 0) > 1) {
                                 showFavoriteMultiPathDialog = true
@@ -668,7 +679,7 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
                         favoriteRepository.setItemLocations(existing.id, selectedCategories, selectedCollections)
                         favoriteDialogTarget = null
                         favoriteRefreshToken += 1
-                        snackbarHostState.showSnackbar("收藏位置已更新")
+                        snackbarHostState.showSnackbar(appString(Res.string.auto_6788887252))
                     }
                 }
             }
@@ -691,7 +702,7 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
                     if ((selection?.paths?.size ?: 0) > 1) {
                         showFavoriteMultiPathDialog = true
                     } else {
-                        pendingFavoriteRemovalSuccessMessage = "已移除收藏"
+                        pendingFavoriteRemovalSuccessMessage = appString(Res.string.auto_3b66a4b8b2)
                         maybePromptRemoteRemoval(target)
                     }
                 }
@@ -744,7 +755,7 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
     if (showFavoriteMultiPathDialog) {
         FavoriteMultiPathRemoveDialog(
             paths = pendingFavoriteRemovalSelection?.paths.orEmpty(),
-            tip = "tip：長按可詳細編輯收藏路徑",
+            tip = appString(Res.string.auto_96fd606a93),
             onDismiss = {
                 showFavoriteMultiPathDialog = false
                 pendingFavoriteRemovalTarget = null
@@ -753,7 +764,7 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
             onRemoveAll = {
                 val target = pendingFavoriteRemovalTarget ?: return@FavoriteMultiPathRemoveDialog
                 showFavoriteMultiPathDialog = false
-                pendingFavoriteRemovalSuccessMessage = "已從所有位置移除收藏"
+                pendingFavoriteRemovalSuccessMessage = appString(Res.string.auto_eb73358eb7)
                 scope.launch {
                     maybePromptRemoteRemoval(target)
                 }
@@ -787,7 +798,7 @@ private fun ReadHistoryFilterDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text("篩選類別", color = colors.brownDeep, fontWeight = FontWeight.Bold)
+            Text(appString(Res.string.auto_d1f269df62), color = colors.brownDeep, fontWeight = FontWeight.Bold)
         },
         text = {
             LazyColumn {
@@ -808,7 +819,7 @@ private fun ReadHistoryFilterDialog(
                                 colors = RadioButtonDefaults.colors(selectedColor = colors.brownDeep),
                             )
                             Text(
-                                text = "${option.label} (${option.count})",
+                                text = "${localizedAppMessage(option.label)} (${option.count})",
                                 color = colors.textDark,
                                 fontWeight = FontWeight.Medium,
                                 maxLines = 1,
@@ -821,7 +832,7 @@ private fun ReadHistoryFilterDialog(
             }
         },
         confirmButton = {
-            YamiboActionChip("關閉", onDismiss)
+            YamiboActionChip(stringResource(Res.string.common_close), onDismiss)
         },
         containerColor = colors.creamSurface,
     )
@@ -834,4 +845,6 @@ private fun historyFilterKey(filter: ReadHistoryRepository.HistoryFilter): Strin
         ReadHistoryRepository.HistoryFilter.Tag -> "tag"
     }
 }
+
+
 

@@ -1,4 +1,8 @@
-package me.thenano.yamibo.yamibo_app.profile.settings.access
+﻿package me.thenano.yamibo.yamibo_app.profile.settings.access
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -6,15 +10,15 @@ import kotlinx.coroutines.flow.StateFlow
 class IOSBackgroundAccessRepository : BackgroundAccessRepository {
     private val _state = MutableStateFlow(
         BackgroundAccessRepository.SetupState(
-            summary = "iOS 目前沒有 Android 那種常駐前景通知與長時間背景同步能力。",
+            summary = appString(Res.string.auto_cc3c3071a5),
             items = listOf(
                 BackgroundAccessRepository.SetupItem(
-                    title = "平台限制",
-                    subtitle = "iOS 最多只能在進入背景後維持一小段時間執行。若系統掛起 App，收藏同步仍可能中斷。",
+                    title = appString(Res.string.auto_f550e6a558),
+                    subtitle = appString(Res.string.auto_a21ad701d5),
                     status = BackgroundAccessRepository.SetupStatus.Info,
                 ),
             ),
-            platformNote = "這個頁面在 iOS 主要是說明限制，不提供 Android 式的系統授權捷徑。",
+            platformNote = appString(Res.string.auto_48d3656712),
         ),
     )
 
@@ -24,3 +28,4 @@ class IOSBackgroundAccessRepository : BackgroundAccessRepository {
 
     override fun runAction(action: BackgroundAccessRepository.SetupAction) = Unit
 }
+

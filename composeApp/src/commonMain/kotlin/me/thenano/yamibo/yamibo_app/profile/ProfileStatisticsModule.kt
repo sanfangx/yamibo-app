@@ -1,4 +1,8 @@
-package me.thenano.yamibo.yamibo_app.profile
+﻿package me.thenano.yamibo.yamibo_app.profile
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import YamiboIcons
 import androidx.compose.foundation.Canvas
@@ -85,7 +89,7 @@ fun ProfileStatisticsModule() {
             .fillMaxSize()
             .background(colors.creamBackground),
     ) {
-        YamiboTopBar(title = "閱讀統計", onBack = navigator::pop)
+        YamiboTopBar(title = appString(Res.string.auto_77865166b9), onBack = navigator::pop)
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -93,27 +97,27 @@ fun ProfileStatisticsModule() {
                 .padding(vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            ProfileSectionCard(title = "作品與章節") {
+            ProfileSectionCard(title = appString(Res.string.auto_e5be7836d7)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ProfileMetricTile("書櫃", "${state.shelfCount}", "作品", Modifier.weight(1f))
-                    ProfileMetricTile("閱畢", "${state.finishedWorkCount}", "作品", Modifier.weight(1f))
+                    ProfileMetricTile(appString(Res.string.auto_3bd24a6e03), "${state.shelfCount}", appString(Res.string.auto_69724359e2), Modifier.weight(1f))
+                    ProfileMetricTile(appString(Res.string.auto_60fe7a69e6), "${state.finishedWorkCount}", appString(Res.string.auto_69724359e2), Modifier.weight(1f))
                 }
                 Spacer(Modifier.height(8.dp))
-                ProfileMetricTile("章節", "${state.readChapterCount}/${state.chapterCount}", "已讀/總數")
+                ProfileMetricTile(appString(Res.string.auto_8002f25dee), "${state.readChapterCount}/${state.chapterCount}", appString(Res.string.auto_e90df5aed5))
             }
 
-            ProfileSectionCard(title = "閱讀時數") {
+            ProfileSectionCard(title = appString(Res.string.auto_8e0acdd260)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ProfileMetricTile("總時數", formatDuration(state.allReadingMillis), "全部", Modifier.weight(1f))
-                    ProfileMetricTile("本周時數", formatDuration(state.weekReadingMillis), "7 天", Modifier.weight(1f))
+                    ProfileMetricTile(appString(Res.string.auto_d41bf52769), formatDuration(state.allReadingMillis), appString(Res.string.common_all), Modifier.weight(1f))
+                    ProfileMetricTile(appString(Res.string.auto_8ff1b62144), formatDuration(state.weekReadingMillis), appString(Res.string.auto_fdef8c231f), Modifier.weight(1f))
                 }
                 Spacer(Modifier.height(8.dp))
-                ProfileMetricTile("本月時數", formatDuration(state.monthReadingMillis), "本月")
+                ProfileMetricTile(appString(Res.string.auto_9702c843ac), formatDuration(state.monthReadingMillis), appString(Res.string.auto_0ec94a3708))
             }
 
-            ProfileSectionCard(title = "閱讀圖表") {
+            ProfileSectionCard(title = appString(Res.string.auto_ee07116616)) {
                 ProfileControlRow(
-                    title = "區間",
+                    title = appString(Res.string.auto_5157eb1dc3),
                     options = ProfileStatsRange.entries,
                     selected = chartRange,
                     label = { it.label },
@@ -121,7 +125,7 @@ fun ProfileStatisticsModule() {
                 )
                 Spacer(Modifier.height(8.dp))
                 ProfileControlRow(
-                    title = "圖表",
+                    title = appString(Res.string.auto_753dac846c),
                     options = ProfileChartType.entries,
                     selected = chartType,
                     label = { it.label },
@@ -137,7 +141,7 @@ fun ProfileStatisticsModule() {
                 )
             }
 
-            ProfileSectionCard(title = "收藏模塊比率") {
+            ProfileSectionCard(title = appString(Res.string.auto_d170867b57)) {
                 FavoriteRatioList(
                     ratios = state.favoriteRatios,
                     fallbackTypeRatios = state.favoriteTypeRatios,
@@ -256,7 +260,7 @@ private fun ProfileReadingChart(
         contentAlignment = Alignment.Center,
     ) {
         if (points.isEmpty() || maxValue <= 0f) {
-            Text(text = "尚無閱讀時數資料", color = colors.brownLight, fontSize = 13.sp)
+            Text(text = appString(Res.string.auto_9f04d73ead), color = colors.brownLight, fontSize = 13.sp)
             return@Box
         }
         Canvas(modifier = Modifier.matchParentSize().padding(horizontal = 12.dp, vertical = 16.dp)) {
@@ -339,7 +343,7 @@ private fun FavoriteRatioList(
     val colors = YamiboTheme.colors
     val displayRatios = ratios.ifEmpty { fallbackTypeRatios }
     if (displayRatios.isEmpty()) {
-        Text(text = "尚無收藏資料", color = colors.brownLight, fontSize = 13.sp)
+        Text(text = appString(Res.string.auto_ef70bf02c3), color = colors.brownLight, fontSize = 13.sp)
         return
     }
     val total = displayRatios.sumOf { it.count }.coerceAtLeast(1)
@@ -472,24 +476,24 @@ private fun formatDuration(durationMillis: Long): String {
 
 private val FavoriteTargetType.label: String
     get() = when (this) {
-        FavoriteTargetType.ThreadNormal -> "帖子"
-        FavoriteTargetType.ThreadNovel -> "小說"
-        FavoriteTargetType.TagManga -> "Tag 漫畫"
+        FavoriteTargetType.ThreadNormal -> appString(Res.string.auto_75be26f8c5)
+        FavoriteTargetType.ThreadNovel -> appString(Res.string.auto_f880f1d7b2)
+        FavoriteTargetType.TagManga -> appString(Res.string.auto_2c0b6c9dda)
     }
 
 private enum class ProfileStatsRange(val label: String, val days: Int?) {
-    Week("本周 7 天", 7),
-    Month("30 天", 30),
-    Season("90 天", 90),
-    Year("一年", 365),
-    All("全部", null),
+    Week(appString(Res.string.auto_3d1e410407), 7),
+    Month(appString(Res.string.auto_923a9a444c), 30),
+    Season(appString(Res.string.auto_670ac73311), 90),
+    Year(appString(Res.string.auto_5c83b1cd6a), 365),
+    All(appString(Res.string.common_all), null),
 }
 
 private enum class ProfileChartType(val label: String) {
-    Bar("長條圖"),
-    Histogram("直方圖"),
-    Pie("圓餅圖"),
-    Line("折線圖"),
+    Bar(appString(Res.string.auto_1de453c334)),
+    Histogram(appString(Res.string.auto_1a8662cb90)),
+    Pie(appString(Res.string.auto_91912abc86)),
+    Line(appString(Res.string.auto_4cea014176)),
 }
 
 private data class ProfileStatisticsState(
@@ -542,3 +546,4 @@ private data class RatioItem(
 
 private const val DAY_MILLIS = 86_400_000L
 private const val ALL_START_DATE_KEY = "0000-01-01"
+

@@ -1,4 +1,9 @@
-package me.thenano.yamibo.yamibo_app.userspace.blog
+﻿package me.thenano.yamibo.yamibo_app.userspace.blog
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import me.thenano.yamibo.yamibo_app.i18n.localizedMessage
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import YamiboIcons
 import androidx.compose.foundation.background
@@ -111,7 +116,7 @@ fun BlogReaderScreen(
                 currentPage = result.value.pageNav?.currentPage ?: page
                 BlogReaderState.Success(result.value)
             }
-            else -> BlogReaderState.Error(result.message())
+            else -> BlogReaderState.Error(result.localizedMessage())
         }
     }
 
@@ -125,7 +130,7 @@ fun BlogReaderScreen(
         snackbarHost = { YamiboSnackbarHost(hostState = snackbarHostState) },
         topBar = {
             BlogReaderTopBar(
-                title = "日志",
+                title = appString(Res.string.auto_456d29ef8b),
                 onBack = { navigator.pop() },
             )
         },
@@ -166,7 +171,7 @@ fun BlogReaderScreen(
                                     comment = comment,
                                     onUserClick = { user -> navigator.navigate(IUserSpaceScreen(user.uid, user.name)) },
                                     onReplyClick = { url ->
-                                        navigator.navigate(IPlatformWebView(YamiboRoute.Domain.toFullLink(url), title = "回覆"))
+                                        navigator.navigate(IPlatformWebView(YamiboRoute.Domain.toFullLink(url), title = appString(Res.string.auto_a9aa7555b4)))
                                     },
                                 )
                             }
@@ -190,10 +195,10 @@ fun BlogReaderScreen(
                                     val message = commentText.trim()
                                     when {
                                         formHash == null -> scope.launch {
-                                            snackbarHostState.showSnackbar("請先登入後再評論", duration = SnackbarDuration.Short)
+                                            snackbarHostState.showSnackbar(appString(Res.string.auto_f8fa9d4f1d), duration = SnackbarDuration.Short)
                                         }
                                         message.isBlank() -> scope.launch {
-                                            snackbarHostState.showSnackbar("請輸入評論內容", duration = SnackbarDuration.Short)
+                                            snackbarHostState.showSnackbar(appString(Res.string.auto_30e7728122), duration = SnackbarDuration.Short)
                                         }
                                         else -> scope.launch {
                                             submitting = true
@@ -204,7 +209,7 @@ fun BlogReaderScreen(
                                                     snackbarHostState.showSnackbar(result.value, duration = SnackbarDuration.Short)
                                                     loadPage(currentPage, preferCache = false)
                                                 }
-                                                else -> snackbarHostState.showSnackbar(result.message(), duration = SnackbarDuration.Short)
+                                                else -> snackbarHostState.showSnackbar(result.localizedMessage(), duration = SnackbarDuration.Short)
                                             }
                                             submitting = false
                                         }
@@ -235,7 +240,7 @@ private fun RootBlogCard(
     val root = page.rootBlog
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 14.dp)) {
         Text(
-            text = page.blogInfo.title.ifBlank { titleHint ?: "日志" },
+            text = page.blogInfo.title.ifBlank { titleHint ?: appString(Res.string.auto_456d29ef8b) },
             color = colors.brownDeep,
             fontSize = 22.sp,
             fontWeight = FontWeight.Bold,
@@ -264,9 +269,9 @@ private fun RootBlogCard(
 @Composable
 private fun BlogActionRow(page: BlogPage, onUrlClick: (String, String) -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        page.blogInfo.collectUrl?.let { BlogSmallButton("收藏") { onUrlClick("收藏日志", it) } }
-        page.blogInfo.shareUrl?.let { BlogSmallButton("分享") { onUrlClick("分享日志", it) } }
-        page.blogInfo.inviteUrl?.let { BlogSmallButton("邀請") { onUrlClick("邀請閱讀", it) } }
+        page.blogInfo.collectUrl?.let { BlogSmallButton(appString(Res.string.main_favorite)) { onUrlClick(appString(Res.string.auto_b4dd3166a3), it) } }
+        page.blogInfo.shareUrl?.let { BlogSmallButton(appString(Res.string.auto_c31f48f84e)) { onUrlClick(appString(Res.string.auto_47b6632a33), it) } }
+        page.blogInfo.inviteUrl?.let { BlogSmallButton(appString(Res.string.auto_89c7338fb6)) { onUrlClick(appString(Res.string.auto_a7aac35ef5), it) } }
     }
 }
 
@@ -276,7 +281,7 @@ private fun BlogCommentSectionTitle(count: Int) {
     Column(Modifier.fillMaxWidth()) {
         HorizontalDivider(color = colors.brownLight.copy(alpha = 0.45f))
         Text(
-            text = if (count > 0) "日志評論" else "日志評論",
+            text = if (count > 0) appString(Res.string.auto_8780f40c63) else appString(Res.string.auto_8780f40c63),
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 16.dp),
             color = colors.brownDeep,
             fontSize = 16.sp,
@@ -309,7 +314,7 @@ private fun BlogCommentCard(
             }
             comment.replyUrl?.let { url ->
                 Text(
-                    text = "回覆",
+                    text = appString(Res.string.auto_a9aa7555b4),
                     modifier = Modifier.clickable { onReplyClick(url) }.padding(6.dp),
                     color = colors.orangeAccent,
                     fontSize = 13.sp,
@@ -338,12 +343,12 @@ private fun BlogCommentEditor(
             onValueChange = onValueChange,
             modifier = Modifier.fillMaxWidth().height(142.dp),
             enabled = enabled,
-            placeholder = { Text(if (enabled) "內容區" else "請先登入後再評論") },
+            placeholder = { Text(if (enabled) appString(Res.string.auto_78108f5f4c) else appString(Res.string.auto_f8fa9d4f1d)) },
         )
         Spacer(Modifier.height(12.dp))
         YamiboPrimaryButton(
-            text = "評論",
-            busyText = "評論中...",
+            text = appString(Res.string.auto_f7f0ddf81c),
+            busyText = appString(Res.string.auto_631c707367),
             enabled = enabled,
             busy = submitting,
             onClick = onSubmit,
@@ -370,7 +375,7 @@ private fun BlogPageNavigation(nav: PageNav, currentPage: Int, onPageChange: (In
 
 @Composable
 private fun BlogEmptyComments() {
-    YamiboEmptyContent(message = "沒有找到評論", modifier = Modifier.padding(horizontal = 24.dp, vertical = 48.dp))
+    YamiboEmptyContent(message = appString(Res.string.auto_6063404215), modifier = Modifier.padding(horizontal = 24.dp, vertical = 48.dp))
 }
 
 @Composable
@@ -382,3 +387,5 @@ private fun BlogReaderLoading() {
 private fun BlogReaderError(message: String, onRetry: () -> Unit) {
     YamiboErrorContent(message = message, onRetry = onRetry)
 }
+
+

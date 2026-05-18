@@ -1,4 +1,9 @@
-package me.thenano.yamibo.yamibo_app.message
+﻿package me.thenano.yamibo.yamibo_app.message
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import me.thenano.yamibo.yamibo_app.i18n.localizedMessage
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import YamiboIcons
 import androidx.compose.foundation.background
@@ -111,7 +116,7 @@ fun PrivateMessageScreen(
                 currentPage = result.value.pageNav?.currentPage ?: page ?: 1
                 PrivateMessageState.Success(result.value)
             }
-            else -> PrivateMessageState.Error(result.message())
+            else -> PrivateMessageState.Error(result.localizedMessage())
         }
     }
 
@@ -131,8 +136,8 @@ fun PrivateMessageScreen(
         topBar = {
             PrivateMessageTopBar(
                 title = (state as? PrivateMessageState.Success)?.page?.title
-                    ?: titleHint?.let { "正在与${it}聊天中......" }
-                    ?: "聊天",
+                    ?: titleHint?.let { appString(Res.string.private_message_title_with_name, it) }
+                    ?: appString(Res.string.auto_c0abbfb414),
                 onBack = { navigator.pop() },
                 onRefresh = {
                     scope.launch { loadPage(page = null, preferCache = false) }
@@ -152,10 +157,10 @@ fun PrivateMessageScreen(
                     val message = input.trim()
                     when {
                         formHash == null -> scope.launch {
-                            snackbarHostState.showSnackbar("請先登入後再發送消息", duration = SnackbarDuration.Short)
+                            snackbarHostState.showSnackbar(appString(Res.string.auto_dc1f0dffd0), duration = SnackbarDuration.Short)
                         }
                         message.isBlank() -> scope.launch {
-                            snackbarHostState.showSnackbar("請輸入內容", duration = SnackbarDuration.Short)
+                            snackbarHostState.showSnackbar(appString(Res.string.auto_bcd47d4bfc), duration = SnackbarDuration.Short)
                         }
                         else -> scope.launch {
                             sending = true
@@ -166,7 +171,7 @@ fun PrivateMessageScreen(
                                 repository.clearMessagePages()
                                 loadPage(page = null, preferCache = false)
                             }
-                                else -> snackbarHostState.showSnackbar(result.message(), duration = SnackbarDuration.Short)
+                                else -> snackbarHostState.showSnackbar(result.localizedMessage(), duration = SnackbarDuration.Short)
                             }
                             sending = false
                         }
@@ -221,7 +226,7 @@ private fun PrivateMessageTopBar(title: String, onBack: () -> Unit, onRefresh: (
         titleFontSize = 18,
         onBack = onBack,
     ) {
-        YamiboTopBarIconAction(YamiboIcons.Reload, "刷新", onRefresh, iconSize = 22)
+        YamiboTopBarIconAction(YamiboIcons.Reload, appString(Res.string.auto_694fc5efa9), onRefresh, iconSize = 22)
     }
 }
 
@@ -293,11 +298,11 @@ private fun PrivateMessageInputBar(
 ) {
     YamiboMessageInputBar(
         value = value,
-        placeholder = "請輸入內容...",
+        placeholder = appString(Res.string.auto_9d0724f77c),
         enabled = enabled,
         sending = sending,
-        sendText = "發送",
-        sendingText = "發送中",
+        sendText = appString(Res.string.auto_62c1c68eac),
+        sendingText = appString(Res.string.auto_2f83d23727),
         onValueChange = onValueChange,
         onSend = onSend,
     )
@@ -320,5 +325,8 @@ private fun PrivateMessageError(message: String, onRetry: () -> Unit) {
 
 @Composable
 private fun EmptyPrivateMessages() {
-    YamiboEmptyContent(message = "沒有找到消息", modifier = Modifier.padding(vertical = 80.dp))
+    YamiboEmptyContent(message = appString(Res.string.auto_3b69690ec1), modifier = Modifier.padding(vertical = 80.dp))
 }
+
+
+

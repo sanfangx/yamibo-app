@@ -16,7 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 
-/** 自動換行的選項按鈕列（如閱讀模式、觸控區域等） */
+/** Wrapping option chips used by settings pages. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun <T> SettingsChipRow(

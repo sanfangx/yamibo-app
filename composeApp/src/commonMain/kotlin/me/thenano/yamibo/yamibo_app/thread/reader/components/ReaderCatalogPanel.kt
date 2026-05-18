@@ -1,4 +1,8 @@
-package me.thenano.yamibo.yamibo_app.thread.reader.components
+﻿package me.thenano.yamibo.yamibo_app.thread.reader.components
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import YamiboIcons
 import androidx.compose.animation.*
@@ -59,7 +63,7 @@ internal fun ReaderCatalogPanel(
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "目錄",
+                text = appString(Res.string.auto_fc417c00b0),
                 color = colors.creamBackground,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold
@@ -95,7 +99,7 @@ internal fun ReaderCatalogPanel(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "第 $page 頁",
+                                text = appString(Res.string.common_page_number, page),
                                 color = colors.brownPrimary,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 16.sp
@@ -204,3 +208,5 @@ internal fun ReaderCatalogPanel(
         }
     }
 }
+
+

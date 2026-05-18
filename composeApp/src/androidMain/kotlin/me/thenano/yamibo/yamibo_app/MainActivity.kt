@@ -1,4 +1,8 @@
-package me.thenano.yamibo.yamibo_app
+﻿package me.thenano.yamibo.yamibo_app
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -83,7 +87,7 @@ class MainActivity : ComponentActivity() {
                         finish()
                     } else {
                         lastBackTime = now
-                        Toast.makeText(this@MainActivity, "再按一次退出應用", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@MainActivity, appString(Res.string.auto_aedd38fc33), Toast.LENGTH_SHORT).show()
                     }
                 }
                 onDispose { callback.remove() }
@@ -227,3 +231,4 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+

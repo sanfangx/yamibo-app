@@ -1,4 +1,8 @@
-package me.thenano.yamibo.yamibo_app.forum.components
+﻿package me.thenano.yamibo.yamibo_app.forum.components
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -37,7 +41,7 @@ fun PageNavigation(pageNav: PageNav, onPageChange: (Int) -> Unit) {
         ) {
             /** prev button */
             PageButton(
-                text = "上一頁",
+                text = appString(Res.string.auto_0b5d407fec),
                 enabled = pageNav.prevUrl != null,
                 onClick = { if (current > 1) onPageChange(current - 1) }
             )
@@ -49,7 +53,7 @@ fun PageNavigation(pageNav: PageNav, onPageChange: (Int) -> Unit) {
                 color = colors.brownDeep,
             ) {
                 Text(
-                    text = "第${current}頁",
+                    text = appString(Res.string.common_page_number_compact, current),
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
@@ -59,7 +63,7 @@ fun PageNavigation(pageNav: PageNav, onPageChange: (Int) -> Unit) {
 
             /** next button */
             PageButton(
-                text = "下一頁",
+                text = appString(Res.string.auto_2ca9eb6d51),
                 enabled = pageNav.nextUrl != null,
                 onClick = { if (current < total) onPageChange(current + 1) }
             )
@@ -140,7 +144,7 @@ private fun PagePickerDialog(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
-                    text = "選擇頁面",
+                    text = appString(Res.string.auto_1c87acc74e),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = colors.textDark
@@ -148,7 +152,7 @@ private fun PagePickerDialog(
                 Spacer(Modifier.height(16.dp))
 
                 Text(
-                    text = "目前第 $currentPage / $totalPages 頁",
+                    text = appString(Res.string.common_current_page_total, currentPage, totalPages),
                     color = colors.textDark.copy(alpha = 0.65f),
                     fontSize = 13.sp,
                 )
@@ -186,7 +190,7 @@ private fun PagePickerDialog(
                     },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    label = { Text("輸入頁碼") },
+                    label = { Text(appString(Res.string.auto_ddab81e196)) },
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Number,
                         imeAction = ImeAction.Go,
@@ -210,7 +214,7 @@ private fun PagePickerDialog(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     TextButton(onClick = onDismiss) {
-                        Text(text = "取消", color = colors.brownPrimary, fontWeight = FontWeight.Medium)
+                        Text(text = appString(Res.string.common_cancel), color = colors.brownPrimary, fontWeight = FontWeight.Medium)
                     }
                     Spacer(Modifier.width(6.dp))
                     Button(
@@ -218,7 +222,7 @@ private fun PagePickerDialog(
                         colors = ButtonDefaults.buttonColors(containerColor = colors.brownDeep),
                         shape = RoundedCornerShape(12.dp),
                     ) {
-                        Text("跳轉", color = Color.White)
+                        Text(appString(Res.string.auto_15004e41f6), color = Color.White)
                     }
                 }
             }
@@ -250,3 +254,5 @@ private fun PageNumberButton(
         )
     }
 }
+
+

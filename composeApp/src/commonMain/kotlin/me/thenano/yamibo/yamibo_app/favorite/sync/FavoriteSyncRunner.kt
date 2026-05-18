@@ -1,4 +1,8 @@
-package me.thenano.yamibo.yamibo_app.favorite.sync
+﻿package me.thenano.yamibo.yamibo_app.favorite.sync
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -106,7 +110,7 @@ class FavoriteSyncRunner(
             latest.runId !in runningRunIds &&
             latest.runId !in pendingActivationStartedAt.keys
         ) {
-            repository.markRunInterrupted(latest.runId, "背景同步任務已中斷，可重新同步。")
+            repository.markRunInterrupted(latest.runId, appString(Res.string.auto_0feac0d17d))
         }
 
         stateFlow.value = repository.getLatestSnapshot()?.let { snapshot ->
@@ -119,3 +123,4 @@ class FavoriteSyncRunner(
         } ?: FavoriteSyncState.Idle
     }
 }
+

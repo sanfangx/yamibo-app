@@ -1,4 +1,8 @@
-package me.thenano.yamibo.yamibo_app.thread.detail.novel.components
+﻿package me.thenano.yamibo.yamibo_app.thread.detail.novel.components
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -117,7 +121,7 @@ internal fun ThreadErrorContent(message: String, onRetry: () -> Unit) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "載入失敗",
+                    text = appString(Res.string.auto_0c830cfab7),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = colors.brownDeep
@@ -137,7 +141,7 @@ internal fun ThreadErrorContent(message: String, onRetry: () -> Unit) {
                     contentColor = Color.White
                 ) {
                     Text(
-                        text = "重試",
+                        text = appString(Res.string.auto_3d2b6505a6),
                         modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
                         fontWeight = FontWeight.Bold,
                         fontSize = 15.sp
@@ -147,3 +151,4 @@ internal fun ThreadErrorContent(message: String, onRetry: () -> Unit) {
         }
     }
 }
+

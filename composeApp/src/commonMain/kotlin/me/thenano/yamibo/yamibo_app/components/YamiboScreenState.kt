@@ -1,4 +1,8 @@
-package me.thenano.yamibo.yamibo_app.components
+﻿package me.thenano.yamibo.yamibo_app.components
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -44,7 +48,7 @@ fun YamiboLoadingContent(modifier: Modifier = Modifier) {
  *
  * Use this for data-loaded-but-empty states such as no messages, no notices,
  * no comments, no favorite items, or no user-space posts. Prefer a concrete
- * domain message ("沒有找到評論") instead of a generic placeholder.
+ * domain message (appString(Res.string.auto_6063404215)) instead of a generic placeholder.
  *
  * @param message User-facing empty state text.
  * @param modifier Parent modifier, normally `Modifier.fillMaxWidth()`.
@@ -91,14 +95,15 @@ fun YamiboErrorContent(
             colors = CardDefaults.cardColors(containerColor = colors.creamSurface),
         ) {
             Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("載入失敗", color = colors.brownDeep, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                Text(appString(Res.string.auto_0c830cfab7), color = colors.brownDeep, fontWeight = FontWeight.Bold, fontSize = 18.sp)
                 Spacer(Modifier.height(10.dp))
                 Text(message, color = colors.brownPrimary.copy(alpha = 0.75f), fontSize = 13.sp)
                 Spacer(Modifier.height(16.dp))
                 Surface(onClick = onRetry, shape = RoundedCornerShape(50), color = colors.brownDeep) {
-                    Text("重試", modifier = Modifier.padding(horizontal = 22.dp, vertical = 10.dp), color = Color.White)
+                    Text(appString(Res.string.auto_3d2b6505a6), modifier = Modifier.padding(horizontal = 22.dp, vertical = 10.dp), color = Color.White)
                 }
             }
         }
     }
 }
+

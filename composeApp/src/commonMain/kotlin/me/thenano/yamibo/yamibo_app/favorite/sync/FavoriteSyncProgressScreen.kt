@@ -1,5 +1,10 @@
 ﻿package me.thenano.yamibo.yamibo_app.favorite.sync
 
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import me.thenano.yamibo.yamibo_app.i18n.localizedAppMessage
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
+
 import YamiboIcons
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -83,7 +88,7 @@ fun FavoriteSyncProgressScreen(runId: String) {
                 TopAppBar(
                     title = {
                         Text(
-                            text = "同步百合會收藏",
+                            text = appString(Res.string.auto_232479ab38),
                             color = Color.White,
                             fontWeight = FontWeight.Bold,
                             fontSize = 18.sp,
@@ -113,7 +118,7 @@ fun FavoriteSyncProgressScreen(runId: String) {
                 when {
                     snapshot == null || snapshot.runId != runId -> {
                         Text(
-                            text = "找不到這個同步任務。",
+                            text = appString(Res.string.auto_c490dfaf7a),
                             color = colors.textDark,
                             style = MaterialTheme.typography.bodyLarge,
                         )
@@ -135,7 +140,7 @@ fun FavoriteSyncProgressScreen(runId: String) {
                             },
                         )
                         Text(
-                            text = "關閉這個畫面不會中止同步，你之後仍可從收藏頁或設定頁重新查看進度。",
+                            text = appString(Res.string.auto_dbb1fba1ce),
                             color = colors.textDark.copy(alpha = 0.72f),
                             fontSize = 13.sp,
                         )
@@ -208,7 +213,7 @@ fun FavoriteSyncStatusCard(
                         fontSize = 18.sp,
                     )
                     Text(
-                        text = "目標類別：${categoryName ?: "預設"}",
+                        text = appString(Res.string.favorite_sync_target_category, categoryName?.let(::localizedAppMessage) ?: appString(Res.string.auto_3ee4f647b2)),
                         color = colors.textDark.copy(alpha = 0.72f),
                         fontSize = 13.sp,
                     )
@@ -236,8 +241,8 @@ fun FavoriteSyncStatusCard(
                     color = colors.brownDeep,
                     trackColor = colors.brownPrimary.copy(alpha = 0.18f),
                 )
-                SyncMetricRow("最後一次同步時間", formatSyncDateTime(lastSyncTimestamp))
-                SyncMetricRow("同步花費時間", formatSyncDuration(displayedElapsedDuration))
+                SyncMetricRow(appString(Res.string.auto_80d0daecfc), formatSyncDateTime(lastSyncTimestamp))
+                SyncMetricRow(appString(Res.string.auto_8242fc76fc), formatSyncDuration(displayedElapsedDuration))
                 progressUi.lines.forEach { line ->
                     SyncMetricRow(line.first, line.second)
                 }
@@ -245,8 +250,8 @@ fun FavoriteSyncStatusCard(
 
             snapshot.logMessage?.takeIf { it.isNotBlank() }?.let {
                 SyncMessageBlock(
-                    title = "日誌",
-                    message = it,
+                    title = appString(Res.string.auto_dccc309f3d),
+                    message = localizedAppMessage(it),
                     tint = colors.brownPrimary,
                     maxHeight = messageMaxHeight,
                 )
@@ -254,8 +259,8 @@ fun FavoriteSyncStatusCard(
 
             snapshot.warningMessage?.takeIf { it.isNotBlank() }?.let {
                 SyncMessageBlock(
-                    title = "提醒",
-                    message = it,
+                    title = appString(Res.string.auto_4b027f3979),
+                    message = localizedAppMessage(it),
                     tint = colors.brownDeep,
                     maxHeight = messageMaxHeight,
                 )
@@ -263,8 +268,8 @@ fun FavoriteSyncStatusCard(
 
             snapshot.errorMessage?.takeIf { it.isNotBlank() }?.let {
                 SyncMessageBlock(
-                    title = "錯誤",
-                    message = it,
+                    title = appString(Res.string.auto_e91a6ab98f),
+                    message = localizedAppMessage(it),
                     tint = Color(0xFFB74D42),
                     maxHeight = messageMaxHeight,
                 )
@@ -282,7 +287,7 @@ fun FavoriteSyncStatusCard(
                             contentColor = Color.White,
                         ),
                     ) {
-                        Text(if (state is FavoriteSyncState.Running) "查看進度" else "打開進度")
+                        Text(if (state is FavoriteSyncState.Running) appString(Res.string.auto_5f85564fa8) else appString(Res.string.auto_3612900095))
                     }
                 }
                 if (onInterrupt != null && state is FavoriteSyncState.Running) {
@@ -293,7 +298,7 @@ fun FavoriteSyncStatusCard(
                             contentColor = Color.White,
                         ),
                     ) {
-                        Text("中斷同步")
+                        Text(appString(Res.string.auto_c93cb1ccc4))
                     }
                 }
                 if (onResume != null && state !is FavoriteSyncState.Running) {
@@ -304,7 +309,7 @@ fun FavoriteSyncStatusCard(
                             contentColor = colors.brownDeep,
                         ),
                     ) {
-                        Text(if (state is FavoriteSyncState.Completed) "重新同步" else "繼續同步")
+                        Text(if (state is FavoriteSyncState.Completed) appString(Res.string.auto_c761d4982b) else appString(Res.string.auto_d072c3908f))
                     }
                 }
                 if (onDismiss != null) {
@@ -315,7 +320,7 @@ fun FavoriteSyncStatusCard(
                             contentColor = colors.textDark.copy(alpha = 0.82f),
                         ),
                     ) {
-                        Text("隱藏")
+                        Text(appString(Res.string.auto_2671918958))
                     }
                 }
             }
@@ -464,14 +469,16 @@ private fun formatSyncDuration(durationMs: Long): String {
     val minutes = (totalSeconds % 3600L) / 60L
     val seconds = totalSeconds % 60L
     return if (hours > 0) {
-        "${hours}時 ${minutes}分 ${seconds}秒"
+        appString(Res.string.favorite_sync_elapsed_hms, hours, minutes, seconds)
     } else if (minutes > 0) {
-        "${minutes}分 ${seconds}秒"
+        appString(Res.string.favorite_sync_elapsed_ms, minutes, seconds)
     } else {
-        "${seconds}秒"
+        appString(Res.string.favorite_sync_elapsed_s, seconds)
     }
 }
 
 private fun isLeapYear(year: Int): Boolean {
     return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)
 }
+
+

@@ -1,4 +1,8 @@
-package me.thenano.yamibo.yamibo_app.thread.reader.components.novel
+﻿package me.thenano.yamibo.yamibo_app.thread.reader.components.novel
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
@@ -64,7 +68,7 @@ fun NovelReaderSettingsPanel(
                     .verticalScroll(rememberScrollState())
             ) {
                 // Typography Section
-                SectionTitle("文字排版", color = colors.textDark)
+                SectionTitle(appString(Res.string.auto_4ae7f423d9), color = colors.textDark)
                 
                 Spacer(Modifier.height(8.dp))
                 NovelFontSizeSetting()
@@ -77,7 +81,7 @@ fun NovelReaderSettingsPanel(
 
                 Spacer(Modifier.height(24.dp))
 
-                SectionTitle("簡繁轉換", color = colors.textDark)
+                SectionTitle(appString(Res.string.auto_789d3745fc), color = colors.textDark)
                 NovelChineseConversionSetting()
 
                 Spacer(Modifier.height(24.dp))
@@ -106,3 +110,4 @@ private fun SectionTitle(text: String, color: Color) {
         modifier = Modifier.padding(bottom = 12.dp)
     )
 }
+

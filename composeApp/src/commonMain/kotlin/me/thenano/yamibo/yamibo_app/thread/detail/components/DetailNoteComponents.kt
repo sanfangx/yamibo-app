@@ -1,4 +1,8 @@
-package me.thenano.yamibo.yamibo_app.thread.detail.components
+﻿package me.thenano.yamibo.yamibo_app.thread.detail.components
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import YamiboIcons
 import androidx.compose.foundation.BorderStroke
@@ -57,7 +61,7 @@ internal fun DetailNoteActionButton(
                 tint = colors.brownDeep,
             )
             Text(
-                text = if (hasNote) "編輯筆記" else "新增筆記",
+                text = if (hasNote) appString(Res.string.auto_9f08cb5587) else appString(Res.string.auto_8f748722de),
                 color = colors.brownDeep,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -104,13 +108,13 @@ internal fun DetailNoteCard(
                         tint = colors.brownDeep,
                     )
                     Text(
-                        text = "筆記",
+                        text = appString(Res.string.auto_d09b79b2b7),
                         color = colors.brownDeep,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
                     )
                 }
-                YamiboActionChip("編輯", onClick = onEdit)
+                YamiboActionChip(appString(Res.string.auto_aa3a615d69), onClick = onEdit)
             }
             Text(
                 text = content,
@@ -139,7 +143,7 @@ internal fun DetailNoteEditorDialog(
         containerColor = colors.creamBackground,
         title = {
             Text(
-                text = if (hasExistingNote) "編輯筆記" else "新增筆記",
+                text = if (hasExistingNote) appString(Res.string.auto_9f08cb5587) else appString(Res.string.auto_8f748722de),
                 color = colors.textDark,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -149,7 +153,7 @@ internal fun DetailNoteEditorDialog(
                 value = content,
                 onValueChange = { content = it },
                 modifier = Modifier.fillMaxWidth().heightIn(min = 150.dp),
-                placeholder = { Text("輸入本地筆記...") },
+                placeholder = { Text(appString(Res.string.auto_2ddba7797e)) },
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = colors.creamSurface,
                     unfocusedContainerColor = colors.creamSurface,
@@ -168,7 +172,7 @@ internal fun DetailNoteEditorDialog(
                 shape = RoundedCornerShape(12.dp),
             ) {
                 Box(Modifier.padding(horizontal = 16.dp, vertical = 9.dp), contentAlignment = Alignment.Center) {
-                    Text("保存", color = colors.creamBackground, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    Text(appString(Res.string.auto_be5fbbe34c), color = colors.creamBackground, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
         },
@@ -181,7 +185,7 @@ internal fun DetailNoteEditorDialog(
                         shape = RoundedCornerShape(12.dp),
                     ) {
                         Box(Modifier.padding(horizontal = 14.dp, vertical = 9.dp), contentAlignment = Alignment.Center) {
-                            Text("刪除", color = colors.brownDeep, fontSize = 13.sp)
+                            Text(appString(Res.string.common_delete), color = colors.brownDeep, fontSize = 13.sp)
                         }
                     }
                 }
@@ -191,10 +195,11 @@ internal fun DetailNoteEditorDialog(
                     shape = RoundedCornerShape(12.dp),
                 ) {
                     Box(Modifier.padding(horizontal = 14.dp, vertical = 9.dp), contentAlignment = Alignment.Center) {
-                        Text("取消", color = colors.brownDeep, fontSize = 13.sp)
+                        Text(appString(Res.string.common_cancel), color = colors.brownDeep, fontSize = 13.sp)
                     }
                 }
             }
         },
     )
 }
+

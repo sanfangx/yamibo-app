@@ -1,4 +1,9 @@
-package me.thenano.yamibo.yamibo_app.home
+﻿package me.thenano.yamibo.yamibo_app.home
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import me.thenano.yamibo.yamibo_app.i18n.localizedMessage
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import YamiboIcons
 import androidx.compose.animation.*
@@ -42,7 +47,6 @@ import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import org.jetbrains.compose.resources.painterResource
-import yamibo_app.composeapp.generated.resources.Res
 import yamibo_app.composeapp.generated.resources.logo_homepage
 import me.thenano.yamibo.yamibo_app.event.AppEventBus
 import me.thenano.yamibo.yamibo_app.event.events.LoginSuccessEvent
@@ -74,7 +78,7 @@ fun HomePageScreen(
         state =
             when (result) {
                 is YamiboResult.Success -> HomeState.Success(result.value)
-                else -> HomeState.Error(result.message())
+                else -> HomeState.Error(result.localizedMessage())
             }
     }
 
@@ -135,7 +139,7 @@ fun HomePageScreen(
 
                                 else -> {
                                     snackbarHostState.showSnackbar(
-                                        message = result.message(),
+                                        message = result.localizedMessage(),
                                         duration = SnackbarDuration.Short
                                     )
                                 }
@@ -204,7 +208,7 @@ private fun HomeHeader(onSearch: () -> Unit) {
         IconButton(onClick = onSearch, modifier = Modifier.offset(y = 11.dp)) {
             Icon(
                 imageVector = YamiboIcons.Search,
-                contentDescription = "搜尋",
+                contentDescription = appString(Res.string.read_history_search),
                 tint = Color.White,
                 modifier = Modifier.size(34.dp)
             )
@@ -361,7 +365,7 @@ private fun ForumCard(forum: ForumSummary) {
                     color = colors.orangeAccent.copy(alpha = 0.18f)
                 ) {
                     Text(
-                        text = "今日 $today",
+                        text = appString(Res.string.home_today_count, today),
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
@@ -468,7 +472,7 @@ private fun ErrorContent(message: String, onRetry: () -> Unit) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "載入失敗",
+                    text = appString(Res.string.auto_0c830cfab7),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = colors.brownDeep
@@ -488,7 +492,7 @@ private fun ErrorContent(message: String, onRetry: () -> Unit) {
                     contentColor = Color.White
                 ) {
                     Text(
-                        text = "重試",
+                        text = appString(Res.string.auto_3d2b6505a6),
                         modifier = Modifier.padding(horizontal = 32.dp, vertical = 12.dp),
                         fontWeight = FontWeight.Bold,
                         fontSize = 15.sp
@@ -498,3 +502,6 @@ private fun ErrorContent(message: String, onRetry: () -> Unit) {
         }
     }
 }
+
+
+

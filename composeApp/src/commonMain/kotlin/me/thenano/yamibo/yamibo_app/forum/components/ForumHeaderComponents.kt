@@ -1,4 +1,8 @@
-package me.thenano.yamibo.yamibo_app.forum.components
+﻿package me.thenano.yamibo.yamibo_app.forum.components
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -59,16 +63,16 @@ fun ForumStatsBar(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            forum.todayCount?.let { count -> StatChip(label = "今日", value = "$count") }
-            forum.themeCount?.let { count -> StatChip(label = "主題", value = "$count") }
-            forum.rank?.let { rank -> StatChip(label = "排名", value = "$rank") }
+            forum.todayCount?.let { count -> StatChip(label = appString(Res.string.auto_296304f1e5), value = "$count") }
+            forum.themeCount?.let { count -> StatChip(label = appString(Res.string.auto_3200853f66), value = "$count") }
+            forum.rank?.let { rank -> StatChip(label = appString(Res.string.auto_a4dc00d83a), value = "$rank") }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             if (showOrder) {
-                ForumFilterChip("排序: ${selectedOrderType?.name ?: "全部"}", onOrderClick)
+                ForumFilterChip(appString(Res.string.forum_order_chip, selectedOrderType?.name ?: appString(Res.string.common_all)), onOrderClick)
             }
             if (showFilter) {
-                ForumFilterChip("分類: ${selectedFilterType?.name ?: "全部"}", onFilterClick)
+                ForumFilterChip(appString(Res.string.forum_filter_chip, selectedFilterType?.name ?: appString(Res.string.common_all)), onFilterClick)
             }
         }
     }
@@ -117,7 +121,7 @@ fun SubForumRow(subForums: List<ForumSummary>, onClick: (ForumId, String) -> Uni
     val colors = YamiboTheme.colors
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)) {
         Text(
-            text = "子版區",
+            text = appString(Res.string.auto_d346f121de),
             fontSize = 13.sp,
             fontWeight = FontWeight.SemiBold,
             color = colors.brownPrimary,
@@ -182,7 +186,7 @@ private fun AnnouncementRow(announcement: PinnedItem.Announcement, onClick: () -
     ) {
         Surface(shape = RoundedCornerShape(6.dp), color = colors.orangeAccent) {
             Text(
-                text = "公告",
+                text = appString(Res.string.auto_fa86f1a57d),
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
@@ -216,7 +220,7 @@ private fun PinnedThreadRow(thread: PinnedItem.Thread, onClick: () -> Unit) {
     ) {
         Surface(shape = RoundedCornerShape(6.dp), color = colors.brownPrimary) {
             Text(
-                text = "置頂",
+                text = appString(Res.string.auto_fe5823398e),
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
@@ -234,3 +238,5 @@ private fun PinnedThreadRow(thread: PinnedItem.Thread, onClick: () -> Unit) {
         )
     }
 }
+
+

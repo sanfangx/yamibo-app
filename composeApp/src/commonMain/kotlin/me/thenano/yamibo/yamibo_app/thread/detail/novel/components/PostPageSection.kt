@@ -1,4 +1,8 @@
-package me.thenano.yamibo.yamibo_app.thread.detail.novel.components
+﻿package me.thenano.yamibo.yamibo_app.thread.detail.novel.components
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import YamiboIcons
 import androidx.compose.animation.AnimatedVisibility
@@ -68,7 +72,7 @@ internal fun PostPageSection(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "第 $page 頁",
+                    text = appString(Res.string.common_page_number, page),
                     fontSize = 14.sp,
                     fontWeight = if (isFirstPage) FontWeight.Bold else FontWeight.Medium,
                     color = colors.brownDeep
@@ -135,7 +139,7 @@ private fun PostTitleRow(
     onLongPress: () -> Unit,
 ) {
     val colors = YamiboTheme.colors
-    val displayTitle = rememberConvertedText(post.title.ifBlank { "（無標題）" })
+    val displayTitle = rememberConvertedText(post.title.ifBlank { appString(Res.string.auto_72a54b7f13) })
 
     Surface(
         modifier = Modifier
@@ -189,3 +193,5 @@ private fun PostTitleRow(
         }
     }
 }
+
+

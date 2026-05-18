@@ -1,4 +1,9 @@
-package me.thenano.yamibo.yamibo_app.thread.reader.components.tag
+﻿package me.thenano.yamibo.yamibo_app.thread.reader.components.tag
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import me.thenano.yamibo.yamibo_app.i18n.localizedMessage
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
@@ -57,7 +62,7 @@ internal fun TagListScreen(
                 }
                 else -> {
                     state = if (!forceRefresh) {
-                        TagListState.Error(result.message())
+                        TagListState.Error(result.localizedMessage())
                     } else {
                         TagListState.Success // keep old tags if refresh fails but don't show error box
                     }
@@ -77,7 +82,7 @@ internal fun TagListScreen(
             TopAppBar(
                 title = {
                     Text(
-                        "標籤列表",
+                        appString(Res.string.auto_f3e3fab608),
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = colors.creamBackground
@@ -128,7 +133,7 @@ internal fun TagListScreen(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    "沒有找到標籤",
+                                    appString(Res.string.auto_1898bb598d),
                                     color = colors.textDark.copy(alpha = 0.5f),
                                     fontSize = 14.sp
                                 )
@@ -141,7 +146,7 @@ internal fun TagListScreen(
                                     .padding(16.dp)
                             ) {
                                 Text(
-                                    "💡 tips : 標籤頁面類似常規漫畫App, 推薦用於收藏漫畫",
+                                    appString(Res.string.auto_56c0a77b20),
                                     color = colors.textDark.copy(alpha = 0.6f),
                                     fontSize = 13.sp,
                                     modifier = Modifier.padding(bottom = 16.dp)
@@ -206,3 +211,5 @@ private fun TagChip(
         }
     }
 }
+
+

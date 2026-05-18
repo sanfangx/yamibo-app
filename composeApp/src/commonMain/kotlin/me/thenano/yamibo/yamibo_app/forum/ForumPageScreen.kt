@@ -1,4 +1,9 @@
-package me.thenano.yamibo.yamibo_app.forum
+﻿package me.thenano.yamibo.yamibo_app.forum
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import me.thenano.yamibo.yamibo_app.i18n.localizedMessage
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import YamiboIcons
 import androidx.compose.animation.core.*
@@ -94,7 +99,7 @@ fun ForumPageScreen(fid: ForumId, name: String) {
                     ForumState.Success(result.value)
                 }
 
-                else -> ForumState.Error(result.message())
+                else -> ForumState.Error(result.localizedMessage())
             }
     }
 
@@ -128,12 +133,12 @@ fun ForumPageScreen(fid: ForumId, name: String) {
                 onPostThread = {
                     navigator.navigate(
                         IActionWebView(
-                            title = "發表帖子",
+                            title = appString(Res.string.auto_a67f86bbe9),
                             initialUrl = YamiboRoute.PostThread(fid).build(),
                             successCondition = { url -> url.contains("mod=forumdisplay") && url.contains("fid=") },
                             onSuccess = {
                                 scope.launch {
-                                    snackbarHostState.showSnackbar("發帖成功")
+                                    snackbarHostState.showSnackbar(appString(Res.string.auto_16cc7b2265))
                                 }
                             },
                         )
@@ -144,7 +149,7 @@ fun ForumPageScreen(fid: ForumId, name: String) {
                     if (formHash == null) {
                         scope.launch {
                             snackbarHostState.showSnackbar(
-                                message = "未登入，請先登入後再收藏",
+                                message = appString(Res.string.auto_b7db368fe9),
                                 duration = SnackbarDuration.Short
                             )
                         }
@@ -153,7 +158,7 @@ fun ForumPageScreen(fid: ForumId, name: String) {
                     scope.launch {
                         val result = forumRepository.addFavorite(fid, formHash)
                         snackbarHostState.showSnackbar(
-                            message = result.message(),
+                            message = result.localizedMessage(),
                             duration = SnackbarDuration.Short
                         )
                     }
@@ -207,9 +212,9 @@ fun ForumPageScreen(fid: ForumId, name: String) {
                                     }
 
                                     else -> {
-                                        val msg = result.message()
+                                        val msg = result.localizedMessage()
                                         snackbarHostState.showSnackbar(
-                                            message = "刷新失敗：$msg",
+                                            message = appString(Res.string.forum_refresh_failed, msg),
                                             duration = SnackbarDuration.Short
                                         )
                                     }
@@ -245,7 +250,7 @@ fun ForumPageScreen(fid: ForumId, name: String) {
                                     is PinnedItem.Announcement -> {
                                         scope.launch {
                                             snackbarHostState.showSnackbar(
-                                                "暫不支持跳轉到公告頁",
+                                                appString(Res.string.auto_3502e3af58),
                                                 duration = SnackbarDuration.Short
                                             )
                                         }
@@ -339,7 +344,7 @@ private fun ForumTopBar(
             IconButton(onClick = onSearch, modifier = Modifier.offset(y = 5.dp)) {
                 Icon(
                     imageVector = YamiboIcons.Search,
-                    contentDescription = "搜尋",
+                    contentDescription = appString(Res.string.read_history_search),
                     tint = Color.White,
                     modifier = Modifier.size(34.dp)
                 )
@@ -348,7 +353,7 @@ private fun ForumTopBar(
                 IconButton(onClick = { showMenu = true }) {
                     Icon(
                         imageVector = YamiboIcons.ThreeDots,
-                        contentDescription = "更多",
+                        contentDescription = appString(Res.string.auto_0ec9eaf9c3),
                         tint = Color.White,
                         modifier = Modifier.size(24.dp)
                     )
@@ -359,7 +364,7 @@ private fun ForumTopBar(
                     modifier = Modifier.background(colors.creamSurface)
                 ) {
                     DropdownMenuItem(
-                        text = { Text("發表帖子", color = colors.brownDeep) },
+                        text = { Text(appString(Res.string.auto_a67f86bbe9), color = colors.brownDeep) },
                         leadingIcon = {
                             Icon(
                                 imageVector = YamiboIcons.EditOrSign,
@@ -373,7 +378,7 @@ private fun ForumTopBar(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("收藏本版", color = colors.brownDeep) },
+                        text = { Text(appString(Res.string.auto_561921a651), color = colors.brownDeep) },
                         leadingIcon = {
                             Icon(
                                 imageVector = YamiboIcons.StarOutline,
@@ -387,7 +392,7 @@ private fun ForumTopBar(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("跳轉到首頁", color = colors.brownDeep) },
+                        text = { Text(appString(Res.string.auto_0ae3a1a9ee), color = colors.brownDeep) },
                         leadingIcon = {
                             Icon(
                                 imageVector = YamiboIcons.Home,
@@ -401,7 +406,7 @@ private fun ForumTopBar(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("跳轉到收藏", color = colors.brownDeep) },
+                        text = { Text(appString(Res.string.auto_e2a2a2069d), color = colors.brownDeep) },
                         leadingIcon = {
                             Icon(
                                 imageVector = YamiboIcons.Explore,
@@ -487,8 +492,8 @@ private fun ForumOrderDialog(
     onSelect: (OrderType?) -> Unit,
 ) {
     ForumOptionDialog(
-        title = "排序",
-        defaultLabel = "全部",
+        title = appString(Res.string.auto_c360e994db),
+        defaultLabel = appString(Res.string.common_all),
         options = options,
         selected = selected,
         optionLabel = { it.name },
@@ -505,8 +510,8 @@ private fun ForumFilterTypeDialog(
     onSelect: (FilterType?) -> Unit,
 ) {
     ForumOptionDialog(
-        title = "分類",
-        defaultLabel = "全部",
+        title = appString(Res.string.auto_e740046d8c),
+        defaultLabel = appString(Res.string.common_all),
         options = options,
         selected = selected,
         optionLabel = { it.name },
@@ -663,7 +668,7 @@ private fun ForumErrorContent(message: String, onRetry: () -> Unit) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "載入失敗",
+                    text = appString(Res.string.auto_0c830cfab7),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = colors.brownDeep
@@ -683,7 +688,7 @@ private fun ForumErrorContent(message: String, onRetry: () -> Unit) {
                     contentColor = Color.White
                 ) {
                     Text(
-                        text = "重試",
+                        text = appString(Res.string.auto_3d2b6505a6),
                         modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
                         fontWeight = FontWeight.Bold,
                         fontSize = 15.sp
@@ -693,3 +698,6 @@ private fun ForumErrorContent(message: String, onRetry: () -> Unit) {
         }
     }
 }
+
+
+

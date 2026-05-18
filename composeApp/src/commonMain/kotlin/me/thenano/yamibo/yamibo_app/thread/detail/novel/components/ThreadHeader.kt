@@ -1,4 +1,8 @@
-package me.thenano.yamibo.yamibo_app.thread.detail.novel.components
+﻿package me.thenano.yamibo.yamibo_app.thread.detail.novel.components
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import YamiboIcons
 import androidx.compose.animation.core.animateFloatAsState
@@ -50,7 +54,6 @@ import me.thenano.yamibo.yamibo_app.thread.detail.components.DetailNoteActionBut
 import me.thenano.yamibo.yamibo_app.userspace.IUserSpaceScreen
 import me.thenano.yamibo.yamibo_app.util.rememberImageRequest
 import org.jetbrains.compose.resources.painterResource
-import yamibo_app.composeapp.generated.resources.Res
 import yamibo_app.composeapp.generated.resources.book
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -168,7 +171,7 @@ internal fun ThreadHeader(
                         onCopy = {
                             clipboardManager.setText(AnnotatedString(convertedThreadTitle))
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            onCopy("已複製標題")
+                            onCopy(appString(Res.string.auto_c45d9a03b1))
                         }
                     )
                     Spacer(Modifier.height(6.dp))
@@ -193,20 +196,20 @@ internal fun ThreadHeader(
                                 onCopy = {
                                     clipboardManager.setText(AnnotatedString(firstPost.author.name))
                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    onCopy("已複製作者名稱")
+                                    onCopy(appString(Res.string.auto_a2105f5bc0))
                                 }
                             )
                         }
                         Spacer(Modifier.height(3.dp))
 
                         Text(
-                            text = "發表於 ${firstPost.timeCreate.text}",
+                            text = appString(Res.string.novel_posted_at, firstPost.timeCreate.text),
                             fontSize = 12.sp,
                             color = colors.brownPrimary.copy(alpha = 0.5f)
                         )
                         Spacer(Modifier.height(2.dp))
                         Text(
-                            text = "最後更新於 ${(firstPost.lastEditedTime ?: firstPost.timeCreate).text}",
+                            text = appString(Res.string.novel_updated_at, (firstPost.lastEditedTime ?: firstPost.timeCreate).text),
                             fontSize = 12.sp,
                             color = colors.brownPrimary.copy(alpha = 0.5f)
                         )
@@ -290,7 +293,7 @@ internal fun ThreadHeader(
                     Box(Modifier.padding(10.dp), contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = YamiboIcons.Share,
-                            contentDescription = "分享",
+                            contentDescription = appString(Res.string.auto_c31f48f84e),
                             modifier = Modifier.size(22.dp),
                             tint = colors.brownDeep
                         )
@@ -310,7 +313,7 @@ internal fun ThreadHeader(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = if (readingProgressText != null) "繼續閱讀" else "開始閱讀",
+                            text = if (readingProgressText != null) appString(Res.string.auto_98c70f280f) else appString(Res.string.auto_5d9fd81879),
                             color = Color.White,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.SemiBold
@@ -337,7 +340,7 @@ internal fun ThreadHeader(
             }
 
             Text(
-                text = "星星按鈕可直接收藏，長按可指定小集合",
+                text = appString(Res.string.auto_db62dc5b52),
                 modifier = Modifier.padding(top = 8.dp),
                 fontSize = 10.sp,
                 color = colors.brownPrimary.copy(alpha = 0.45f)
@@ -378,3 +381,5 @@ private fun CopyableLabel(
             )
     )
 }
+
+

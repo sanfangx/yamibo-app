@@ -1,5 +1,9 @@
 ﻿package me.thenano.yamibo.yamibo_app.profile
 
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
+
 import androidx.compose.animation.*
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -74,7 +78,7 @@ fun LoginScreen() {
 
     PlatformWebViewScreen(
         initialUrl = YamiboRoute.Login.build(),
-        initialTitle = "登入頁面",
+        initialTitle = appString(Res.string.auto_b09206acc4),
         showNavigation = false,
         useBackIcon = true,
         onPageFinished = { authRepo.syncCookieFromWebView() },
@@ -172,7 +176,7 @@ private fun LoginContent() {
     val navigator = LocalNavigator.current
     Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
         AnimatedYamiboButton(
-            text = "登入",
+            text = appString(Res.string.auto_6e00cae3e2),
             onClick = { navigator.navigate(ILoginScreen()) },
             modifier = Modifier.fillMaxWidth(0.6f)
         )
@@ -206,14 +210,14 @@ private fun UserInfoContent(
             verticalAlignment = Alignment.CenterVertically
         ) {
             AnimatedYamiboChip(
-                label = "刷新",
+                label = appString(Res.string.auto_694fc5efa9),
                 onClick = { onRefresh() },
                 containerColor = YamiboTheme.colors.brownPrimary.copy(alpha = 0.1f),
                 contentColor = YamiboTheme.colors.brownDeep
             )
             Spacer(Modifier.width(12.dp))
             AnimatedYamiboChip(
-                label = "登出",
+                label = appString(Res.string.auto_75c856b174),
                 onClick = { onLogout() },
                 containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.8f),
                 contentColor = MaterialTheme.colorScheme.onErrorContainer
@@ -250,7 +254,7 @@ private fun UserInfoContent(
                 Row {
                     InfoChip(user.userGroup)
                     Spacer(Modifier.width(8.dp))
-                    InfoChip("總積分 ${user.totalPoints}")
+                    InfoChip(appString(Res.string.login_total_points, user.totalPoints.toString()))
                 }
             }
         }
@@ -379,3 +383,5 @@ private fun AnimatedYamiboChip(
         )
     }
 }
+
+

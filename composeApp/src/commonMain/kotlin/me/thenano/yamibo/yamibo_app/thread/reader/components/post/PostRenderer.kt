@@ -1,4 +1,8 @@
-package me.thenano.yamibo.yamibo_app.thread.reader.components.post
+﻿package me.thenano.yamibo.yamibo_app.thread.reader.components.post
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import YamiboIcons
 import androidx.compose.foundation.background
@@ -248,7 +252,7 @@ fun PostRenderer(
                 if (lastEditedTime != null) {
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = lastEditedTime.specialText ?: "最後編輯於 ${lastEditedTime.text}",
+                        text = lastEditedTime.specialText ?: appString(Res.string.thread_post_last_edited, lastEditedTime.text),
                         fontSize = 12.sp,
                         color = YamiboTheme.colors.textDark.copy(alpha = 0.5f)
                     )
@@ -286,25 +290,25 @@ fun PostRenderer(
                     ) {
                         if (onRate != null) {
                             TextButton(onClick = { showRateDialog = true }) {
-                                Icon(imageVector = YamiboIcons.Heart, contentDescription = "評分", modifier = Modifier.size(18.dp), tint = YamiboTheme.colors.brownPrimary)
+                                Icon(imageVector = YamiboIcons.Heart, contentDescription = appString(Res.string.auto_7a79f13ede), modifier = Modifier.size(18.dp), tint = YamiboTheme.colors.brownPrimary)
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("評分", fontSize = 13.sp, color = YamiboTheme.colors.brownPrimary, fontWeight = FontWeight.SemiBold)
+                                Text(appString(Res.string.auto_7a79f13ede), fontSize = 13.sp, color = YamiboTheme.colors.brownPrimary, fontWeight = FontWeight.SemiBold)
                             }
                             Spacer(modifier = Modifier.width(8.dp))
                         }
                         if (onComment != null) {
                             TextButton(onClick = { showCommentDialog = true }) {
-                                Icon(imageVector = YamiboIcons.Comment, contentDescription = "點評", modifier = Modifier.size(18.dp), tint = YamiboTheme.colors.brownPrimary)
+                                Icon(imageVector = YamiboIcons.Comment, contentDescription = appString(Res.string.auto_211919f5fb), modifier = Modifier.size(18.dp), tint = YamiboTheme.colors.brownPrimary)
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("點評", fontSize = 13.sp, color = YamiboTheme.colors.brownPrimary, fontWeight = FontWeight.SemiBold)
+                                Text(appString(Res.string.auto_211919f5fb), fontSize = 13.sp, color = YamiboTheme.colors.brownPrimary, fontWeight = FontWeight.SemiBold)
                             }
                             Spacer(modifier = Modifier.width(8.dp))
                         }
                         if (onReply != null) {
                             TextButton(onClick = { onReply() }) {
-                                Icon(imageVector = YamiboIcons.Reply, contentDescription = "回復", modifier = Modifier.size(18.dp), tint = YamiboTheme.colors.brownPrimary)
+                                Icon(imageVector = YamiboIcons.Reply, contentDescription = appString(Res.string.auto_859cca82ef), modifier = Modifier.size(18.dp), tint = YamiboTheme.colors.brownPrimary)
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("回復", fontSize = 13.sp, color = YamiboTheme.colors.brownPrimary, fontWeight = FontWeight.SemiBold)
+                                Text(appString(Res.string.auto_859cca82ef), fontSize = 13.sp, color = YamiboTheme.colors.brownPrimary, fontWeight = FontWeight.SemiBold)
                             }
                         }
                     }
@@ -320,13 +324,13 @@ fun PostRenderer(
             onDismissRequest = {
                 showRateDialog = false
             },
-            title = { Text("本帖評分", fontWeight = FontWeight.Bold, fontSize = 20.sp) },
+            title = { Text(appString(Res.string.auto_1c6159a445), fontWeight = FontWeight.Bold, fontSize = 20.sp) },
             text = {
                 Column {
                     OutlinedTextField(
                         value = scoreInput,
                         onValueChange = { scoreInput = it },
-                        label = { Text("分數", fontSize = 12.sp) },
+                        label = { Text(appString(Res.string.auto_51abfbc639), fontSize = 12.sp) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
                         singleLine = true,
@@ -335,7 +339,7 @@ fun PostRenderer(
                     OutlinedTextField(
                         value = reasonInput,
                         onValueChange = { reasonInput = it },
-                        label = { Text("評分理由", fontSize = 12.sp) },
+                        label = { Text(appString(Res.string.auto_3c613c5698), fontSize = 12.sp) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = YamiboTheme.colors.brownPrimary, focusedLabelColor = YamiboTheme.colors.brownPrimary)
@@ -350,10 +354,10 @@ fun PostRenderer(
                         showRateDialog = false
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = YamiboTheme.colors.brownPrimary)
-                ) { Text("提交", color = YamiboTheme.colors.creamBackground) }
+                ) { Text(appString(Res.string.auto_939d5345ad), color = YamiboTheme.colors.creamBackground) }
             },
             dismissButton = {
-                TextButton(onClick = { showRateDialog = false }) { Text("取消", color = YamiboTheme.colors.brownPrimary) }
+                TextButton(onClick = { showRateDialog = false }) { Text(appString(Res.string.common_cancel), color = YamiboTheme.colors.brownPrimary) }
             },
             containerColor = YamiboTheme.colors.creamSurface,
             titleContentColor = YamiboTheme.colors.brownPrimary,
@@ -374,7 +378,7 @@ fun PostRenderer(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "點評",
+                        text = appString(Res.string.auto_211919f5fb),
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
                         color = YamiboTheme.colors.brownPrimary,
@@ -403,7 +407,7 @@ fun PostRenderer(
                         )
                         if (commentInput.isEmpty()) {
                             Text(
-                                "輸入內容...",
+                                appString(Res.string.auto_6bbeff1a67),
                                 color = YamiboTheme.colors.textDark.copy(alpha = 0.4f),
                                 fontSize = 16.sp,
                                 modifier = Modifier.align(Alignment.TopStart)
@@ -426,7 +430,7 @@ fun PostRenderer(
                         ),
                         enabled = commentInput.isNotBlank()
                     ) {
-                        Text("發布", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        Text(appString(Res.string.auto_79495d6803), color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -458,3 +462,5 @@ private fun ThreadReaderStatBadge(icon: ImageVector, value: String) {
         }
     }
 }
+
+

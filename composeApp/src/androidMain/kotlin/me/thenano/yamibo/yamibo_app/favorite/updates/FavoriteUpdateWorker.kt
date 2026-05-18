@@ -1,4 +1,8 @@
-package me.thenano.yamibo.yamibo_app.favorite.updates
+﻿package me.thenano.yamibo.yamibo_app.favorite.updates
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import android.content.Context
 import android.content.pm.ServiceInfo
@@ -49,12 +53,12 @@ class FavoriteUpdateWorker(
                 }
                 Result.success()
             } catch (throwable: CancellationException) {
-                repository.markRunInterrupted(runId, "更新檢查已中斷")
+                repository.markRunInterrupted(runId, appString(Res.string.auto_0208c6c4be))
                 Result.failure()
             } catch (throwable: Throwable) {
-                repository.markRunInterrupted(runId, throwable.message ?: "更新檢查被系統中斷")
+                repository.markRunInterrupted(runId, throwable.message ?: appString(Res.string.auto_873be1d8b4))
                 @Suppress("MissingPermission")
-                notifications.showFailed("收藏更新中斷", throwable.message ?: "更新檢查被系統中斷")
+                notifications.showFailed(appString(Res.string.auto_c4182e8c50), throwable.message ?: appString(Res.string.auto_873be1d8b4))
                 Result.retry()
             } finally {
                 notificationJob.cancel()
@@ -92,3 +96,4 @@ class FavoriteUpdateWorker(
         private const val FOREGROUND_UPDATE_INTERVAL_MS = 2_000L
     }
 }
+

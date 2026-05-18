@@ -1,4 +1,8 @@
-package me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl
+﻿package me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl
+
+import me.thenano.yamibo.yamibo_app.i18n.appString
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.*
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -171,9 +175,10 @@ fun PollRenderer(
                         disabledContainerColor = colors.brownLight.copy(alpha = 0.5f)
                     )
                 ) {
-                    Text(text = if (isSubmitting) "提交中..." else "提交投票", color = colors.creamBackground)
+                    Text(text = if (isSubmitting) appString(Res.string.auto_abe2c5d2b9) else appString(Res.string.auto_9efe59f75a), color = colors.creamBackground)
                 }
             }
         }
     }
 }
+
