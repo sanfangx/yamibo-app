@@ -1,6 +1,7 @@
 package me.thenano.yamibo.yamibo_app.repository
 
 import io.github.littlesurvival.core.YamiboResult
+import io.github.littlesurvival.dto.page.RatePopoutPage
 import io.github.littlesurvival.dto.page.ThreadPage
 import io.github.littlesurvival.dto.value.FormHash
 import io.github.littlesurvival.dto.value.ForumId
@@ -35,7 +36,8 @@ interface ThreadRepository {
     suspend fun addFavorite(tid: ThreadId, formHash: FormHash): YamiboResult<String>
     
     suspend fun votePoll(fId: ForumId, tId: ThreadId, pollOptionIds: List<PollOptionId>, formHash: FormHash): YamiboResult<String>
-    suspend fun ratePost(tId: ThreadId, pId: PostId, score: Int, reason: String, formHash: FormHash): YamiboResult<String>
+    suspend fun fetchRatePopoutPage(tId: ThreadId, pId: PostId): YamiboResult<RatePopoutPage>
+    suspend fun ratePost(tId: ThreadId, pId: PostId, score: Int, reason: String, formHash: FormHash, noticeAuthor: Boolean = false): YamiboResult<String>
     suspend fun commentPost(tId: ThreadId, pId: PostId, message: String, formHash: FormHash): YamiboResult<String>
 
     fun getCachedThread(tid: ThreadId, authorId: UserId? = null, page: Int = 1): ThreadPage?

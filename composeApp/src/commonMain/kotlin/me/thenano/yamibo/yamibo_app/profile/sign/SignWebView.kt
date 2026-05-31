@@ -1,8 +1,6 @@
-﻿package me.thenano.yamibo.yamibo_app.profile.sign
+package me.thenano.yamibo.yamibo_app.profile.sign
 
-import me.thenano.yamibo.yamibo_app.i18n.appString
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
+import me.thenano.yamibo.yamibo_app.i18n.i18n
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -84,7 +82,7 @@ private fun SignWebViewScreen(
 
     PlatformWebViewScreen(
         initialUrl = YamiboRoute.Sign.build(),
-        initialTitle = appString(Res.string.ui_daily_check_in),
+        initialTitle = i18n("每日簽到"),
         useBackIcon = true,
         captureHtml = true,
         onPageFinished = { currentUrl ->
@@ -114,7 +112,7 @@ private fun SignWebViewScreen(
         onLoadError = { _, description ->
             if (semiAutomatic && !handledLoadFailure) {
                 handledLoadFailure = true
-                onLoadFailed(description.ifBlank { appString(Res.string.ui_sign_in_page_failed_load) })
+                onLoadFailed(description.ifBlank { i18n("簽到頁載入失敗") })
                 navigator.pop()
             }
         },

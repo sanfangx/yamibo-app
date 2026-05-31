@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.repository.FavoriteUpdateRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.FavoriteUpdateInterval
+import kotlin.time.Duration.Companion.milliseconds
 
 class FavoriteUpdateRunner(
     private val repository: FavoriteUpdateRepository,
@@ -93,7 +94,7 @@ class FavoriteUpdateRunner(
             while (true) {
                 val state = syncRunSnapshot(runId)
                 if (state !is FavoriteUpdateRepository.RunState.Running) break
-                delay(RUN_SYNC_INTERVAL_MS)
+                delay(RUN_SYNC_INTERVAL_MS.milliseconds)
             }
         }
     }

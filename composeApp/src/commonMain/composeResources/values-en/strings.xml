@@ -171,6 +171,12 @@
     <string name="ui_send_message">send message</string>
     <string name="ui_their_profile">Their profile</string>
     <string name="ui_reason_for_rating">Reason for rating</string>
+    <string name="ui_rate_options_loading">Loading options</string>
+    <string name="ui_rate_options_failed_manual">Failed to load; you can enter manually</string>
+    <string name="ui_notify_author">Notify author</string>
+    <string name="ui_select">Select</string>
+    <string name="ui_select_score">Select score</string>
+    <string name="ui_select_rate_reason">Select rating reason</string>
     <string name="ui_enter_keyword_post_link">Enter keyword or post link</string>
     <string name="ui_7_days_week">7 days this week</string>
     <string name="ui_try_again">Try again</string>
@@ -797,10 +803,40 @@
     <string name="msg_sign_already_signed">Already signed in today.</string>
     <string name="msg_sign_repair_completed">%1$s Completed %2$d repair signs.</string>
     <string name="msg_sign_cloudflare_required">Cloudflare verification for the sign page is not complete. Finish it in WebView first.</string>
-    <string name="msg_sign_action_completed">Action completed</string></resources>
-
-
-
-
+    <string name="msg_sign_action_completed">Action completed</string>
+    <string name="app_name_display">Yamibo Forum</string>
+    <string name="settings_app_update_title">App updates</string>
+    <string name="settings_app_update_subtitle">Check versions, download APKs, and open installation</string>
+    <string name="ui_checking">Checking...</string>
+    <string name="ui_check_update">Check update</string>
+    <string name="ui_checking_update">Checking for updates</string>
+    <string name="ui_download_update">Download update</string>
+    <string name="ui_release_page">Release page</string>
+    <string name="ui_update_manifest_source_hint">Update info comes from a manifest. Mainland users can prefer Gitee/GitCode mirrors.</string>
+    <string name="ui_update_not_checked">Updates have not been checked</string>
+    <string name="ui_update_available">New version %1$s is available</string>
+    <string name="ui_update_ignored">Version %1$s is ignored</string>
+    <string name="ui_update_up_to_date">You are on the latest version: %1$s</string>
+    <string name="ui_update_check_failed">Update check failed</string>
+    <string name="ui_update_source">Source: %1$s</string>
+    <string name="ui_downloading_update">Downloading update...</string>
+    <string name="ui_update_install_started">Download complete. System installation has been opened.</string>
+    <string name="ui_update_install_permission_required">Allow this app to install unknown apps, then tap download again.</string>
+    <string name="ui_update_download_failed">Download failed: %1$s</string>
+    <string name="ui_app_update_launch_threshold">Launch update check interval</string>
+    <string name="ui_app_update_launch_threshold_desc">Checks for updates in the background after launch; no network request is made before the interval passes.</string>
+    <string name="app_update_launch_threshold_manual">Do not auto check</string>
+    <string name="app_update_launch_threshold_6h">6 hours</string>
+    <string name="app_update_launch_threshold_12h">12 hours</string>
+    <string name="app_update_launch_threshold_24h">24 hours</string>
+    <string name="app_update_launch_threshold_3d">3 days</string>
+    <string name="app_update_launch_threshold_7d">7 days</string>
+    <string name="ui_update_available_dialog_title">Version %1$s is available</string>
+    <string name="ui_update_available_dialog_message">A new version is available. Download it now, or handle it later from Settings > App updates.</string>
+    <string name="ui_check_in_launch_reminder">Launch check-in reminder</string>
+    <string name="ui_check_in_launch_reminder_desc">If you have not checked in today, remind you after the app opens.</string>
+    <string name="ui_check_in_launch_reminder_title">You have not checked in today</string>
+    <string name="ui_check_in_launch_reminder_message">Daily check-in is not completed today.</string>
+    <string name="ui_go_to_check_in">Go to check in</string></resources>
 
 

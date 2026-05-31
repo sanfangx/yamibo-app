@@ -1,9 +1,5 @@
 ﻿package me.thenano.yamibo.yamibo_app.favorite
 
-import me.thenano.yamibo.yamibo_app.i18n.appString
-import me.thenano.yamibo.yamibo_app.i18n.localizedAppMessage
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -19,27 +15,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.littlesurvival.dto.value.TagId
 import io.github.littlesurvival.dto.value.ThreadId
-import kotlinx.serialization.Serializable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
 import me.thenano.yamibo.yamibo_app.*
-import me.thenano.yamibo.yamibo_app.favorite.components.ActionChip
-import me.thenano.yamibo.yamibo_app.favorite.components.FavoriteSyncCategoryDialog
-import me.thenano.yamibo.yamibo_app.favorite.components.CollectionEditorDialog
-import me.thenano.yamibo.yamibo_app.favorite.components.FavoriteGridModeDialog
-import me.thenano.yamibo.yamibo_app.favorite.components.FavoriteSortDialog
+import me.thenano.yamibo.yamibo_app.favorite.components.*
 import me.thenano.yamibo.yamibo_app.favorite.sync.IFavoriteSyncProgressScreen
-import me.thenano.yamibo.yamibo_app.navigation.ComposableNavigator
-import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
-import me.thenano.yamibo.yamibo_app.navigation.Navigatable
-import me.thenano.yamibo.yamibo_app.navigation.RestorableNavigatable
-import me.thenano.yamibo.yamibo_app.navigation.RestorableScreenEntry
-import me.thenano.yamibo.yamibo_app.navigation.RestorableScreenSnapshot
-import me.thenano.yamibo.yamibo_app.navigation.TypedRestorableNavigatableDecoder
-import me.thenano.yamibo.yamibo_app.navigation.decodeRestorePayload
-import me.thenano.yamibo.yamibo_app.navigation.emptyRestoreSnapshot
-import me.thenano.yamibo.yamibo_app.navigation.restoreSnapshot
+import me.thenano.yamibo.yamibo_app.i18n.i18n
+import me.thenano.yamibo.yamibo_app.navigation.*
 import me.thenano.yamibo.yamibo_app.repository.FavoriteSyncRepository.FavoriteSyncState
 import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.*
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
@@ -67,7 +51,7 @@ internal enum class FavoritePageMode { Normal, Search, Select }
 internal data class FavoriteCollectionDraft(
     val collectionId: Long? = null,
     val parentCategoryId: Long? = null,
-    val title: String = appString(Res.string.ui_synthetic_collection),
+    val title: String = i18n("合成集合"),
     val initialName: String = "",
     val initialColorKey: String = "brown",
     val removeOriginalItems: Boolean = true,
@@ -292,9 +276,9 @@ fun FavoritePage() {
         }
         showSnackbarMessage(
             when {
-                deleteResult.failedCount == 0 -> appString(Res.string.ui_favorites_deleted)
-                deleteResult.deletedCount == 0 -> deleteResult.messages.firstOrNull() ?: appString(Res.string.ui_failed_delete_favorites)
-                else -> appString(Res.string.favorite_selected_deleted_failed, deleteResult.deletedCount, deleteResult.failedCount)
+                deleteResult.failedCount == 0 -> i18n("已刪除收藏")
+                deleteResult.deletedCount == 0 -> deleteResult.messages.firstOrNull() ?: i18n("刪除收藏失敗")
+                else -> i18n("已刪除 {} 項，{} 項失敗", deleteResult.deletedCount, deleteResult.failedCount)
             }
         )
         deleteRequest = null
@@ -345,7 +329,7 @@ fun FavoritePage() {
         selectedCollectionIds = emptySet()
         mode = FavoritePageMode.Normal
         reload(request.categoryId)
-        showSnackbarMessage(appString(Res.string.ui_the_current_directory_favorite_has_removed))
+        showSnackbarMessage(i18n("已移除當下目錄收藏"))
         deleteRequest = null
     }
 
@@ -446,7 +430,7 @@ fun FavoritePage() {
                     if (runId != null) {
                         scope.launch {
                             favoriteSyncRunner.interruptImport(runId)
-                            showSnackbarMessage(appString(Res.string.ui_sync_canceled_2))
+                            showSnackbarMessage(i18n("已取消同步"))
                         }
                     }
                 },
@@ -490,7 +474,7 @@ fun FavoritePage() {
                     pickerReturnState = null
                     collectionDraft = FavoriteCollectionDraft(
                         parentCategoryId = ready.selectedCategoryId,
-                        title = appString(Res.string.ui_synthetic_collection),
+                        title = i18n("合成集合"),
                         showRemoveOriginalOption = true,
                     )
                 },
@@ -499,7 +483,7 @@ fun FavoritePage() {
                     collectionDraft = FavoriteCollectionDraft(
                         collectionId = collection.id,
                         parentCategoryId = collection.categoryId,
-                        title = appString(Res.string.ui_edit_collection),
+                        title = i18n("編輯集合"),
                         initialName = collection.name,
                         initialColorKey = collection.colorKey,
                         removeOriginalItems = false,
@@ -517,7 +501,7 @@ fun FavoritePage() {
                         selectedCollectionIds = emptySet()
                         mode = FavoritePageMode.Normal
                         reload(ready.selectedCategoryId)
-                        showSnackbarMessage(appString(Res.string.ui_disbanded_collection))
+                        showSnackbarMessage(i18n("已解散集合"))
                     }
                 },
                 onDeleteSelectedItems = {
@@ -561,7 +545,7 @@ fun FavoritePage() {
                 )
                 showMoveDialog = false
                 collectionDraft = FavoriteCollectionDraft(parentCategoryId = categoryId)
-                    .copy(title = appString(Res.string.ui_add_new_collection), showRemoveOriginalOption = false)
+                    .copy(title = i18n("新增集合"), showRemoveOriginalOption = false)
             },
             onConfirm = { selectedCategories, selectedCollections ->
                 scope.launch {
@@ -576,7 +560,7 @@ fun FavoritePage() {
                     selectedCollectionIds = emptySet()
                     mode = FavoritePageMode.Normal
                     reload(current.selectedCategoryId)
-                    showSnackbarMessage(appString(Res.string.ui_favorite_location_updated_2))
+                    showSnackbarMessage(i18n("已更新收藏位置"))
                 }
             },
         )
@@ -587,20 +571,20 @@ fun FavoritePage() {
             onDismissRequest = { showSyncConfirmDialog = false },
             title = {
                 Text(
-                    appString(Res.string.ui_synchronous_yamibo_favorite),
+                    i18n("同步百合會收藏"),
                     color = colors.brownDeep,
                     fontWeight = FontWeight.Bold,
                 )
             },
             text = {
                 Text(
-                    appString(Res.string.ui_are_sure_want_synchronize_yamibo_favorites_local_computer),
+                    i18n("你確定要將百合會收藏同步到本地嗎"),
                     color = colors.textDark,
                 )
             },
             confirmButton = {
                 FavoriteDialogButton(
-                    text = appString(Res.string.ui_sure),
+                    text = i18n("確定"),
                     background = colors.brownDeep,
                     contentColor = Color.White,
                     onClick = {
@@ -612,7 +596,7 @@ fun FavoritePage() {
             },
             dismissButton = {
                 FavoriteDialogButton(
-                    text = appString(Res.string.common_cancel),
+                    text = i18n("取消"),
                     background = colors.brownPrimary.copy(alpha = 0.1f),
                     contentColor = colors.brownDeep,
                     onClick = { showSyncConfirmDialog = false },
@@ -672,7 +656,7 @@ fun FavoritePage() {
                             selectedCollectionIds = emptySet()
                             mode = FavoritePageMode.Normal
                             reload(current.selectedCategoryId)
-                            showSnackbarMessage(appString(Res.string.ui_collection_updated))
+                            showSnackbarMessage(i18n("已更新集合"))
                         } else if (draft.parentCategoryId != null) {
                             val createdCollection = withContext(Dispatchers.Default) {
                                 favoriteRepository.createCollection(
@@ -700,7 +684,7 @@ fun FavoritePage() {
                                 selectedCollectionIds = emptySet()
                                 mode = FavoritePageMode.Normal
                                 reload(current.selectedCategoryId)
-                                showSnackbarMessage(appString(Res.string.ui_collection_created))
+                                showSnackbarMessage(i18n("已建立集合"))
                             } else {
                                 val (categories, options) = withContext(Dispatchers.Default) {
                                     favoriteRepository.getCategories() to favoriteRepository.getCollectionOptions()
@@ -713,13 +697,13 @@ fun FavoritePage() {
                                 collectionDraft = null
                                 showMoveDialog = true
                                 pickerReturnState = null
-                                showSnackbarMessage(appString(Res.string.ui_collection_added))
+                                showSnackbarMessage(i18n("已新增集合"))
                             }
                         } else {
                             collectionDraft = null
                         }
                     } catch (error: IllegalArgumentException) {
-                        showSnackbarMessage(error.message?.let(::localizedAppMessage) ?: appString(Res.string.ui_save_failed_2))
+                        showSnackbarMessage(error.message?.takeIf { it.isNotBlank() } ?: i18n("保存失敗"))
                     }
                 }
             },
@@ -808,15 +792,15 @@ fun FavoritePage() {
                 showDeleteScopeDialog = false
                 deleteRequest = null
             },
-            title = { Text(appString(Res.string.ui_do_want_delete_favorites_under_all_paths), color = colors.brownDeep, fontWeight = FontWeight.Bold) },
-            text = { Text(appString(Res.string.ui_at_least_one_item_in_selected_favorite_exists_in_multiple), color = colors.textDark, fontSize = 14.sp) },
+            title = { Text(i18n("是否要刪除所有路徑下的收藏"), color = colors.brownDeep, fontWeight = FontWeight.Bold) },
+            text = { Text(i18n("目前選取的收藏中，至少有一項存在於多個收藏路徑。"), color = colors.textDark, fontSize = 14.sp) },
             dismissButton = {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ActionChip(appString(Res.string.common_cancel)) {
+                    ActionChip(i18n("取消")) {
                         showDeleteScopeDialog = false
                         deleteRequest = null
                     }
-                    ActionChip(appString(Res.string.ui_yes)) {
+                    ActionChip(i18n("是")) {
                         val request = deleteRequest ?: return@ActionChip
                         showDeleteScopeDialog = false
                         scope.launch {
@@ -840,7 +824,7 @@ fun FavoritePage() {
                         color = colors.brownDeep,
                     ) {
                         Text(
-                            text = appString(Res.string.ui_remove_only_current_directory),
+                            text = i18n("僅移除當下目錄"),
                             color = Color.White,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold,
@@ -1013,5 +997,4 @@ private fun currentSyncRunId(state: FavoriteSyncState): String? {
         is FavoriteSyncState.Completed -> state.snapshot.runId
     }
 }
-
 

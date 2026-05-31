@@ -1,51 +1,16 @@
-﻿package me.thenano.yamibo.yamibo_app.message
-
-import me.thenano.yamibo.yamibo_app.i18n.appString
-import me.thenano.yamibo.yamibo_app.i18n.localizedMessage
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
+package me.thenano.yamibo.yamibo_app.message
 
 import YamiboIcons
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -61,14 +26,16 @@ import io.github.littlesurvival.dto.value.UserId
 import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.LocalAuthRepository
 import me.thenano.yamibo.yamibo_app.LocalUserSpaceRepository
-import me.thenano.yamibo.yamibo_app.components.UserAvatar
-import me.thenano.yamibo.yamibo_app.components.YamiboEmptyContent
-import me.thenano.yamibo.yamibo_app.components.YamiboErrorContent
-import me.thenano.yamibo.yamibo_app.components.YamiboLoadingContent
-import me.thenano.yamibo.yamibo_app.components.YamiboMessageInputBar
-import me.thenano.yamibo.yamibo_app.components.YamiboPageNavigation
-import me.thenano.yamibo.yamibo_app.components.YamiboTopBar
-import me.thenano.yamibo.yamibo_app.components.YamiboTopBarIconAction
+import me.thenano.yamibo.yamibo_app.components.feedback.YamiboEmptyContent
+import me.thenano.yamibo.yamibo_app.components.feedback.YamiboErrorContent
+import me.thenano.yamibo.yamibo_app.components.feedback.YamiboLoadingContent
+import me.thenano.yamibo.yamibo_app.components.input.YamiboMessageInputBar
+import me.thenano.yamibo.yamibo_app.components.navigation.YamiboPageNavigation
+import me.thenano.yamibo.yamibo_app.components.navigation.YamiboTopBar
+import me.thenano.yamibo.yamibo_app.components.navigation.YamiboTopBarIconAction
+import me.thenano.yamibo.yamibo_app.components.user.UserAvatar
+import me.thenano.yamibo.yamibo_app.i18n.i18n
+import me.thenano.yamibo.yamibo_app.i18n.localizedMessage
 import me.thenano.yamibo.yamibo_app.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.HtmlRenderer
@@ -94,7 +61,7 @@ fun PrivateMessageScreen(
     val listState = rememberLazyListState()
     var currentPage by remember(toUser) { mutableIntStateOf(1) }
     var state by remember(toUser) {
-        mutableStateOf<PrivateMessageState>(
+        mutableStateOf(
             repository.getCachedPrivateMessagePage(toUser)?.let { PrivateMessageState.Success(it) }
                 ?: PrivateMessageState.Loading
         )
@@ -136,8 +103,8 @@ fun PrivateMessageScreen(
         topBar = {
             PrivateMessageTopBar(
                 title = (state as? PrivateMessageState.Success)?.page?.title
-                    ?: titleHint?.let { appString(Res.string.private_message_title_with_name, it) }
-                    ?: appString(Res.string.ui_chat),
+                    ?: titleHint?.let { i18n("正在與{}聊天中......", it) }
+                    ?: i18n("聊天"),
                 onBack = { navigator.pop() },
                 onRefresh = {
                     scope.launch { loadPage(page = null, preferCache = false) }
@@ -157,10 +124,10 @@ fun PrivateMessageScreen(
                     val message = input.trim()
                     when {
                         formHash == null -> scope.launch {
-                            snackbarHostState.showSnackbar(appString(Res.string.ui_please_log_in_first_sending_message), duration = SnackbarDuration.Short)
+                            snackbarHostState.showSnackbar(i18n("請先登入後再發送消息"), duration = SnackbarDuration.Short)
                         }
                         message.isBlank() -> scope.launch {
-                            snackbarHostState.showSnackbar(appString(Res.string.ui_please_enter_content_2), duration = SnackbarDuration.Short)
+                            snackbarHostState.showSnackbar(i18n("請輸入內容"), duration = SnackbarDuration.Short)
                         }
                         else -> scope.launch {
                             sending = true
@@ -226,7 +193,7 @@ private fun PrivateMessageTopBar(title: String, onBack: () -> Unit, onRefresh: (
         titleFontSize = 18,
         onBack = onBack,
     ) {
-        YamiboTopBarIconAction(YamiboIcons.Reload, appString(Res.string.ui_refresh_2), onRefresh, iconSize = 22)
+        YamiboTopBarIconAction(YamiboIcons.Reload, i18n("刷新"), onRefresh, iconSize = 22)
     }
 }
 
@@ -298,11 +265,11 @@ private fun PrivateMessageInputBar(
 ) {
     YamiboMessageInputBar(
         value = value,
-        placeholder = appString(Res.string.ui_please_enter_content),
+        placeholder = i18n("請輸入內容..."),
         enabled = enabled,
         sending = sending,
-        sendText = appString(Res.string.ui_send),
-        sendingText = appString(Res.string.ui_sending),
+        sendText = i18n("發送"),
+        sendingText = i18n("發送中"),
         onValueChange = onValueChange,
         onSend = onSend,
     )
@@ -325,8 +292,6 @@ private fun PrivateMessageError(message: String, onRetry: () -> Unit) {
 
 @Composable
 private fun EmptyPrivateMessages() {
-    YamiboEmptyContent(message = appString(Res.string.ui_no_message_found), modifier = Modifier.padding(vertical = 80.dp))
+    YamiboEmptyContent(message = i18n("沒有找到消息"), modifier = Modifier.padding(vertical = 80.dp))
 }
-
-
 

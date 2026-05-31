@@ -1,8 +1,6 @@
-﻿package me.thenano.yamibo.yamibo_app.history
+package me.thenano.yamibo.yamibo_app.history
 
-import me.thenano.yamibo.yamibo_app.i18n.appString
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
+import me.thenano.yamibo.yamibo_app.i18n.i18n
 
 import YamiboIcons
 import androidx.compose.foundation.layout.Arrangement
@@ -67,7 +65,7 @@ internal fun EmptyContent(mode: PageMode) {
         )
         Spacer(Modifier.height(16.dp))
         Text(
-            text = if (mode == PageMode.Search) appString(Res.string.ui_no_results_found) else appString(Res.string.ui_there_no_reading_history_yet),
+            text = if (mode == PageMode.Search) i18n("搜尋無結果") else i18n("目前還沒有閱讀歷史紀錄"),
             fontSize = 16.sp,
             color = colors.textDark.copy(alpha = 0.5f),
         )
@@ -83,7 +81,7 @@ internal fun ErrorContent(message: String, onRetry: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-            text = appString(Res.string.read_history_load_error, message),
+            text = i18n("載入錯誤：{}", message),
             fontSize = 14.sp,
             color = colors.textDark.copy(alpha = 0.7f),
         )
@@ -92,7 +90,7 @@ internal fun ErrorContent(message: String, onRetry: () -> Unit) {
             onClick = onRetry,
             colors = ButtonDefaults.buttonColors(containerColor = colors.brownPrimary),
         ) {
-            Text(appString(Res.string.ui_reload), color = Color.White)
+            Text(i18n("重新載入"), color = Color.White)
         }
     }
 }
@@ -253,5 +251,4 @@ internal fun TagHistoryItem(
         onFavoriteLongPress = onFavoriteLongPress,
     )
 }
-
 

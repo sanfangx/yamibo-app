@@ -6,7 +6,6 @@ import android.os.LocaleList
 import me.thenano.yamibo.yamibo_app.repository.settings.AppLanguage
 import java.util.Locale
 
-
 actual fun applyAppLocale(language: AppLanguage) {
     val locale = Locale.forLanguageTag(language.languageTag)
     Locale.setDefault(locale)

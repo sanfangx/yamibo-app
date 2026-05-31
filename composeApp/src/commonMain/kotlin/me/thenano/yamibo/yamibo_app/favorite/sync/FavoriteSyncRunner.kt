@@ -1,18 +1,10 @@
 ﻿package me.thenano.yamibo.yamibo_app.favorite.sync
 
-import me.thenano.yamibo.yamibo_app.i18n.appString
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
-
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
+import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.repository.BackgroundTaskRepository
 import me.thenano.yamibo.yamibo_app.repository.FavoriteSyncRepository
 import me.thenano.yamibo.yamibo_app.repository.FavoriteSyncRepository.FavoriteSyncState
@@ -110,7 +102,7 @@ class FavoriteSyncRunner(
             latest.runId !in runningRunIds &&
             latest.runId !in pendingActivationStartedAt.keys
         ) {
-            repository.markRunInterrupted(latest.runId, appString(Res.string.ui_the_background_synchronization_task_has_interrupted_can))
+            repository.markRunInterrupted(latest.runId, i18n("背景同步任務已中斷，可重新同步。"))
         }
 
         stateFlow.value = repository.getLatestSnapshot()?.let { snapshot ->

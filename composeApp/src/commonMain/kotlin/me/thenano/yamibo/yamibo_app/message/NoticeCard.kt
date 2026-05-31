@@ -1,8 +1,6 @@
-﻿package me.thenano.yamibo.yamibo_app.message
+package me.thenano.yamibo.yamibo_app.message
 
-import me.thenano.yamibo.yamibo_app.i18n.appString
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
+import me.thenano.yamibo.yamibo_app.i18n.i18n
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -26,7 +24,7 @@ import androidx.compose.ui.unit.sp
 import io.github.littlesurvival.dto.page.NoticeItem
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.HtmlRenderer
-import me.thenano.yamibo.yamibo_app.components.UserAvatar
+import me.thenano.yamibo.yamibo_app.components.user.UserAvatar
 import me.thenano.yamibo.yamibo_app.userspace.components.SmallActionButton
 
 @Composable
@@ -59,7 +57,7 @@ internal fun NoticeCard(item: NoticeItem, onAction: () -> Unit) {
                 }
             }
         }
-        SmallActionButton(appString(Res.string.ui_shield), onAction)
+        SmallActionButton(i18n("屏蔽"), onAction)
     }
     HorizontalDivider(color = colors.brownLight.copy(alpha = 0.35f))
 }

@@ -1,8 +1,6 @@
-﻿package me.thenano.yamibo.yamibo_app.userspace
+package me.thenano.yamibo.yamibo_app.userspace
 
-import me.thenano.yamibo.yamibo_app.i18n.appString
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
+import me.thenano.yamibo.yamibo_app.i18n.i18n
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -36,7 +34,7 @@ import coil3.compose.SubcomposeAsyncImage
 import io.github.littlesurvival.dto.page.ProfilePage
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.HtmlRenderer
-import me.thenano.yamibo.yamibo_app.components.UserAvatar
+import me.thenano.yamibo.yamibo_app.components.user.UserAvatar
 import me.thenano.yamibo.yamibo_app.util.rememberImageRequest
 
 @Composable
@@ -45,6 +43,7 @@ internal fun UserSpaceProfileHeader(
     isSelf: Boolean,
     onNavigateSection: (UserSpaceSection, UserSpaceSubPage) -> Unit,
     onOpenMessageCenter: () -> Unit,
+    onAddFriend: (ProfilePage) -> Unit,
     onOpenWebView: (String, String) -> Unit,
 ) {
     val colors = YamiboTheme.colors
@@ -74,11 +73,11 @@ internal fun UserSpaceProfileHeader(
         }
 
         StatPanel(profile)
-        ActionGrid(isSelf, onNavigateSection, onOpenMessageCenter)
+        ActionGrid(isSelf, profile, onNavigateSection, onOpenMessageCenter, onAddFriend)
         if (!profile.signatureHtml.isNullOrBlank()) {
             ProfileSignatureCard(profile.signatureHtml)
         }
-        ProfileInfoTable(profile, onOpenHomepage = { url -> onOpenWebView(appString(Res.string.ui_personal_homepage), url) })
+        ProfileInfoTable(profile, onOpenHomepage = { url -> onOpenWebView(i18n("個人主頁"), url) })
     }
 }
 
@@ -92,9 +91,9 @@ private fun StatPanel(profile: ProfilePage) {
         border = BorderStroke(0.5.dp, colors.brownLight.copy(alpha = 0.45f)),
     ) {
         Row(Modifier.fillMaxWidth().padding(vertical = 12.dp)) {
-            ProfileStat(appString(Res.string.ui_total_points), profile.totalPoints.toString(), Modifier.weight(1f))
-            ProfileStat(appString(Res.string.ui_integral), appString(Res.string.userspace_points_value, profile.points.toString()), Modifier.weight(1f))
-            ProfileStat(appString(Res.string.ui_object), profile.partner.toString(), Modifier.weight(1f))
+            ProfileStat(i18n("總積分"), profile.totalPoints.toString(), Modifier.weight(1f))
+            ProfileStat(i18n("積分"), i18n("{} 點", profile.points.toString()), Modifier.weight(1f))
+            ProfileStat(i18n("對象"), profile.partner.toString(), Modifier.weight(1f))
         }
     }
 }
@@ -113,27 +112,30 @@ private data class SpaceAction(
     val initialTab: UserSpaceSubPage,
     val label: String,
     val opensMessageCenter: Boolean = false,
+    val addsFriend: Boolean = false,
 )
 
 @Composable
 private fun ActionGrid(
     isSelf: Boolean,
+    profile: ProfilePage,
     onNavigateSection: (UserSpaceSection, UserSpaceSubPage) -> Unit,
     onOpenMessageCenter: () -> Unit,
+    onAddFriend: (ProfilePage) -> Unit,
 ) {
     val actions = if (isSelf) {
         listOf(
-            SpaceAction(UserSpaceSection.Threads, UserSpaceSubPage.Threads, appString(Res.string.ui_my_threads)),
-            SpaceAction(UserSpaceSection.Blogs, UserSpaceSubPage.FriendBlogs, appString(Res.string.ui_my_blogs)),
-            SpaceAction(UserSpaceSection.Friends, UserSpaceSubPage.Friends, appString(Res.string.ui_my_friends)),
-            SpaceAction(null, UserSpaceSubPage.Profile, appString(Res.string.ui_message_reminder), opensMessageCenter = true),
+            SpaceAction(UserSpaceSection.Threads, UserSpaceSubPage.Threads, i18n("我的主題")),
+            SpaceAction(UserSpaceSection.Blogs, UserSpaceSubPage.FriendBlogs, i18n("我的日志")),
+            SpaceAction(UserSpaceSection.Friends, UserSpaceSubPage.Friends, i18n("我的好友")),
+            SpaceAction(null, UserSpaceSubPage.Profile, i18n("消息提醒"), opensMessageCenter = true),
         )
     } else {
         listOf(
-            SpaceAction(UserSpaceSection.Threads, UserSpaceSubPage.Threads, appString(Res.string.ui_their_threads)),
-            SpaceAction(UserSpaceSection.Blogs, UserSpaceSubPage.MyBlogs, appString(Res.string.ui_their_blogs)),
-            SpaceAction(UserSpaceSection.Threads, UserSpaceSubPage.Replies, appString(Res.string.ui_their_replies)),
-            SpaceAction(null, UserSpaceSubPage.Profile, appString(Res.string.ui_add_as_friend)),
+            SpaceAction(UserSpaceSection.Threads, UserSpaceSubPage.Threads, i18n("Ta的主題")),
+            SpaceAction(UserSpaceSection.Blogs, UserSpaceSubPage.MyBlogs, i18n("Ta的日志")),
+            SpaceAction(UserSpaceSection.Threads, UserSpaceSubPage.Replies, i18n("Ta的回覆")),
+            SpaceAction(null, UserSpaceSubPage.Profile, i18n("加為好友"), addsFriend = true),
         )
     }
     val colors = YamiboTheme.colors
@@ -152,6 +154,7 @@ private fun ActionGrid(
                             onClick = {
                                 when {
                                     action.opensMessageCenter -> onOpenMessageCenter()
+                                    action.addsFriend -> onAddFriend(profile)
                                     action.group != null -> onNavigateSection(action.group, action.initialTab)
                                 }
                             },
@@ -185,7 +188,7 @@ private fun ProfileSignatureCard(signatureHtml: String?) {
         elevation = CardDefaults.cardElevation(0.dp),
     ) {
         Column(Modifier.padding(16.dp)) {
-            Text(appString(Res.string.ui_personal_signature), color = colors.brownDeep, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Text(i18n("個人簽名"), color = colors.brownDeep, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             Spacer(Modifier.height(12.dp))
             HtmlRenderer(html = signatureHtml.orEmpty(), modifier = Modifier.fillMaxWidth())
         }
@@ -202,17 +205,17 @@ private data class ProfileInfoRow(
 private fun ProfileInfoTable(profile: ProfilePage, onOpenHomepage: (String) -> Unit) {
     val rows = listOfNotNull(
         ProfileInfoRow("UID", profile.uid.value.toString()),
-        ProfileInfoRow(appString(Res.string.ui_user_group), profile.userGroup),
-        profile.adminGroup?.let { ProfileInfoRow(appString(Res.string.ui_management_group), it) },
-        ProfileInfoRow(appString(Res.string.ui_gender), profile.gender ?: "-"),
-        ProfileInfoRow(appString(Res.string.ui_birthday), profile.birthday ?: "-"),
-        profile.birthplace?.let { ProfileInfoRow(appString(Res.string.ui_place_birth), it) },
-        profile.education?.let { ProfileInfoRow(appString(Res.string.ui_educational_qualifications), it) },
-        profile.customTitle?.let { ProfileInfoRow(appString(Res.string.ui_custom_title), it) },
-        profile.homepage?.let { ProfileInfoRow(appString(Res.string.ui_personal_homepage), it, it) },
-        ProfileInfoRow(appString(Res.string.ui_online_time), appString(Res.string.userspace_online_hours_value, profile.onlineHours.toString())),
-        ProfileInfoRow(appString(Res.string.ui_registration_time), profile.registerTime?.text ?: "-"),
-        ProfileInfoRow(appString(Res.string.ui_last_visited), profile.lastVisit?.text ?: "-"),
+        ProfileInfoRow(i18n("用戶組"), profile.userGroup),
+        profile.adminGroup?.let { ProfileInfoRow(i18n("管理組"), it) },
+        ProfileInfoRow(i18n("性別"), profile.gender ?: "-"),
+        ProfileInfoRow(i18n("生日"), profile.birthday ?: "-"),
+        profile.birthplace?.let { ProfileInfoRow(i18n("出生地"), it) },
+        profile.education?.let { ProfileInfoRow(i18n("學歷"), it) },
+        profile.customTitle?.let { ProfileInfoRow(i18n("自定義頭銜"), it) },
+        profile.homepage?.let { ProfileInfoRow(i18n("個人主頁"), it, it) },
+        ProfileInfoRow(i18n("在線時間"), i18n("{} 小時", profile.onlineHours.toString())),
+        ProfileInfoRow(i18n("注冊時間"), profile.registerTime?.text ?: "-"),
+        ProfileInfoRow(i18n("最後訪問"), profile.lastVisit?.text ?: "-"),
     )
     val colors = YamiboTheme.colors
     Card(
@@ -223,7 +226,7 @@ private fun ProfileInfoTable(profile: ProfilePage, onOpenHomepage: (String) -> U
         elevation = CardDefaults.cardElevation(0.dp),
     ) {
         Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-            Text(appString(Res.string.ui_personal_data), color = colors.brownDeep, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Text(i18n("個人資料"), color = colors.brownDeep, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             Spacer(Modifier.height(8.dp))
             rows.forEach { row ->
                 val url = row.url
@@ -243,5 +246,3 @@ private fun ProfileInfoTable(profile: ProfilePage, onOpenHomepage: (String) -> U
         }
     }
 }
-
-

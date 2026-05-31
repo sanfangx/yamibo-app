@@ -82,14 +82,13 @@ internal fun Modifier.fastReorderDrag(
             }
 
             onDragStart()
-            var finished = false
+            val finished = false
             while (!finished) {
                 val event = awaitPointerEvent()
                 val change = event.changes.firstOrNull { it.id == down.id } ?: break
                 latest = change
                 if (!change.pressed) {
                     released = true
-                    finished = true
                     break
                 }
                 val delta = change.position - change.previousPosition

@@ -15,7 +15,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.material3.Text
 import io.github.littlesurvival.dto.model.User
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
-import me.thenano.yamibo.yamibo_app.components.UserAvatar
+import me.thenano.yamibo.yamibo_app.components.user.UserAvatar
 
 @Composable
 internal fun UserLine(user: User, time: String?, onUserClick: (User) -> Unit) {

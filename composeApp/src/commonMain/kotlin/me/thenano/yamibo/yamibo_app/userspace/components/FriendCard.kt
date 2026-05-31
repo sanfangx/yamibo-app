@@ -1,8 +1,6 @@
-﻿package me.thenano.yamibo.yamibo_app.userspace.components
+package me.thenano.yamibo.yamibo_app.userspace.components
 
-import me.thenano.yamibo.yamibo_app.i18n.appString
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
+import me.thenano.yamibo.yamibo_app.i18n.i18n
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -20,7 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.littlesurvival.dto.page.UserSpaceFriendItem
-import me.thenano.yamibo.yamibo_app.components.UserAvatar
+import me.thenano.yamibo.yamibo_app.components.user.UserAvatar
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 
 @Composable
@@ -44,11 +42,11 @@ internal fun FriendCard(
             }
         }
         if (onMessageClick != null) {
-            SmallActionButton(appString(Res.string.ui_send_message), onMessageClick)
+            SmallActionButton(i18n("發消息"), onMessageClick)
             Spacer(Modifier.width(6.dp))
         }
         if (item.deleteUrl != null) {
-            SmallActionButton(appString(Res.string.common_delete), onDeleteClick)
+            SmallActionButton(i18n("刪除"), onDeleteClick)
         }
     }
     HorizontalDivider(color = colors.brownLight.copy(alpha = 0.35f))

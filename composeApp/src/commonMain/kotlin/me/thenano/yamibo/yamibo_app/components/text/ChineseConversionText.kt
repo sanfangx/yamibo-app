@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.components
+package me.thenano.yamibo.yamibo_app.components.text
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect

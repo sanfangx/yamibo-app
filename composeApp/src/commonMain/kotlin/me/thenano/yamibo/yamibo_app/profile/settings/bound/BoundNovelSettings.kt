@@ -1,9 +1,8 @@
 ﻿package me.thenano.yamibo.yamibo_app.profile.settings.bound
 
-import me.thenano.yamibo.yamibo_app.i18n.appString
+import me.thenano.yamibo.yamibo_app.i18n.i18n
+
 import me.thenano.yamibo.yamibo_app.i18n.localizedLabel
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -27,7 +26,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import me.thenano.yamibo.yamibo_app.LocalNovelReaderSettingsRepository
-import me.thenano.yamibo.yamibo_app.components.rememberConvertedText
+import me.thenano.yamibo.yamibo_app.components.text.rememberConvertedText
 import me.thenano.yamibo.yamibo_app.profile.settings.components.SettingsChipRow
 import me.thenano.yamibo.yamibo_app.profile.settings.components.SettingsSlider
 import me.thenano.yamibo.yamibo_app.repository.settings.ReaderChineseConversionOption
@@ -37,7 +36,7 @@ import me.thenano.yamibo.yamibo_app.util.state
 import kotlin.math.roundToInt
 
 private val PREVIEW_TEXT: String
-    get() = appString(Res.string.ui_i_am_thenano_author_yamibo_app_which_open_source_app)
+    get() = i18n("我是YamiboApp的作者TheNano，這是一個第三方個人獨立開發的開源App")
 
 @Composable
 fun NovelReaderPreviewSetting() {
@@ -76,7 +75,7 @@ fun NovelFontSizeSetting() {
     val fontSize = novelSettingsRepo.fontSize.state()
 
     SettingsSlider(
-        label = appString(Res.string.ui_text_size),
+        label = i18n("文字大小"),
         value = fontSize.toFloat(),
         valueRange = 10f..40f,
         steps = 29,
@@ -91,7 +90,7 @@ fun NovelLineSpacingSetting() {
     val lineSpacing = novelSettingsRepo.lineSpacing.state()
 
     SettingsSlider(
-        label = appString(Res.string.ui_line_spacing_ratio),
+        label = i18n("行距比例"),
         value = lineSpacing,
         valueRange = 1.0f..3.0f,
         steps = 39,
@@ -106,7 +105,7 @@ fun NovelContentWidthSetting() {
     val contentWidthFraction = novelSettingsRepo.contentWidthFraction.state()
 
     SettingsSlider(
-        label = appString(Res.string.ui_content_width),
+        label = i18n("內容寬度"),
         value = contentWidthFraction,
         valueRange = 0.6f..1.0f,
         steps = 39,
@@ -133,13 +132,13 @@ fun NovelSystemBarsBackgroundSetting() {
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = appString(Res.string.ui_keep_system_column_background),
+                text = i18n("保留系統列背景"),
                 fontSize = 16.sp,
                 color = colors.textDark,
             )
             Spacer(Modifier.height(2.dp))
             Text(
-                text = appString(Res.string.ui_use_reading_background_behind_status_bar_bottom_navigation_bar),
+                text = i18n("在狀態列與底部導覽列後方使用閱讀背景，避免透明系統列蓋住內容。"),
                 fontSize = 13.sp,
                 color = colors.textDark.copy(alpha = 0.6f),
             )

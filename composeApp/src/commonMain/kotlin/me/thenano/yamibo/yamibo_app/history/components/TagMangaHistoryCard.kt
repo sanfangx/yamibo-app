@@ -1,8 +1,4 @@
-﻿package me.thenano.yamibo.yamibo_app.history.components
-
-import me.thenano.yamibo.yamibo_app.i18n.appString
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
+package me.thenano.yamibo.yamibo_app.history.components
 
 import YamiboIcons
 import androidx.compose.animation.core.animateFloatAsState
@@ -11,23 +7,9 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -41,10 +23,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.SubcomposeAsyncImage
 import me.thenano.yamibo.yamibo_app.favorite.FavoriteActionButton
+import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository.TagMangaReadingHistory
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.util.rememberImageRequest
 import org.jetbrains.compose.resources.painterResource
+import yamibo_app.composeapp.generated.resources.Res
 import yamibo_app.composeapp.generated.resources.book
 
 @Composable
@@ -63,7 +47,7 @@ fun TagMangaHistoryCard(
     val colors = YamiboTheme.colors
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
-    val timingSummary = appString(Res.string.history_recent_read_time, timeLabel)
+    val timingSummary = i18n("最近閱讀 {}", timeLabel)
     val scale by animateFloatAsState(
         targetValue = if (isPressed) 0.97f else 1f,
         animationSpec = tween(150)
@@ -152,7 +136,7 @@ fun TagMangaHistoryCard(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
-                val progress = appString(Res.string.common_current_page_total, history.threadImagePageIndex + 1, history.threadImageTotalPages)
+                val progress = i18n("目前第 {} / {} 頁", history.threadImagePageIndex + 1, history.threadImageTotalPages)
                 Text(
                     text = progress,
                     fontSize = 12.sp,
@@ -191,7 +175,7 @@ fun TagMangaHistoryCard(
                     ) {
                         Icon(
                             imageVector = YamiboIcons.Trashcan,
-                            contentDescription = appString(Res.string.common_delete),
+                            contentDescription = i18n("刪除"),
                             modifier = Modifier.size(16.dp),
                             tint = colors.textDark.copy(alpha = 0.4f)
                         )
@@ -201,6 +185,4 @@ fun TagMangaHistoryCard(
         }
     }
 }
-
-
 

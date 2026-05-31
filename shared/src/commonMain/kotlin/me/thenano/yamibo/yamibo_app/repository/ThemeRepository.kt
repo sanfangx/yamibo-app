@@ -2,7 +2,6 @@ package me.thenano.yamibo.yamibo_app.repository
 
 import me.thenano.yamibo.yamibo_app.repository.scheme.YamiboColorScheme
 
-
 /**
  * Theme repository interface.
  *

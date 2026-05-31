@@ -1,9 +1,8 @@
-﻿package me.thenano.yamibo.yamibo_app.thread.reader.components.manga
+package me.thenano.yamibo.yamibo_app.thread.reader.components.manga
 
-import me.thenano.yamibo.yamibo_app.i18n.appString
+import me.thenano.yamibo.yamibo_app.i18n.i18n
+
 import me.thenano.yamibo.yamibo_app.i18n.localizedLabel
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
@@ -29,7 +28,6 @@ import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.repository.settings.ReadingMode
 import me.thenano.yamibo.yamibo_app.repository.settings.TouchZoneLayout
 
-
 /**
  * Settings panel for the manga reader.
  * Slides up from the bottom and contains reading mode and touch zone layout options.
@@ -41,7 +39,6 @@ fun MangaReaderSettingsPanel(
     currentTouchZoneLayout: TouchZoneLayout,
     onReadingModeChange: (ReadingMode) -> Unit,
     onTouchZoneLayoutChange: (TouchZoneLayout) -> Unit,
-    onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val colors = YamiboTheme.colors
@@ -71,7 +68,7 @@ fun MangaReaderSettingsPanel(
                     .verticalScroll(rememberScrollState())
             ) {
                 // Reading mode
-                SectionTitle(appString(Res.string.ui_reading_mode))
+                SectionTitle(i18n("閱讀模式"))
                 ChipGroup(
                     options = ReadingMode.entries.toList(),
                     selectedOption = currentReadingMode,
@@ -82,7 +79,7 @@ fun MangaReaderSettingsPanel(
                 Spacer(Modifier.height(20.dp))
 
                 // Touch zone layout
-                SectionTitle(appString(Res.string.ui_touch_area))
+                SectionTitle(i18n("輕觸區域"))
                 ChipGroup(
                     options = TouchZoneLayout.entries.toList(),
                     selectedOption = currentTouchZoneLayout,

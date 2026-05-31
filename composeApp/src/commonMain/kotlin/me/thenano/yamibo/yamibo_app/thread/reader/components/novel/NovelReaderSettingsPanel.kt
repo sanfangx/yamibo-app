@@ -1,8 +1,6 @@
-﻿package me.thenano.yamibo.yamibo_app.thread.reader.components.novel
+package me.thenano.yamibo.yamibo_app.thread.reader.components.novel
 
-import me.thenano.yamibo.yamibo_app.i18n.appString
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
+import me.thenano.yamibo.yamibo_app.i18n.i18n
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
@@ -23,7 +21,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import me.thenano.yamibo.yamibo_app.repository.settings.AppSettingsRepository
-import me.thenano.yamibo.yamibo_app.repository.settings.NovelReaderSettingsRepository
 import me.thenano.yamibo.yamibo_app.profile.settings.components.ThemeSelectorContent
 import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelChineseConversionSetting
 import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelFontSizeSetting
@@ -35,9 +32,7 @@ import me.thenano.yamibo.yamibo_app.util.state
 @Composable
 fun NovelReaderSettingsPanel(
     visible: Boolean,
-    novelSettingsRepo: NovelReaderSettingsRepository,
     appSettingsRepo: AppSettingsRepository,
-    onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val colors = YamiboTheme.colors
@@ -68,7 +63,7 @@ fun NovelReaderSettingsPanel(
                     .verticalScroll(rememberScrollState())
             ) {
                 // Typography Section
-                SectionTitle(appString(Res.string.ui_text_layout), color = colors.textDark)
+                SectionTitle(i18n("文字排版"), color = colors.textDark)
                 
                 Spacer(Modifier.height(8.dp))
                 NovelFontSizeSetting()
@@ -81,7 +76,7 @@ fun NovelReaderSettingsPanel(
 
                 Spacer(Modifier.height(24.dp))
 
-                SectionTitle(appString(Res.string.ui_conversion_between_simplified_traditional_chinese), color = colors.textDark)
+                SectionTitle(i18n("簡繁轉換"), color = colors.textDark)
                 NovelChineseConversionSetting()
 
                 Spacer(Modifier.height(24.dp))

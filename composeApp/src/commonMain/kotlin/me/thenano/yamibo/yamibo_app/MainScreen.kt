@@ -9,8 +9,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -20,28 +20,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.zIndex
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import kotlinx.serialization.Serializable
 import me.thenano.yamibo.yamibo_app.favorite.FavoritePage
 import me.thenano.yamibo.yamibo_app.history.ReadHistoryPage
+import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.message.MessageCenterScreen
 import me.thenano.yamibo.yamibo_app.message.MessageCenterTab
-import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
-import me.thenano.yamibo.yamibo_app.navigation.Navigatable
-import me.thenano.yamibo.yamibo_app.navigation.RestorableNavigatable
-import me.thenano.yamibo.yamibo_app.navigation.RestorableScreenEntry
-import me.thenano.yamibo.yamibo_app.navigation.RestorableScreenSnapshot
-import me.thenano.yamibo.yamibo_app.navigation.TypedRestorableNavigatableDecoder
-import me.thenano.yamibo.yamibo_app.navigation.decodeRestorePayload
-import me.thenano.yamibo.yamibo_app.navigation.restoreSnapshot
+import me.thenano.yamibo.yamibo_app.navigation.*
 import me.thenano.yamibo.yamibo_app.profile.ProfilePage
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
-import org.jetbrains.compose.resources.StringResource
-import org.jetbrains.compose.resources.stringResource
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
 
 enum class MainTab(val icon: ImageVector) {
     Home(YamiboIcons.Home),
@@ -115,14 +105,14 @@ fun MainScreen(initialTab: MainTab = MainTab.Home) {
                 tabs = MainTab.entries.map {
                     BottomNavItem(
                         tab = it,
-                        title = stringResource(it.titleResource()),
+                        title = it.titleText(),
                         icon = it.icon,
                         showBadge = it == MainTab.Message && hasNewMessage,
                     )
                 },
                 currentTab = BottomNavItem(
                     tab = currentTab,
-                    title = stringResource(currentTab.titleResource()),
+                    title = currentTab.titleText(),
                     icon = currentTab.icon,
                     showBadge = currentTab == MainTab.Message && hasNewMessage,
                 ),
@@ -150,9 +140,7 @@ fun MainScreen(initialTab: MainTab = MainTab.Home) {
                     label = "MainScreenTabAlpha_${tab.name}",
                 )
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .then(if (selected) Modifier else Modifier.size(0.dp))
+                    modifier = (if (selected) Modifier.fillMaxSize() else Modifier.size(0.dp))
                         .zIndex(if (selected) 1f else 0f)
                         .graphicsLayer {
                             this.alpha = alpha
@@ -177,13 +165,13 @@ fun MainScreen(initialTab: MainTab = MainTab.Home) {
     }
 }
 
-private fun MainTab.titleResource(): StringResource {
+private fun MainTab.titleText(): String {
     return when (this) {
-        MainTab.Home -> Res.string.main_home
-        MainTab.History -> Res.string.main_history
-        MainTab.Message -> Res.string.main_message
-        MainTab.Favorite -> Res.string.main_favorite
-        MainTab.Profile -> Res.string.main_profile
+        MainTab.Home -> i18n("首頁")
+        MainTab.History -> i18n("紀錄")
+        MainTab.Message -> i18n("消息")
+        MainTab.Favorite -> i18n("收藏")
+        MainTab.Profile -> i18n("我的")
     }
 }
 
@@ -242,13 +230,4 @@ fun MainScreenBottomBar(
             }
         }
     }
-}
-
-@Composable
-fun PlaceholderScreen(name: String) {
-    val colors = YamiboTheme.colors
-    Box(
-        modifier = Modifier.fillMaxSize().background(colors.creamBackground),
-        contentAlignment = Alignment.Center
-    ) { Text("Content for $name") }
 }

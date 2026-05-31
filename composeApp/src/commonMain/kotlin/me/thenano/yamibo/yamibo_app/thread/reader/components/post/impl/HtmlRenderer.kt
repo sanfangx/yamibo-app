@@ -1,8 +1,6 @@
 ﻿package me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl
 
-import me.thenano.yamibo.yamibo_app.i18n.appString
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
+import me.thenano.yamibo.yamibo_app.i18n.i18n
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.*
@@ -39,7 +37,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.TextUnitType
 import coil3.compose.AsyncImage
 import io.github.littlesurvival.dto.value.ThreadId
-import me.thenano.yamibo.yamibo_app.components.rememberConvertedText
+import me.thenano.yamibo.yamibo_app.components.text.rememberConvertedText
 import me.thenano.yamibo.yamibo_app.LocalNovelReaderSettingsRepository
 import me.thenano.yamibo.yamibo_app.navigation.IInAppLinkResolvingScreen
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
@@ -397,7 +395,6 @@ private fun HtmlBlockRenderer(
                 onTextLayout = { layoutResult.value = it }
             )
 
-
             if (showLongPressMenu != null) {
                 DisableSelection {
                     val menu = showLongPressMenu!!
@@ -405,7 +402,7 @@ private fun HtmlBlockRenderer(
 
                     AlertDialog(
                         onDismissRequest = { showLongPressMenu = null },
-                        title = { Text(appString(Res.string.ui_link_options), style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 20.sp)) },
+                        title = { Text(i18n("連結選項"), style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 20.sp)) },
                         text = {
                             Column(modifier = Modifier.fillMaxWidth()) {
                                 Column(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
@@ -433,23 +430,23 @@ private fun HtmlBlockRenderer(
                                     TextButton(onClick = {
                                         navigator.navigate(IInAppLinkResolvingScreen(fullUrl, linkContext))
                                         showLongPressMenu = null
-                                    }) { Text(appString(Res.string.ui_open_in_app), color = colors.brownPrimary, fontSize = 16.sp) }
+                                    }) { Text(i18n("App 內打開"), color = colors.brownPrimary, fontSize = 16.sp) }
                                 }
 
                                 TextButton(onClick = {
                                     navigator.navigate(IPlatformWebView(fullUrl))
                                     showLongPressMenu = null
-                                }) { Text(appString(Res.string.ui_webview_open), color = colors.brownPrimary, fontSize = 16.sp) }
+                                }) { Text(i18n("WebView 打開"), color = colors.brownPrimary, fontSize = 16.sp) }
 
                                 TextButton(onClick = {
                                     clipboardManager.setText(AnnotatedString(fullUrl))
                                     showLongPressMenu = null
-                                }) { Text(appString(Res.string.ui_copy_link), color = colors.brownPrimary, fontSize = 16.sp) }
+                                }) { Text(i18n("複製連結"), color = colors.brownPrimary, fontSize = 16.sp) }
 
                                 TextButton(onClick = {
                                     clipboardManager.setText(AnnotatedString(menu.linkText))
                                     showLongPressMenu = null
-                                }) { Text(appString(Res.string.ui_copy_text), color = colors.brownPrimary, fontSize = 16.sp) }
+                                }) { Text(i18n("複製文字"), color = colors.brownPrimary, fontSize = 16.sp) }
 
                                 TextButton(onClick = {
                                     try {
@@ -457,13 +454,13 @@ private fun HtmlBlockRenderer(
                                     } catch (_: Exception) {
                                     }
                                     showLongPressMenu = null
-                                }) { Text(appString(Res.string.ui_external_browser), color = colors.brownPrimary, fontSize = 16.sp) }
+                                }) { Text(i18n("外部瀏覽器"), color = colors.brownPrimary, fontSize = 16.sp) }
                             }
                         },
                         confirmButton = {},
                         dismissButton = {
                             TextButton(onClick = { showLongPressMenu = null }) {
-                                Text(appString(Res.string.common_cancel), color = colors.textDark.copy(alpha = 0.5f))
+                                Text(i18n("取消"), color = colors.textDark.copy(alpha = 0.5f))
                             }
                         },
                         containerColor = colors.creamSurface,
@@ -594,7 +591,7 @@ private fun HtmlBlockRenderer(
                 DisableSelection {
                     AlertDialog(
                         onDismissRequest = { showAttachmentMenu = false },
-                        title = { Text(appString(Res.string.ui_accessory_options), style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 20.sp)) },
+                        title = { Text(i18n("附件選項"), style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 20.sp)) },
                         text = {
                             Column(modifier = Modifier.fillMaxWidth()) {
                                 Column(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
@@ -636,17 +633,17 @@ private fun HtmlBlockRenderer(
                                 TextButton(onClick = {
                                     navigator.navigate(IPlatformWebView(fullUrl))
                                     showAttachmentMenu = false
-                                }) { Text(appString(Res.string.ui_open_link_within_app), color = colors.brownPrimary, fontSize = 16.sp) }
+                                }) { Text(i18n("在應用內開啟連結"), color = colors.brownPrimary, fontSize = 16.sp) }
 
                                 TextButton(onClick = {
                                     clipboardManager.setText(AnnotatedString(fullUrl))
                                     showAttachmentMenu = false
-                                }) { Text(appString(Res.string.ui_copy_link_address), color = colors.brownPrimary, fontSize = 16.sp) }
+                                }) { Text(i18n("複製連結地址"), color = colors.brownPrimary, fontSize = 16.sp) }
 
                                 TextButton(onClick = {
                                     clipboardManager.setText(AnnotatedString(block.fileName))
                                     showAttachmentMenu = false
-                                }) { Text(appString(Res.string.ui_copy_link_text), color = colors.brownPrimary, fontSize = 16.sp) }
+                                }) { Text(i18n("複製連結文字"), color = colors.brownPrimary, fontSize = 16.sp) }
 
                                 TextButton(onClick = {
                                     try {
@@ -654,13 +651,13 @@ private fun HtmlBlockRenderer(
                                     } catch (_: Exception) {
                                     }
                                     showAttachmentMenu = false
-                                }) { Text(appString(Res.string.ui_open_using_external_browser), color = colors.brownPrimary, fontSize = 16.sp) }
+                                }) { Text(i18n("使用外部瀏覽器開啟"), color = colors.brownPrimary, fontSize = 16.sp) }
                             }
                         },
                         confirmButton = {},
                         dismissButton = {
                             TextButton(onClick = { showAttachmentMenu = false }) {
-                                Text(appString(Res.string.common_cancel), color = colors.textDark.copy(alpha = 0.5f))
+                                Text(i18n("取消"), color = colors.textDark.copy(alpha = 0.5f))
                             }
                         },
                         containerColor = colors.creamSurface,
@@ -689,7 +686,7 @@ private fun HtmlBlockRenderer(
             ) {
                 Column(modifier = Modifier.padding(12.dp).fillMaxWidth()) {
                     Text(
-                        text = if (expanded) "▼ ${block.title ?: appString(Res.string.ui_click_expand_collapse)}" else "▶ ${block.title ?: appString(Res.string.ui_click_expand_collapse)}",
+                        text = if (expanded) "▼ ${block.title ?: i18n("點擊展開 / 收起")}" else "▶ ${block.title ?: i18n("點擊展開 / 收起")}",
                         color = colors.brownDeep,
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.sp
@@ -745,7 +742,7 @@ private fun HtmlBlockRenderer(
                             modifier = Modifier.padding(end = 8.dp)
                         )
                         Text(
-                            text = appString(Res.string.thread_post_hidden_score, block.cost.toString()),
+                            text = i18n("本帖隱藏內容需要積分: {}", block.cost.toString()),
                             color = Color(0xFFD32F2F),
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp
@@ -928,5 +925,4 @@ private fun HtmlBlockRenderer(
         }
     }
 }
-
 

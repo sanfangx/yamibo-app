@@ -1,8 +1,4 @@
-﻿package me.thenano.yamibo.yamibo_app.profile
-
-import me.thenano.yamibo.yamibo_app.i18n.appString
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
+package me.thenano.yamibo.yamibo_app.profile
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.animateFloatAsState
@@ -29,7 +25,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.serialization.Serializable
 import coil3.compose.SubcomposeAsyncImage
 import io.github.littlesurvival.YamiboRoute
 import io.github.littlesurvival.core.YamiboResult
@@ -38,21 +33,14 @@ import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.LocalAuthRepository
 import me.thenano.yamibo.yamibo_app.event.AppEventBus
 import me.thenano.yamibo.yamibo_app.event.events.LoginSuccessEvent
-import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
-import me.thenano.yamibo.yamibo_app.navigation.Navigatable
-import me.thenano.yamibo.yamibo_app.navigation.RestorableNavigatable
-import me.thenano.yamibo.yamibo_app.navigation.RestorableScreenEntry
-import me.thenano.yamibo.yamibo_app.navigation.RestorableScreenSnapshot
-import me.thenano.yamibo.yamibo_app.navigation.TypedRestorableNavigatableDecoder
-import me.thenano.yamibo.yamibo_app.navigation.emptyRestoreSnapshot
+import me.thenano.yamibo.yamibo_app.i18n.i18n
+import me.thenano.yamibo.yamibo_app.navigation.*
 import me.thenano.yamibo.yamibo_app.store.auth.UserStore
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
-import me.thenano.yamibo.yamibo_app.util.rememberImageRequest
 import me.thenano.yamibo.yamibo_app.userspace.IUserSpaceScreen
+import me.thenano.yamibo.yamibo_app.util.rememberImageRequest
 import me.thenano.yamibo.yamibo_app.webview.PlatformWebViewScreen
 
-@Serializable
-private data object LoginScreenRestorePayload
 @RestorableScreenEntry
 class ILoginScreen : RestorableNavigatable {
     override val id: String = buildId("login")
@@ -78,7 +66,7 @@ fun LoginScreen() {
 
     PlatformWebViewScreen(
         initialUrl = YamiboRoute.Login.build(),
-        initialTitle = appString(Res.string.ui_login_page),
+        initialTitle = i18n("登入頁面"),
         showNavigation = false,
         useBackIcon = true,
         onPageFinished = { authRepo.syncCookieFromWebView() },
@@ -176,7 +164,7 @@ private fun LoginContent() {
     val navigator = LocalNavigator.current
     Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
         AnimatedYamiboButton(
-            text = appString(Res.string.ui_log_in),
+            text = i18n("登入"),
             onClick = { navigator.navigate(ILoginScreen()) },
             modifier = Modifier.fillMaxWidth(0.6f)
         )
@@ -210,14 +198,14 @@ private fun UserInfoContent(
             verticalAlignment = Alignment.CenterVertically
         ) {
             AnimatedYamiboChip(
-                label = appString(Res.string.ui_refresh_2),
+                label = i18n("刷新"),
                 onClick = { onRefresh() },
                 containerColor = YamiboTheme.colors.brownPrimary.copy(alpha = 0.1f),
                 contentColor = YamiboTheme.colors.brownDeep
             )
             Spacer(Modifier.width(12.dp))
             AnimatedYamiboChip(
-                label = appString(Res.string.ui_sign_out),
+                label = i18n("登出"),
                 onClick = { onLogout() },
                 containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.8f),
                 contentColor = MaterialTheme.colorScheme.onErrorContainer
@@ -254,7 +242,7 @@ private fun UserInfoContent(
                 Row {
                     InfoChip(user.userGroup)
                     Spacer(Modifier.width(8.dp))
-                    InfoChip(appString(Res.string.login_total_points, user.totalPoints.toString()))
+                    InfoChip(i18n("總積分 {}", user.totalPoints.toString()))
                 }
             }
         }
@@ -383,5 +371,4 @@ private fun AnimatedYamiboChip(
         )
     }
 }
-
 

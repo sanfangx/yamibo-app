@@ -80,7 +80,13 @@ class SignRepositoryImpl(
             finalStatus = signAction.status
 
             pageInfo = when (val refreshed = fetchPageInfo()) {
-                is YamiboResult.Success -> refreshed.value
+                is YamiboResult.Success -> {
+                    if (signAction.status.isTodaySignedStatus()) {
+                        optimisticSignedPageInfo(refreshed.value)
+                    } else {
+                        refreshed.value
+                    }
+                }
                 else -> optimisticSignedPageInfo(pageInfo)
             }
         } else {
@@ -138,6 +144,25 @@ class SignRepositoryImpl(
             if (cached.hasSignedToday) return true
         }
         return getTodayRecord()?.isSigned == true
+    }
+
+    override suspend fun markTodaySigned(message: String?) {
+        val info = getCachedPageInfo()?.let(::optimisticSignedPageInfo)
+            ?: SignRepository.SignPageInfo(
+                currentDateText = null,
+                monthLabel = null,
+                notice = null,
+                calendarDays = emptyList(),
+                repairOptions = emptyList(),
+                myActivity = emptyList(),
+                statistics = emptyList(),
+                extraSections = emptyList(),
+                signActionUrl = null,
+                repairActionPrefix = null,
+                hasSignedToday = true,
+                lastSignDateKey = currentLocalDateKey(),
+            )
+        updateTodayRecord(info, message)
     }
 
     override fun getCachedPageInfo(): SignRepository.SignPageInfo? {
@@ -274,6 +299,12 @@ class SignRepositoryImpl(
         return optimisticSignedPageInfo(info).copy(
             repairOptions = info.repairOptions.filterNot { it.value == repairedValue }
         )
+    }
+
+    private fun SignRepository.ActionStatus.isTodaySignedStatus(): Boolean {
+        return this == SignRepository.ActionStatus.SUCCESS ||
+            this == SignRepository.ActionStatus.ALREADY_SIGNED ||
+            this == SignRepository.ActionStatus.REPAIR_SUCCESS
     }
 
     private fun updateTodayRecord(

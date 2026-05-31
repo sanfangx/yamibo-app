@@ -1,13 +1,16 @@
 ﻿package me.thenano.yamibo.yamibo_app.thread.reader.components.post
 
-import me.thenano.yamibo.yamibo_app.i18n.appString
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
+import me.thenano.yamibo.yamibo_app.i18n.i18n
 
 import YamiboIcons
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -31,9 +34,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import coil3.compose.AsyncImage
+import io.github.littlesurvival.core.YamiboResult
 import io.github.littlesurvival.dto.page.Post
+import io.github.littlesurvival.dto.page.RatePopoutPage
 import io.github.littlesurvival.dto.value.PollOptionId
-import me.thenano.yamibo.yamibo_app.components.rememberConvertedText
+import me.thenano.yamibo.yamibo_app.components.text.rememberConvertedText
 import me.thenano.yamibo.yamibo_app.LocalNovelReaderSettingsRepository
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.inapplinknavigation.InAppLinkContext
@@ -51,7 +56,8 @@ fun PostRenderer(
     modifier: Modifier = Modifier,
     threadTitle: String? = null,
     onVote: (suspend (List<PollOptionId>) -> Boolean)? = null,
-    onRate: ((Int, String) -> Unit)? = null,
+    onLoadRateOptions: (suspend () -> YamiboResult<RatePopoutPage>)? = null,
+    onRate: ((Int, String, Boolean) -> Unit)? = null,
     onComment: ((String) -> Unit)? = null,
     onReply: (() -> Unit)? = null,
     cachedHeightPx: Int? = null,
@@ -77,7 +83,6 @@ fun PostRenderer(
 
     var showRateDialog by remember { mutableStateOf(false) }
     var showCommentDialog by remember { mutableStateOf(false) }
-    val colors = YamiboTheme.colors
     val navigator = LocalNavigator.current
     val novelSettingsRepo = LocalNovelReaderSettingsRepository.current
     val contentWidthFraction = novelSettingsRepo.contentWidthFraction.state()
@@ -98,9 +103,8 @@ fun PostRenderer(
     } else {
         Modifier
     }
-    val blocksToRender = bodyBlocks
     val convertedThreadTitle = if (threadTitle != null) rememberConvertedText(threadTitle) else null
-    if (!showHeader && !showFooter && !blocksToRender.isNullOrEmpty()) {
+    if (!showHeader && !showFooter && !bodyBlocks.isNullOrEmpty()) {
         Box(
             modifier = modifier
                 .fillMaxWidth()
@@ -113,7 +117,7 @@ fun PostRenderer(
                     .padding(horizontal = 16.dp, vertical = verticalPadding)
             ) {
                 HtmlBlocksRenderer(
-                    blocks = blocksToRender,
+                    blocks = bodyBlocks,
                     linkContext = linkContext,
                     onImageSuccess = onImageSuccess,
                     onImageError = onImageError,
@@ -216,9 +220,9 @@ fun PostRenderer(
                 }
             }
 
-            if (blocksToRender != null) {
+            if (bodyBlocks != null) {
                 HtmlBlocksRenderer(
-                    blocks = blocksToRender,
+                    blocks = bodyBlocks,
                     linkContext = linkContext,
                     onImageSuccess = onImageSuccess,
                     onImageError = onImageError,
@@ -252,7 +256,7 @@ fun PostRenderer(
                 if (lastEditedTime != null) {
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = lastEditedTime.specialText ?: appString(Res.string.thread_post_last_edited, lastEditedTime.text),
+                        text = lastEditedTime.specialText ?: i18n("最後編輯於 {}", lastEditedTime.text),
                         fontSize = 12.sp,
                         color = YamiboTheme.colors.textDark.copy(alpha = 0.5f)
                     )
@@ -290,25 +294,25 @@ fun PostRenderer(
                     ) {
                         if (onRate != null) {
                             TextButton(onClick = { showRateDialog = true }) {
-                                Icon(imageVector = YamiboIcons.Heart, contentDescription = appString(Res.string.ui_score), modifier = Modifier.size(18.dp), tint = YamiboTheme.colors.brownPrimary)
+                                Icon(imageVector = YamiboIcons.Heart, contentDescription = i18n("評分"), modifier = Modifier.size(18.dp), tint = YamiboTheme.colors.brownPrimary)
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text(appString(Res.string.ui_score), fontSize = 13.sp, color = YamiboTheme.colors.brownPrimary, fontWeight = FontWeight.SemiBold)
+                                Text(i18n("評分"), fontSize = 13.sp, color = YamiboTheme.colors.brownPrimary, fontWeight = FontWeight.SemiBold)
                             }
                             Spacer(modifier = Modifier.width(8.dp))
                         }
                         if (onComment != null) {
                             TextButton(onClick = { showCommentDialog = true }) {
-                                Icon(imageVector = YamiboIcons.Comment, contentDescription = appString(Res.string.ui_comment_remark), modifier = Modifier.size(18.dp), tint = YamiboTheme.colors.brownPrimary)
+                                Icon(imageVector = YamiboIcons.Comment, contentDescription = i18n("點評"), modifier = Modifier.size(18.dp), tint = YamiboTheme.colors.brownPrimary)
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text(appString(Res.string.ui_comment_remark), fontSize = 13.sp, color = YamiboTheme.colors.brownPrimary, fontWeight = FontWeight.SemiBold)
+                                Text(i18n("點評"), fontSize = 13.sp, color = YamiboTheme.colors.brownPrimary, fontWeight = FontWeight.SemiBold)
                             }
                             Spacer(modifier = Modifier.width(8.dp))
                         }
                         if (onReply != null) {
                             TextButton(onClick = { onReply() }) {
-                                Icon(imageVector = YamiboIcons.Reply, contentDescription = appString(Res.string.ui_reply), modifier = Modifier.size(18.dp), tint = YamiboTheme.colors.brownPrimary)
+                                Icon(imageVector = YamiboIcons.Reply, contentDescription = i18n("回復"), modifier = Modifier.size(18.dp), tint = YamiboTheme.colors.brownPrimary)
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text(appString(Res.string.ui_reply), fontSize = 13.sp, color = YamiboTheme.colors.brownPrimary, fontWeight = FontWeight.SemiBold)
+                                Text(i18n("回復"), fontSize = 13.sp, color = YamiboTheme.colors.brownPrimary, fontWeight = FontWeight.SemiBold)
                             }
                         }
                     }
@@ -320,44 +324,99 @@ fun PostRenderer(
     if (showRateDialog) {
         var scoreInput by remember { mutableStateOf("") }
         var reasonInput by remember { mutableStateOf("") }
+        var noticeAuthor by remember { mutableStateOf(false) }
+        var rateOptions by remember { mutableStateOf<RatePopoutPage?>(null) }
+        var rateHint by remember { mutableStateOf<String?>(null) }
+        val loadingHint = i18n("正在載入選項")
+        val failedHint = i18n("載入失敗, 可選擇直接填寫")
+
+        LaunchedEffect(onLoadRateOptions) {
+            if (onLoadRateOptions == null) return@LaunchedEffect
+            rateHint = loadingHint
+            when (val result = onLoadRateOptions()) {
+                is YamiboResult.Success -> {
+                    rateOptions = result.value
+                    rateHint = null
+                }
+
+                else -> {
+                    rateOptions = null
+                    rateHint = failedHint
+                }
+            }
+        }
+
         AlertDialog(
             onDismissRequest = {
                 showRateDialog = false
             },
-            title = { Text(appString(Res.string.ui_rate_post), fontWeight = FontWeight.Bold, fontSize = 20.sp) },
+            title = { Text(i18n("本帖評分"), fontWeight = FontWeight.Bold, fontSize = 20.sp) },
             text = {
                 Column {
-                    OutlinedTextField(
+                    RateOptionTextField(
                         value = scoreInput,
                         onValueChange = { scoreInput = it },
-                        label = { Text(appString(Res.string.ui_fraction), fontSize = 12.sp) },
+                        label = { Text(i18n("分數"), fontSize = 12.sp) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = YamiboTheme.colors.brownPrimary, focusedLabelColor = YamiboTheme.colors.brownPrimary)
+                        pickerTitle = i18n("選擇分數"),
+                        options = rateOptions?.availableScores.orEmpty().distinct().sortedDescending().map { it.toString() },
+                        compactGrid = true,
                     )
-                    OutlinedTextField(
+                    RateOptionTextField(
                         value = reasonInput,
                         onValueChange = { reasonInput = it },
-                        label = { Text(appString(Res.string.ui_reason_for_rating), fontSize = 12.sp) },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = YamiboTheme.colors.brownPrimary, focusedLabelColor = YamiboTheme.colors.brownPrimary)
+                        label = { Text(i18n("評分理由"), fontSize = 12.sp) },
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                        pickerTitle = i18n("選擇評分理由"),
+                        options = rateOptions?.defaultReasons.orEmpty(),
                     )
+                    if (rateHint != null) {
+                        Text(
+                            text = rateHint.orEmpty(),
+                            color = YamiboTheme.colors.textDark.copy(alpha = 0.55f),
+                            fontSize = 12.sp,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { noticeAuthor = !noticeAuthor }
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = i18n("通知作者"),
+                            color = YamiboTheme.colors.textDark,
+                            fontSize = 14.sp,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Checkbox(
+                            checked = noticeAuthor,
+                            onCheckedChange = { noticeAuthor = it },
+                            colors = CheckboxDefaults.colors(
+                                checkedColor = YamiboTheme.colors.brownPrimary,
+                                uncheckedColor = YamiboTheme.colors.textDark.copy(alpha = 0.5f),
+                                checkmarkColor = YamiboTheme.colors.creamBackground,
+                            )
+                        )
+                    }
                 }
             },
             confirmButton = {
                 Button(
                     onClick = {
                         val score = scoreInput.toIntOrNull() ?: 0
-                        onRate?.invoke(score, reasonInput)
+                        onRate?.invoke(score, reasonInput, noticeAuthor)
                         showRateDialog = false
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = YamiboTheme.colors.brownPrimary)
-                ) { Text(appString(Res.string.ui_submit), color = YamiboTheme.colors.creamBackground) }
+                ) { Text(i18n("提交"), color = YamiboTheme.colors.creamBackground) }
             },
             dismissButton = {
-                TextButton(onClick = { showRateDialog = false }) { Text(appString(Res.string.common_cancel), color = YamiboTheme.colors.brownPrimary) }
+                TextButton(onClick = { showRateDialog = false }) { Text(i18n("取消"), color = YamiboTheme.colors.brownPrimary) }
             },
             containerColor = YamiboTheme.colors.creamSurface,
             titleContentColor = YamiboTheme.colors.brownPrimary,
@@ -378,7 +437,7 @@ fun PostRenderer(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = appString(Res.string.ui_comment_remark),
+                        text = i18n("點評"),
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
                         color = YamiboTheme.colors.brownPrimary,
@@ -407,7 +466,7 @@ fun PostRenderer(
                         )
                         if (commentInput.isEmpty()) {
                             Text(
-                                appString(Res.string.ui_enter_content),
+                                i18n("輸入內容..."),
                                 color = YamiboTheme.colors.textDark.copy(alpha = 0.4f),
                                 fontSize = 16.sp,
                                 modifier = Modifier.align(Alignment.TopStart)
@@ -430,9 +489,204 @@ fun PostRenderer(
                         ),
                         enabled = commentInput.isNotBlank()
                     ) {
-                        Text(appString(Res.string.ui_release), color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        Text(i18n("發布"), color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RateOptionTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: @Composable (() -> Unit),
+    pickerTitle: String,
+    options: List<String>,
+    modifier: Modifier = Modifier,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    compactGrid: Boolean = false,
+) {
+    var showPicker by remember { mutableStateOf(false) }
+    Box(modifier = modifier) {
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            label = label,
+            keyboardOptions = keyboardOptions,
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            trailingIcon = {
+                if (options.isNotEmpty()) {
+                    TextButton(
+                        onClick = { showPicker = true },
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.textButtonColors(contentColor = YamiboTheme.colors.brownPrimary),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                    ) {
+                        Text(
+                            i18n("選擇"),
+                            color = YamiboTheme.colors.brownPrimary,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                }
+            },
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = YamiboTheme.colors.brownPrimary,
+                unfocusedBorderColor = YamiboTheme.colors.brownPrimary.copy(alpha = 0.35f),
+                focusedLabelColor = YamiboTheme.colors.brownPrimary,
+                cursorColor = YamiboTheme.colors.brownPrimary,
+            )
+        )
+    }
+
+    if (showPicker) {
+        RateOptionPickerDialog(
+            title = pickerTitle,
+            options = options,
+            selected = value,
+            compactGrid = compactGrid,
+            onSelected = { option ->
+                onValueChange(option)
+                showPicker = false
+            },
+            onDismiss = { showPicker = false },
+        )
+    }
+}
+
+@Composable
+private fun RateOptionPickerDialog(
+    title: String,
+    options: List<String>,
+    selected: String,
+    compactGrid: Boolean,
+    onSelected: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val colors = YamiboTheme.colors
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = colors.creamSurface),
+            elevation = CardDefaults.cardElevation(8.dp),
+        ) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    text = title,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = colors.textDark,
+                )
+                Spacer(Modifier.height(16.dp))
+
+                if (compactGrid) {
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(4),
+                        modifier = Modifier.heightIn(max = 260.dp).fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        items(options) { option ->
+                            RateOptionButton(
+                                text = option,
+                                selected = option == selected,
+                                onClick = { onSelected(option) },
+                            )
+                        }
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.heightIn(max = 360.dp).fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        items(options) { option ->
+                            RateOptionListRow(
+                                text = option,
+                                selected = option == selected,
+                                onClick = { onSelected(option) },
+                            )
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(14.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text(
+                            text = i18n("取消"),
+                            color = colors.brownPrimary,
+                            fontWeight = FontWeight.Medium,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RateOptionButton(
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    val colors = YamiboTheme.colors
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(10.dp),
+        color = if (selected) colors.brownDeep else colors.creamBackground,
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.padding(vertical = 10.dp).fillMaxWidth(),
+            color = if (selected) Color.White else colors.textDark,
+            fontSize = 14.sp,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        )
+    }
+}
+
+@Composable
+private fun RateOptionListRow(
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    val colors = YamiboTheme.colors
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(12.dp),
+        color = if (selected) colors.brownPrimary.copy(alpha = 0.12f) else Color.Transparent,
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = text,
+                color = colors.textDark,
+                fontSize = 14.sp,
+                modifier = Modifier.weight(1f),
+            )
+            if (selected) {
+                Text(
+                    text = i18n("已選擇"),
+                    color = colors.brownDeep,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
             }
         }
     }
@@ -462,5 +716,3 @@ private fun ThreadReaderStatBadge(icon: ImageVector, value: String) {
         }
     }
 }
-
-

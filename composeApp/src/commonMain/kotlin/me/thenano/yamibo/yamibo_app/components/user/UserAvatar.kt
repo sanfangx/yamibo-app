@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.components
+package me.thenano.yamibo.yamibo_app.components.user
 
 import YamiboIcons
 import androidx.compose.foundation.background

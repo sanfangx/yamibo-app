@@ -1,8 +1,6 @@
 ﻿package me.thenano.yamibo.yamibo_app.thread.detail.novel.components
 
-import me.thenano.yamibo.yamibo_app.i18n.appString
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
+import me.thenano.yamibo.yamibo_app.i18n.i18n
 
 import YamiboIcons
 import androidx.compose.animation.AnimatedVisibility
@@ -31,7 +29,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.littlesurvival.dto.page.Post
-import me.thenano.yamibo.yamibo_app.components.rememberConvertedText
+import me.thenano.yamibo.yamibo_app.components.text.rememberConvertedText
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 
 /** Expandable page section with post titles */
@@ -72,7 +70,7 @@ internal fun PostPageSection(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = appString(Res.string.common_page_number, page),
+                    text = i18n("第 {} 頁", page),
                     fontSize = 14.sp,
                     fontWeight = if (isFirstPage) FontWeight.Bold else FontWeight.Medium,
                     color = colors.brownDeep
@@ -139,7 +137,7 @@ private fun PostTitleRow(
     onLongPress: () -> Unit,
 ) {
     val colors = YamiboTheme.colors
-    val displayTitle = rememberConvertedText(post.title.ifBlank { appString(Res.string.ui_untitled) })
+    val displayTitle = rememberConvertedText(post.title.ifBlank { i18n("（無標題）") })
 
     Surface(
         modifier = Modifier
@@ -193,5 +191,4 @@ private fun PostTitleRow(
         }
     }
 }
-
 

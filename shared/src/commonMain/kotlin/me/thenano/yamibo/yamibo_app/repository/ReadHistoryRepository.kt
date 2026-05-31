@@ -128,6 +128,37 @@ interface ReadHistoryRepository {
 
     suspend fun getCombinedHistoryFilterCounts(): List<HistoryFilterCount>
 
+    suspend fun getCombinedHistoryPageByFilters(
+        filters: Set<HistoryFilter>,
+        page: Int,
+        pageSize: Int = 20,
+    ): List<AnyReadingHistory> {
+        val normalized = filters.filterNot { it == HistoryFilter.All }.toSet()
+        if (normalized.isEmpty()) return getCombinedHistoryPage(page, pageSize)
+        val offset = (page - 1).coerceAtLeast(0) * pageSize
+        val items = mutableListOf<AnyReadingHistory>()
+        for (filter in normalized) {
+            val count = getCombinedHistoryCountByFilter(filter).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+            if (count > 0) {
+                items += getCombinedHistoryPageByFilter(filter, page = 1, pageSize = count)
+            }
+        }
+        return items
+            .sortedByDescending { it.lastVisitTime }
+            .drop(offset)
+            .take(pageSize)
+    }
+
+    suspend fun getCombinedHistoryCountByFilters(filters: Set<HistoryFilter>): Long {
+        val normalized = filters.filterNot { it == HistoryFilter.All }.toSet()
+        if (normalized.isEmpty()) return getCombinedHistoryCount()
+        var total = 0L
+        for (filter in normalized) {
+            total += getCombinedHistoryCountByFilter(filter)
+        }
+        return total
+    }
+
     /** Search combined history entries by title/tag (newest first) */
     suspend fun searchCombinedHistory(query: String, page: Int, pageSize: Int = 20): List<AnyReadingHistory>
 

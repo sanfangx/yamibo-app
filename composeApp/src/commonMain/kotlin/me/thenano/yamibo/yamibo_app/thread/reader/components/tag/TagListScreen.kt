@@ -1,9 +1,8 @@
-﻿package me.thenano.yamibo.yamibo_app.thread.reader.components.tag
+package me.thenano.yamibo.yamibo_app.thread.reader.components.tag
 
-import me.thenano.yamibo.yamibo_app.i18n.appString
+import me.thenano.yamibo.yamibo_app.i18n.i18n
+
 import me.thenano.yamibo.yamibo_app.i18n.localizedMessage
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
@@ -82,7 +81,7 @@ internal fun TagListScreen(
             TopAppBar(
                 title = {
                     Text(
-                        appString(Res.string.ui_tag_list),
+                        i18n("標籤列表"),
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = colors.creamBackground
@@ -133,7 +132,7 @@ internal fun TagListScreen(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    appString(Res.string.ui_tag_not_found),
+                                    i18n("沒有找到標籤"),
                                     color = colors.textDark.copy(alpha = 0.5f),
                                     fontSize = 14.sp
                                 )
@@ -146,7 +145,7 @@ internal fun TagListScreen(
                                     .padding(16.dp)
                             ) {
                                 Text(
-                                    appString(Res.string.ui_tips_tab_page_similar_regular_comic_app_recommended_for_collecting),
+                                    i18n("💡 tips : 標籤頁面類似常規漫畫App, 推薦用於收藏漫畫"),
                                     color = colors.textDark.copy(alpha = 0.6f),
                                     fontSize = 13.sp,
                                     modifier = Modifier.padding(bottom = 16.dp)
@@ -211,5 +210,4 @@ private fun TagChip(
         }
     }
 }
-
 

@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.components
+package me.thenano.yamibo.yamibo_app.components.user
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column

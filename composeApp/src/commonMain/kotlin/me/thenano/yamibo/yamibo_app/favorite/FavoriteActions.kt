@@ -1,9 +1,7 @@
-﻿package me.thenano.yamibo.yamibo_app.favorite
+package me.thenano.yamibo.yamibo_app.favorite
 
-import me.thenano.yamibo.yamibo_app.i18n.appString
-import me.thenano.yamibo.yamibo_app.i18n.localizedAppMessage
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
+import me.thenano.yamibo.yamibo_app.i18n.i18n
+
 
 import YamiboIcons
 import androidx.compose.foundation.BorderStroke
@@ -74,7 +72,6 @@ data class FavoriteLocationSelection(
     val paths: List<String>,
 )
 
-
 internal fun FavoriteTargetPayload.supportsRemoteWebsiteSync(): Boolean = this is FavoriteTargetPayload.Thread
 
 internal suspend fun addFavoriteAndMaybeSync(
@@ -100,7 +97,7 @@ internal suspend fun syncExistingFavoriteIfRequested(
 ): FavoriteSyncActionResult? {
     if (!syncToRemote || !target.supportsRemoteWebsiteSync()) return null
     val item = favoriteRepository.findFavoriteItem(target)
-        ?: return FavoriteSyncActionResult(false, appString(Res.string.ui_added_local_favorite_but_sync_target_not_found))
+        ?: return FavoriteSyncActionResult(false, i18n("已加入本地收藏，但找不到同步目標。"))
     return favoriteSyncRepository.syncLocalFavoriteItem(item.id)
 }
 
@@ -126,9 +123,9 @@ internal suspend fun completeFavoriteAddWithFeedback(
     }
     onRefreshRequested()
     val message = when {
-        syncResult == null -> appString(Res.string.ui_added_favorites)
-        syncResult.success -> appString(Res.string.favorite_add_success, syncResult.message?.let(::localizedAppMessage) ?: appString(Res.string.ui_already_synced_yamibo))
-        else -> appString(Res.string.favorite_add_sync_failed, syncResult.message?.let(::localizedAppMessage) ?: appString(Res.string.ui_please_try_again_later))
+        syncResult == null -> i18n("已加入收藏")
+        syncResult.success -> i18n("已加入收藏，{}", (syncResult.message?.takeIf { it.isNotBlank() } ?: i18n("已同步到百合會。")))
+        else -> i18n("已加入收藏，但同步失敗：{}", (syncResult.message?.takeIf { it.isNotBlank() } ?: i18n("請稍後再試")))
     }
     snackbarHostState.showSnackbar(message)
 }
@@ -145,7 +142,7 @@ internal suspend fun completeSavedFavoriteSyncWithFeedback(
     val syncingSnackbarJob = if (syncToRemote) {
         scope.launch {
             snackbarHostState.showSnackbar(
-                message = appString(Res.string.ui_synchronizing_yamibo),
+                message = i18n("正在同步到百合會..."),
                 duration = SnackbarDuration.Indefinite,
             )
         }
@@ -159,9 +156,9 @@ internal suspend fun completeSavedFavoriteSyncWithFeedback(
     snackbarHostState.currentSnackbarData?.dismiss()
     onRefreshRequested()
     val message = when {
-        syncResult == null -> appString(Res.string.ui_added_local_favorites)
-        syncResult.success -> appString(Res.string.favorite_add_local_success, syncResult.message?.let(::localizedAppMessage) ?: appString(Res.string.ui_already_synced_yamibo))
-        else -> appString(Res.string.favorite_add_local_sync_failed, syncResult.message?.let(::localizedAppMessage) ?: appString(Res.string.ui_please_try_again_later))
+        syncResult == null -> i18n("已加入本地收藏")
+        syncResult.success -> i18n("已加入本地收藏，{}", (syncResult.message?.takeIf { it.isNotBlank() } ?: i18n("已同步到百合會。")))
+        else -> i18n("已加入本地收藏，但同步到百合會失敗：{}", (syncResult.message?.takeIf { it.isNotBlank() } ?: i18n("請稍後再試")))
     }
     snackbarHostState.showSnackbar(message)
 }
@@ -180,7 +177,7 @@ internal suspend fun completeFavoriteRemovalWithFeedback(
     val syncingSnackbarJob = if (removeRemote) {
         scope.launch {
             snackbarHostState.showSnackbar(
-                message = appString(Res.string.ui_removing_favorites_from_yamibo),
+                message = i18n("正在從百合會移除收藏..."),
                 duration = SnackbarDuration.Indefinite,
             )
         }
@@ -199,7 +196,7 @@ internal suspend fun completeFavoriteRemovalWithFeedback(
     snackbarHostState.currentSnackbarData?.dismiss()
     onRefreshRequested()
     snackbarHostState.showSnackbar(
-        if (result.success) successMessage else result.message?.let(::localizedAppMessage) ?: failureMessage,
+        if (result.success) successMessage else result.message?.takeIf { it.isNotBlank() } ?: failureMessage,
     )
 }
 
@@ -273,7 +270,7 @@ fun FavoriteActionButton(
         ) {
             Icon(
                 imageVector = if (filled) YamiboIcons.StarFilled else YamiboIcons.StarOutline,
-                contentDescription = appString(Res.string.main_favorite),
+                contentDescription = i18n("收藏"),
                 tint = tint,
                 modifier = Modifier.size(iconSize.dp),
             )
@@ -337,7 +334,7 @@ fun FavoriteCollectionPickerDialog(
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
                 Text(
-                    text = appString(Res.string.ui_select_category),
+                    text = i18n("選擇類別"),
                     color = colors.brownDeep,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
@@ -345,7 +342,7 @@ fun FavoriteCollectionPickerDialog(
 
                 Spacer(Modifier.size(6.dp))
                 Text(
-                    text = currentCategory?.let { "${localizedAppMessage(it.categoryName)}/" } ?: appString(Res.string.ui_check_major_categories_click_in_select_small_collections),
+                    text = currentCategory?.let { "${it.categoryName}/" } ?: i18n("勾選大類，或點進去選擇小集合"),
                     color = colors.textDark.copy(alpha = if (currentCategory == null) 0.58f else 0.82f),
                     fontSize = 12.sp,
                     fontWeight = if (currentCategory == null) FontWeight.Normal else FontWeight.Medium,
@@ -431,7 +428,7 @@ fun FavoriteCollectionPickerDialog(
                 ) {
                     if (currentCategory != null) {
                         FavoriteDialogButton(
-                            text = appString(Res.string.ui_return),
+                            text = i18n("返回"),
                             background = colors.brownPrimary.copy(alpha = 0.12f),
                             contentColor = colors.brownDeep,
                             onClick = { currentCategoryId = null },
@@ -439,7 +436,7 @@ fun FavoriteCollectionPickerDialog(
                     }
 
                     FavoriteDialogButton(
-                        text = appString(Res.string.ui_edit),
+                        text = i18n("編輯"),
                         background = colors.brownPrimary.copy(alpha = 0.08f),
                         contentColor = colors.brownDeep,
                         onClick = onEdit,
@@ -447,7 +444,7 @@ fun FavoriteCollectionPickerDialog(
 
                     if (currentCategory != null) {
                         FavoriteDialogButton(
-                            text = appString(Res.string.ui_add_new_collection),
+                            text = i18n("新增集合"),
                             background = colors.brownPrimary.copy(alpha = 0.08f),
                             contentColor = colors.brownDeep,
                             onClick = { onCreateCollection(currentCategory.categoryId) },
@@ -457,14 +454,14 @@ fun FavoriteCollectionPickerDialog(
                     Spacer(modifier = Modifier.weight(1f))
 
                     FavoriteDialogButton(
-                        text = appString(Res.string.common_cancel),
+                        text = i18n("取消"),
                         background = colors.textDark.copy(alpha = 0.06f),
                         contentColor = colors.textDark.copy(alpha = 0.8f),
                         onClick = onDismiss,
                     )
 
                     FavoriteDialogButton(
-                        text = appString(Res.string.ui_sure),
+                        text = i18n("確定"),
                         background = colors.brownDeep,
                         contentColor = Color.White,
                         onClick = { onConfirm(selectedCategories, selectedCollections) },
@@ -506,7 +503,7 @@ private fun FavoriteCategoryRow(
         Spacer(Modifier.width(4.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = localizedAppMessage(category.categoryName),
+                text = category.categoryName,
                 color = colors.textDark,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -514,13 +511,13 @@ private fun FavoriteCategoryRow(
             Text(
                 text = buildString {
                     if (category.categoryId in selectedCategories) {
-                        append(appString(Res.string.ui_already_added_major_categories))
+                        append(i18n("已加入大類"))
                     }
                     if (selectedCollectionCount > 0) {
                         if (isNotEmpty()) append(" / ")
-                        append(appString(Res.string.favorite_selected_collection_count, selectedCollectionCount))
+                        append(i18n("{} 個集合", selectedCollectionCount))
                     }
-                    if (isEmpty()) append(appString(Res.string.ui_not_yet_joined))
+                    if (isEmpty()) append(i18n("尚未加入"))
                 },
                 color = colors.textDark.copy(alpha = 0.5f),
                 fontSize = 11.sp,
@@ -582,16 +579,16 @@ private fun FavoriteCategoryRootRow(
             Spacer(Modifier.width(4.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = localizedAppMessage(category.categoryName),
+                    text = category.categoryName,
                     color = colors.textDark,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold,
                 )
                 Text(
                     text = when (toggleState) {
-                        ToggleableState.On -> appString(Res.string.ui_already_added_major_categories)
-                        ToggleableState.Indeterminate -> appString(Res.string.ui_join_only_part_collection)
-                        ToggleableState.Off -> appString(Res.string.ui_not_added_major_categories)
+                        ToggleableState.On -> i18n("已加入大類")
+                        ToggleableState.Indeterminate -> i18n("只加入部分集合")
+                        ToggleableState.Off -> i18n("未加入大類")
                     },
                     color = colors.textDark.copy(alpha = 0.45f),
                     fontSize = 11.sp,
@@ -646,7 +643,7 @@ private fun FavoriteCollectionRow(
                     fontWeight = FontWeight.Medium,
                 )
                 Text(
-                    text = "#${localizedAppMessage(option.categoryName)}",
+                    text = "#${option.categoryName}",
                     color = colors.textDark.copy(alpha = 0.45f),
                     fontSize = 11.sp,
                 )
@@ -764,11 +761,11 @@ fun FavoriteRemovalConfirmDialog(
     var skipNextTime by remember { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(appString(Res.string.ui_confirm_remove_favorite), color = colors.brownDeep, fontWeight = FontWeight.Bold) },
+        title = { Text(i18n("確定要取消收藏嗎"), color = colors.brownDeep, fontWeight = FontWeight.Bold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
-                    text = appString(Res.string.ui_cancellation_remove_current_favorite_item),
+                    text = i18n("取消後會移除目前這個收藏項目。"),
                     color = colors.textDark,
                     fontSize = 14.sp,
                 )
@@ -786,7 +783,7 @@ fun FavoriteRemovalConfirmDialog(
                         ),
                     )
                     Text(
-                        text = appString(Res.string.ui_don_t_prompt_again_next_time),
+                        text = i18n("下次不再提示"),
                         color = colors.textDark,
                         fontSize = 13.sp,
                     )
@@ -795,7 +792,7 @@ fun FavoriteRemovalConfirmDialog(
         },
         confirmButton = {
             FavoriteDialogButton(
-                text = appString(Res.string.ui_sure),
+                text = i18n("確定"),
                 background = colors.brownDeep,
                 contentColor = Color.White,
                 onClick = { onConfirm(skipNextTime) },
@@ -803,7 +800,7 @@ fun FavoriteRemovalConfirmDialog(
         },
         dismissButton = {
             FavoriteDialogButton(
-                text = appString(Res.string.common_cancel),
+                text = i18n("取消"),
                 background = colors.brownPrimary.copy(alpha = 0.1f),
                 contentColor = colors.brownDeep,
                 onClick = onDismiss,
@@ -813,18 +810,17 @@ fun FavoriteRemovalConfirmDialog(
     )
 }
 
-
 @Composable
 fun FavoriteAddSyncConfirmDialog(
     onDismiss: () -> Unit,
     onConfirm: (rememberChoice: Boolean, syncRemote: Boolean) -> Unit,
 ) {
     FavoriteRemoteSyncChoiceDialog(
-        title = appString(Res.string.ui_will_synchronized_yamibo_favorite),
-        message = appString(Res.string.ui_do_want_sync_favorite_yamibo),
-        rememberLabel = appString(Res.string.ui_remember_choice),
-        primaryText = appString(Res.string.ui_sync_yamibo),
-        secondaryText = appString(Res.string.ui_only_save_local),
+        title = i18n("同步到百合會收藏嗎"),
+        message = i18n("要將此收藏同步到百合會嗎？"),
+        rememberLabel = i18n("記住這次選擇"),
+        primaryText = i18n("同步到百合會"),
+        secondaryText = i18n("只存本地"),
         onDismiss = onDismiss,
         onConfirm = onConfirm,
     )
@@ -836,11 +832,11 @@ fun FavoriteRemoveSyncConfirmDialog(
     onConfirm: (rememberChoice: Boolean, syncRemote: Boolean) -> Unit,
 ) {
     FavoriteRemoteSyncChoiceDialog(
-        title = appString(Res.string.ui_will_favorite_yamibo_removed_simultaneously),
-        message = appString(Res.string.ui_do_want_remove_favorite_from_yamibo_website),
-        rememberLabel = appString(Res.string.ui_remember_choice),
-        primaryText = appString(Res.string.ui_synchronous_removal),
-        secondaryText = appString(Res.string.ui_only_delete_local),
+        title = i18n("同步移除百合會收藏嗎"),
+        message = i18n("要將此收藏從百合會網站移除嗎？"),
+        rememberLabel = i18n("記住這次選擇"),
+        primaryText = i18n("同步移除"),
+        secondaryText = i18n("只刪本地"),
         onDismiss = onDismiss,
         onConfirm = onConfirm,
     )
@@ -919,11 +915,11 @@ fun FavoriteMultiPathRemoveDialog(
     val colors = YamiboTheme.colors
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(appString(Res.string.ui_cancel_all_favorites_2), color = colors.brownDeep, fontWeight = FontWeight.Bold) },
+        title = { Text(i18n("取消全部收藏嗎"), color = colors.brownDeep, fontWeight = FontWeight.Bold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
-                    text = appString(Res.string.favorite_item_saved_paths, paths.joinToString(appString(Res.string.common_list_separator))),
+                    text = i18n("這個項目目前收藏在：{}", paths.joinToString(i18n("?"))),
                     color = colors.textDark,
                     fontSize = 14.sp,
                 )
@@ -936,7 +932,7 @@ fun FavoriteMultiPathRemoveDialog(
         },
         confirmButton = {
             FavoriteDialogButton(
-                text = appString(Res.string.ui_cancel_all_favorites),
+                text = i18n("取消全部收藏"),
                 background = colors.brownPrimary.copy(alpha = 0.1f),
                 contentColor = colors.brownDeep,
                 onClick = onRemoveAll,
@@ -944,7 +940,7 @@ fun FavoriteMultiPathRemoveDialog(
         },
         dismissButton = {
             FavoriteDialogButton(
-                text = appString(Res.string.ui_no),
+                text = i18n("否"),
                 background = colors.textDark.copy(alpha = 0.06f),
                 contentColor = colors.textDark.copy(alpha = 0.8f),
                 onClick = onDismiss,
@@ -957,5 +953,4 @@ fun FavoriteMultiPathRemoveDialog(
 private fun Set<Long>.toggle(id: Long): Set<Long> {
     return if (id in this) this - id else this + id
 }
-
 

@@ -1,8 +1,6 @@
-﻿package me.thenano.yamibo.yamibo_app.thread.reader.components.overlay
+package me.thenano.yamibo.yamibo_app.thread.reader.components.overlay
 
-import me.thenano.yamibo.yamibo_app.i18n.appString
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
+import me.thenano.yamibo.yamibo_app.i18n.i18n
 
 import YamiboIcons
 import androidx.compose.animation.AnimatedVisibility
@@ -20,7 +18,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
-
 
 /** Floating circle buttons (Refresh, Settings, and optionally Manga Reader) */
 @Composable
@@ -55,7 +52,7 @@ fun ReaderFloatButtons(
                         .size(56.dp)
                         .background(colors.brownPrimary.copy(alpha = 0.2f), CircleShape)
                 ) {
-                    Icon(imageVector = YamiboIcons.Reload, contentDescription = appString(Res.string.ui_refresh), tint = colors.brownPrimary, modifier = Modifier.size(24.dp))
+                    Icon(imageVector = YamiboIcons.Reload, contentDescription = i18n("重新整理"), tint = colors.brownPrimary, modifier = Modifier.size(24.dp))
                 }
                 IconButton(
                     onClick = onSettings,
@@ -63,7 +60,7 @@ fun ReaderFloatButtons(
                         .size(56.dp)
                         .background(colors.brownPrimary.copy(alpha = 0.2f), CircleShape)
                 ) {
-                    Icon(imageVector = YamiboIcons.Setting, contentDescription = appString(Res.string.settings_title), tint = colors.brownPrimary, modifier = Modifier.size(28.dp))
+                    Icon(imageVector = YamiboIcons.Setting, contentDescription = i18n("設定"), tint = colors.brownPrimary, modifier = Modifier.size(28.dp))
                 }
             }
         }
@@ -76,7 +73,7 @@ fun ReaderFloatButtons(
                     .size(56.dp)
                     .background(colors.brownPrimary.copy(alpha = 0.2f), CircleShape)
             ) {
-                Icon(imageVector = YamiboIcons.Book, contentDescription = appString(Res.string.ui_comic_reading_mode), tint = colors.brownPrimary, modifier = Modifier.size(24.dp))
+                Icon(imageVector = YamiboIcons.Book, contentDescription = i18n("漫畫閱讀模式"), tint = colors.brownPrimary, modifier = Modifier.size(24.dp))
             }
         }
     }

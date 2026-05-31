@@ -1,8 +1,6 @@
-﻿package me.thenano.yamibo.yamibo_app.favorite.sync
+package me.thenano.yamibo.yamibo_app.favorite.sync
 
-import me.thenano.yamibo.yamibo_app.i18n.appString
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
+import me.thenano.yamibo.yamibo_app.i18n.i18n
 
 import android.Manifest
 import android.app.Service
@@ -57,8 +55,8 @@ class FavoriteSyncForegroundService : Service() {
         val notificationId = notificationIdFor(runId)
         val initialModel = SystemNotificationRepository.ProgressNotificationModel(
             notificationId = notificationId,
-            title = appString(Res.string.ui_synchronous_yamibo_favorite),
-            text = appString(Res.string.ui_prepare_synchronization_tasks),
+            title = i18n("同步百合會收藏"),
+            text = i18n("準備同步任務"),
             progress = 3,
             indeterminate = false,
             ongoing = true,
@@ -70,7 +68,7 @@ class FavoriteSyncForegroundService : Service() {
         } catch (throwable: Throwable) {
             Log.e(TAG, "Failed to enter foreground for favorite sync runId=$runId", throwable)
             scope.launch {
-                favoriteSyncRepository.markRunInterrupted(runId, appString(Res.string.ui_the_system_does_not_allow_background_synchronization_initiated_try))
+                favoriteSyncRepository.markRunInterrupted(runId, i18n("系統目前不允許啟動背景同步，請在 App 前景時重試。"))
             }
             stopSelf()
             return
@@ -83,15 +81,15 @@ class FavoriteSyncForegroundService : Service() {
                 notificationRepository.showProgress(snapshot.toNotificationModel(state))
                 when (state) {
                     is FavoriteSyncRepository.FavoriteSyncState.Completed -> {
-                        notificationRepository.showCompleted(notificationId, appString(Res.string.ui_synchronization_completed), appString(Res.string.ui_yamibo_favorite_has_synchronized_local))
+                        notificationRepository.showCompleted(notificationId, i18n("同步完成"), i18n("百合會收藏已同步到本地"))
                         finishRun(runId, keepNotification = true)
                     }
                     is FavoriteSyncRepository.FavoriteSyncState.Failed -> {
-                        notificationRepository.showFailed(notificationId, appString(Res.string.ui_sync_failed), snapshot.errorMessage ?: appString(Res.string.ui_an_error_occurred_during_synchronization))
+                        notificationRepository.showFailed(notificationId, i18n("同步失敗"), snapshot.errorMessage ?: i18n("同步過程發生錯誤"))
                         finishRun(runId, keepNotification = true)
                     }
                     is FavoriteSyncRepository.FavoriteSyncState.Interrupted -> {
-                        notificationRepository.showFailed(notificationId, appString(Res.string.ui_sync_interrupted), snapshot.errorMessage ?: appString(Res.string.ui_sync_canceled))
+                        notificationRepository.showFailed(notificationId, i18n("同步已中斷"), snapshot.errorMessage ?: i18n("同步已取消"))
                         finishRun(runId, keepNotification = true)
                     }
                     else -> Unit

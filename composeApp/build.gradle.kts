@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.composeHotReload)
     alias(libs.plugins.kotlinSerialization)
+    id("local.i18n-auto-merge")
 }
 
 kotlin {
@@ -21,8 +22,10 @@ kotlin {
 
     sourceSets {
         val generatedRestorableRegistryDir = layout.buildDirectory.dir("generated/restorableScreenRegistry/commonMain/kotlin")
+        val generatedI18nKotlinDir = layout.buildDirectory.dir("generated/i18n/kotlin")
         commonMain {
             kotlin.srcDir(generatedRestorableRegistryDir)
+            kotlin.srcDir(generatedI18nKotlinDir)
         }
 
         androidMain.dependencies {
@@ -50,6 +53,27 @@ kotlin {
         }
         commonTest.dependencies { implementation(libs.kotlin.test) }
     }
+}
+
+compose.resources {
+    customDirectory("commonMain", layout.buildDirectory.dir("generated/i18n/composeResources"))
+}
+
+i18nAutoMerge {
+    scanDirs.set(listOf("composeApp/src", "shared/src"))
+    glossary.set(rootProject.layout.projectDirectory.file("i18n/glossary.csv"))
+    baseTranslations.set(rootProject.layout.projectDirectory.file("i18n/base.csv"))
+    existingComposeResourcesDir.set(rootProject.layout.projectDirectory.dir("composeApp/src/commonMain/composeResources"))
+    outputComposeResources.set(layout.buildDirectory.dir("generated/i18n/composeResources"))
+    outputKotlin.set(layout.buildDirectory.dir("generated/i18n/kotlin"))
+    reportDir.set(layout.buildDirectory.dir("reports/i18n"))
+    defaultLanguage.set("zh-tw")
+    fallbackToSource.set(true)
+    failOnPlaceholderMismatch.set(true)
+    failOnMissingTranslation.set(false)
+    apiFunctionName.set("i18n")
+    runtimePackage.set("me.thenano.yamibo.yamibo_app.i18n")
+    resImportPackage.set("yamibo_app.composeapp.generated.resources")
 }
 
 val generateRestorableScreenRegistry by tasks.registering(GenerateRestorableScreenRegistryTask::class) {

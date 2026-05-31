@@ -1,9 +1,4 @@
-﻿package me.thenano.yamibo.yamibo_app.thread.reader
-
-import me.thenano.yamibo.yamibo_app.i18n.appString
-import me.thenano.yamibo.yamibo_app.i18n.localizedMessage
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
+package me.thenano.yamibo.yamibo_app.thread.reader
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -14,10 +9,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import coil3.compose.LocalPlatformContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil3.compose.LocalPlatformContext
 import io.github.littlesurvival.YamiboRoute
 import io.github.littlesurvival.core.YamiboResult
 import io.github.littlesurvival.dto.page.Post
@@ -30,9 +24,11 @@ import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.LocalAuthRepository
 import me.thenano.yamibo.yamibo_app.LocalNovelThreadCacheRepository
 import me.thenano.yamibo.yamibo_app.LocalThreadRepository
+import me.thenano.yamibo.yamibo_app.i18n.i18n
+import me.thenano.yamibo.yamibo_app.i18n.localizedMessage
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
-import me.thenano.yamibo.yamibo_app.repository.inapplinknavigation.InAppLinkContext
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
+import me.thenano.yamibo.yamibo_app.repository.inapplinknavigation.InAppLinkContext
 import me.thenano.yamibo.yamibo_app.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.components.ThreadErrorContent
@@ -104,10 +100,10 @@ internal fun CommentReaderScreen(
         val replyPageUrl = YamiboRoute.PostReply(tid, pid).build()
         navigator.navigate(
             IActionWebView(
-                title = appString(Res.string.ui_leave_reply),
+                title = i18n("發表回復"),
                 initialUrl = replyPageUrl,
                 successCondition = { url -> url.contains("mod=viewthread") && url.contains("tid=") },
-                onSuccess = { scope.launch { snackbarHostState.showSnackbar(appString(Res.string.ui_reply_successful)) } },
+                onSuccess = { scope.launch { snackbarHostState.showSnackbar(i18n("回復成功")) } },
             )
         )
     }
@@ -269,7 +265,7 @@ internal fun CommentReaderScreen(
             listState.animateScrollToItem(index)
             targetCommentHandled = true
         } else if (isCommentComplete) {
-            snackbarHostState.showSnackbar(appString(Res.string.ui_unable_pinpoint_comment))
+            snackbarHostState.showSnackbar(i18n("無法精準定位該評論"))
             targetCommentHandled = true
         }
     }
@@ -325,7 +321,7 @@ internal fun CommentReaderScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = appString(Res.string.ui_no_comments),
+                                text = i18n("暫無評論"),
                                 color = colors.textDark.copy(alpha = 0.5f),
                                 fontSize = 14.sp
                             )
@@ -344,29 +340,30 @@ internal fun CommentReaderScreen(
                                     post = post,
                                     threadTitle = postTitle,
                                     linkContext = htmlLinkContext,
-                                    onRate = { score, reason ->
+                                    onLoadRateOptions = { threadRepository.fetchRatePopoutPage(tid, post.pid) },
+                                    onRate = { score, reason, noticeAuthor ->
                                         val formHash = getFormHash()
                                         if (formHash == null) {
-                                            scope.launch { snackbarHostState.showSnackbar(appString(Res.string.ui_failed_obtain_login_information_log_in_again)) }
+                                            scope.launch { snackbarHostState.showSnackbar(i18n("獲取登入資訊失敗，請重新登入")) }
                                             return@PostRenderer
                                         }
                                         scope.launch {
-                                            when (val res = threadRepository.ratePost(tid, post.pid, score, reason, formHash)) {
-                                                is YamiboResult.Success -> snackbarHostState.showSnackbar(appString(Res.string.ui_rating_successful_update_rating_review_status_refreshing))
-                                                else -> snackbarHostState.showSnackbar(appString(Res.string.thread_rate_failed, res.localizedMessage()))
+                                            when (val res = threadRepository.ratePost(tid, post.pid, score, reason, formHash, noticeAuthor)) {
+                                                is YamiboResult.Success -> snackbarHostState.showSnackbar(i18n("評分成功，刷新後更新評分/點評狀態"))
+                                                else -> snackbarHostState.showSnackbar(i18n("評分失敗: {}", res.localizedMessage()))
                                             }
                                         }
                                     },
                                     onComment = { message ->
                                         val formHash = getFormHash()
                                         if (formHash == null) {
-                                            scope.launch { snackbarHostState.showSnackbar(appString(Res.string.ui_failed_obtain_login_information_log_in_again)) }
+                                            scope.launch { snackbarHostState.showSnackbar(i18n("獲取登入資訊失敗，請重新登入")) }
                                             return@PostRenderer
                                         }
                                         scope.launch {
                                             when (val res = threadRepository.commentPost(tid, post.pid, message, formHash)) {
-                                                is YamiboResult.Success -> snackbarHostState.showSnackbar(appString(Res.string.ui_the_review_successful_rating_review_status_updated_refreshing))
-                                                else -> snackbarHostState.showSnackbar(appString(Res.string.thread_comment_failed, res.localizedMessage()))
+                                                is YamiboResult.Success -> snackbarHostState.showSnackbar(i18n("點評成功，刷新後更新評分/點評狀態"))
+                                                else -> snackbarHostState.showSnackbar(i18n("點評失敗: {}", res.localizedMessage()))
                                             }
                                         }
                                     },
@@ -398,7 +395,7 @@ internal fun CommentReaderScreen(
                                         }
                                     } else {
                                         CommentBanner(
-                                            text = appString(Res.string.ui_loading_more_comments),
+                                            text = i18n("載入更多評論"),
                                             icon = "📖",
                                             onClick = {
                                                 scope.launch {
@@ -418,7 +415,7 @@ internal fun CommentReaderScreen(
                                                             threadRepository.fetchThread(tid, null, nextPage)) {
                                                             is YamiboResult.Success -> result.value
                                                             else -> {
-                                                                snackbarHostState.showSnackbar(appString(Res.string.thread_load_failed, result.localizedMessage()))
+                                                                snackbarHostState.showSnackbar(i18n("載入失敗: {}", result.localizedMessage()))
                                                                 isLoadingMore = false
                                                                 return@launch
                                                             }
@@ -454,7 +451,7 @@ internal fun CommentReaderScreen(
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Text(
-                                            text = appString(Res.string.ui_end_comment_section),
+                                            text = i18n("- 評論區結束 -"),
                                             color = colors.textDark.copy(alpha = 0.5f),
                                             fontSize = 12.sp
                                         )
@@ -488,7 +485,7 @@ internal fun CommentReaderScreen(
                 },
                 onSettings = {
                     scope.launch {
-                        snackbarHostState.showSnackbar(appString(Res.string.ui_setting_function_under_development))
+                        snackbarHostState.showSnackbar(i18n("設定功能開發中"))
                     }
                 },
                 modifier = Modifier
@@ -504,18 +501,18 @@ internal fun CommentReaderScreen(
                     val replyUrl = YamiboRoute.ThreadReply(tid, currentFullPage).build()
                     navigator.navigate(
                         IActionWebView(
-                            title = appString(Res.string.ui_leave_reply),
+                            title = i18n("發表回復"),
                             initialUrl = replyUrl,
                             successCondition = { url -> url.contains("mod=viewthread") && url.contains("tid=") },
                             onSuccess = {
-                                scope.launch { snackbarHostState.showSnackbar(appString(Res.string.ui_reply_successful)) }
+                                scope.launch { snackbarHostState.showSnackbar(i18n("回復成功")) }
                             },
                         )
                     )
                 },
                 onFavorite = {
                     scope.launch {
-                        snackbarHostState.showSnackbar(appString(Res.string.ui_favorite_function_under_development))
+                        snackbarHostState.showSnackbar(i18n("收藏功能開發中"))
                     }
                 },
                 onShare = {
@@ -527,6 +524,4 @@ internal fun CommentReaderScreen(
         }
     }
 }
-
-
 

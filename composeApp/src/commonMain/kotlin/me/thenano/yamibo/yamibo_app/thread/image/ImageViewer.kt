@@ -1,19 +1,11 @@
-﻿package me.thenano.yamibo.yamibo_app.thread.image
-
-import me.thenano.yamibo.yamibo_app.i18n.appString
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
+package me.thenano.yamibo.yamibo_app.thread.image
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,11 +24,13 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImagePainter
 import coil3.compose.rememberAsyncImagePainter
 import coil3.compose.rememberConstraintsSizeResolver
+import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.thread.reader.debug.DebugRecomposeProbe
 import me.thenano.yamibo.yamibo_app.thread.reader.debug.debugPerfLog
 import me.thenano.yamibo.yamibo_app.util.rememberImageRequest
 import org.jetbrains.compose.resources.painterResource
+import yamibo_app.composeapp.generated.resources.Res
 import yamibo_app.composeapp.generated.resources.image_icon
 
 val LocalReaderOverlayVisible = compositionLocalOf { false }
@@ -274,7 +268,7 @@ private fun ImageLoadingContent(
             )
             Spacer(Modifier.height(12.dp))
             Text(
-                text = appString(Res.string.ui_picture_loading),
+                text = i18n("圖片載入中"),
                 color = colors.textDark.copy(alpha = 0.72f),
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium,
@@ -282,7 +276,7 @@ private fun ImageLoadingContent(
             if (onImageRetry != null) {
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    text = appString(Res.string.ui_if_wait_too_long_can_reload),
+                    text = i18n("若等待過久可重新載入"),
                     color = colors.textDark.copy(alpha = 0.48f),
                     fontSize = 11.sp,
                 )
@@ -321,7 +315,7 @@ private fun ImageErrorContent(
         )
         Spacer(Modifier.height(12.dp))
         Text(
-            text = appString(Res.string.ui_image_loading_failed),
+            text = i18n("圖片載入失敗"),
             color = errorTextColor,
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold
@@ -352,7 +346,7 @@ private fun ImageErrorContent(
             contentPadding = PaddingValues(horizontal = 28.dp, vertical = 8.dp)
         ) {
             Text(
-                text = appString(Res.string.ui_reload),
+                text = i18n("重新載入"),
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold
             )

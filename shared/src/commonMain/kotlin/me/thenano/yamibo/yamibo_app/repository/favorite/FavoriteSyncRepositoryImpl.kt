@@ -1,4 +1,4 @@
-﻿package me.thenano.yamibo.yamibo_app.repository.favorite
+package me.thenano.yamibo.yamibo_app.repository.favorite
 
 import io.github.littlesurvival.YamiboForum
 import io.github.littlesurvival.YamiboRoute
@@ -137,7 +137,6 @@ class FavoriteSyncRepositoryImpl(
     override suspend fun getLatestSnapshot(): FavoriteSyncSnapshot? {
         return taskQueries.getLatestRecoverable().executeAsOneOrNull()?.toSnapshot()
     }
-
 
     override suspend fun syncLocalFavoriteItem(itemId: Long): FavoriteSyncActionResult {
         val item = itemQueries.getById(itemId).executeAsOneOrNull()
@@ -936,8 +935,6 @@ class FavoriteSyncRepositoryImpl(
             FavoriteSyncStatus.COMPLETED -> FavoriteSyncState.Completed(this)
         }
     }
-
-
 
     private fun me.thenano.yamibo.yamiboapp.LocalFavoriteItem.asThreadIdOrNull(): ThreadId? {
         return when (LocalFavoriteRepository.FavoriteTargetType.fromStorage(targetType)) {

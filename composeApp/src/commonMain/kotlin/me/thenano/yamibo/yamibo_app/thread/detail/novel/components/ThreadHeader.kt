@@ -1,8 +1,8 @@
 ﻿package me.thenano.yamibo.yamibo_app.thread.detail.novel.components
 
-import me.thenano.yamibo.yamibo_app.i18n.appString
+import me.thenano.yamibo.yamibo_app.i18n.i18n
+
 import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
 
 import YamiboIcons
 import androidx.compose.animation.core.animateFloatAsState
@@ -47,7 +47,7 @@ import coil3.compose.SubcomposeAsyncImage
 import io.github.littlesurvival.YamiboRoute
 import io.github.littlesurvival.dto.page.ThreadPage
 import me.thenano.yamibo.yamibo_app.favorite.FavoriteActionButton
-import me.thenano.yamibo.yamibo_app.components.rememberConvertedText
+import me.thenano.yamibo.yamibo_app.components.text.rememberConvertedText
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.thread.detail.components.DetailNoteActionButton
@@ -171,7 +171,7 @@ internal fun ThreadHeader(
                         onCopy = {
                             clipboardManager.setText(AnnotatedString(convertedThreadTitle))
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            onCopy(appString(Res.string.ui_title_copied))
+                            onCopy(i18n("已複製標題"))
                         }
                     )
                     Spacer(Modifier.height(6.dp))
@@ -196,20 +196,20 @@ internal fun ThreadHeader(
                                 onCopy = {
                                     clipboardManager.setText(AnnotatedString(firstPost.author.name))
                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    onCopy(appString(Res.string.ui_author_name_copied))
+                                    onCopy(i18n("已複製作者名稱"))
                                 }
                             )
                         }
                         Spacer(Modifier.height(3.dp))
 
                         Text(
-                            text = appString(Res.string.novel_posted_at, firstPost.timeCreate.text),
+                            text = i18n("發表於 {}", firstPost.timeCreate.text),
                             fontSize = 12.sp,
                             color = colors.brownPrimary.copy(alpha = 0.5f)
                         )
                         Spacer(Modifier.height(2.dp))
                         Text(
-                            text = appString(Res.string.novel_updated_at, (firstPost.lastEditedTime ?: firstPost.timeCreate).text),
+                            text = i18n("最後更新於 {}", (firstPost.lastEditedTime ?: firstPost.timeCreate).text),
                             fontSize = 12.sp,
                             color = colors.brownPrimary.copy(alpha = 0.5f)
                         )
@@ -293,7 +293,7 @@ internal fun ThreadHeader(
                     Box(Modifier.padding(10.dp), contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = YamiboIcons.Share,
-                            contentDescription = appString(Res.string.ui_share),
+                            contentDescription = i18n("分享"),
                             modifier = Modifier.size(22.dp),
                             tint = colors.brownDeep
                         )
@@ -313,7 +313,7 @@ internal fun ThreadHeader(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = if (readingProgressText != null) appString(Res.string.ui_continue_reading) else appString(Res.string.ui_start_reading),
+                            text = if (readingProgressText != null) i18n("繼續閱讀") else i18n("開始閱讀"),
                             color = Color.White,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.SemiBold
@@ -340,7 +340,7 @@ internal fun ThreadHeader(
             }
 
             Text(
-                text = appString(Res.string.ui_the_star_button_can_directly_collected_long_press_can_used),
+                text = i18n("星星按鈕可直接收藏，長按可指定小集合"),
                 modifier = Modifier.padding(top = 8.dp),
                 fontSize = 10.sp,
                 color = colors.brownPrimary.copy(alpha = 0.45f)
@@ -381,5 +381,4 @@ private fun CopyableLabel(
             )
     )
 }
-
 

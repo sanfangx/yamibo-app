@@ -29,7 +29,7 @@ abstract class GenerateRestorableScreenRegistryTask : DefaultTask() {
                 val text = file.readText(Charsets.UTF_8)
                 val matches = annotationPattern.findAll(text).toList()
                 if (matches.isEmpty()) {
-                    return@flatMap emptyList<String>()
+                    return@flatMap emptyList()
                 }
                 val packageName = packagePattern.find(text)?.groupValues?.get(1)
                     ?: error("Missing package declaration in ${file.relativeTo(sourceRoot)}")

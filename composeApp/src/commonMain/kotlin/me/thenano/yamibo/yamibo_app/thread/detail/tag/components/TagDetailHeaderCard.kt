@@ -1,29 +1,9 @@
-﻿package me.thenano.yamibo.yamibo_app.thread.detail.tag.components
-
-import me.thenano.yamibo.yamibo_app.i18n.appString
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
+package me.thenano.yamibo.yamibo_app.thread.detail.tag.components
 
 import YamiboIcons
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,10 +15,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.SubcomposeAsyncImage
 import me.thenano.yamibo.yamibo_app.favorite.FavoriteActionButton
+import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.thread.detail.components.DetailNoteActionButton
 import me.thenano.yamibo.yamibo_app.util.rememberImageRequest
 import org.jetbrains.compose.resources.painterResource
+import yamibo_app.composeapp.generated.resources.Res
 import yamibo_app.composeapp.generated.resources.book
 
 @Composable
@@ -123,7 +105,7 @@ fun TagDetailHeaderCard(
                         color = colors.brownDeep.copy(alpha = 0.12f)
                     ) {
                         Text(
-                            text = appString(Res.string.ui_hash_hashtagcomics),
+                            text = i18n("#標籤漫畫"),
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                             fontSize = 11.sp,
                             color = colors.brownDeep
@@ -134,7 +116,7 @@ fun TagDetailHeaderCard(
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = appString(Res.string.ui_comic_mode),
+                            text = i18n("漫畫模式"),
                             fontSize = 13.sp,
                             color = colors.brownPrimary.copy(alpha = 0.85f)
                         )
@@ -181,7 +163,7 @@ fun TagDetailHeaderCard(
                     Box(Modifier.padding(10.dp), contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = YamiboIcons.Share,
-                            contentDescription = appString(Res.string.ui_share),
+                            contentDescription = i18n("分享"),
                             modifier = Modifier.size(22.dp),
                             tint = colors.brownDeep
                         )
@@ -201,7 +183,7 @@ fun TagDetailHeaderCard(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = if (hasReadingHistory) appString(Res.string.ui_continue_reading) else appString(Res.string.ui_start_reading),
+                            text = if (hasReadingHistory) i18n("繼續閱讀") else i18n("開始閱讀"),
                             color = Color.White,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.SemiBold
@@ -228,7 +210,7 @@ fun TagDetailHeaderCard(
             }
 
             Text(
-                text = appString(Res.string.ui_the_star_button_can_directly_collected_long_press_can_used),
+                text = i18n("星星按鈕可直接收藏，長按可指定小集合"),
                 modifier = Modifier.padding(top = 8.dp),
                 fontSize = 10.sp,
                 color = colors.brownPrimary.copy(alpha = 0.45f)

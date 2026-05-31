@@ -1,8 +1,6 @@
-﻿package me.thenano.yamibo.yamibo_app.history.components
+package me.thenano.yamibo.yamibo_app.history.components
 
-import me.thenano.yamibo.yamibo_app.i18n.appString
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
+import me.thenano.yamibo.yamibo_app.i18n.i18n
 
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository.ThreadReadingHistory
@@ -25,10 +23,10 @@ internal fun groupByDate(
     for (item in items) {
         val diffMs = now - item.lastVisitTime
         val label = when {
-            diffMs < oneDayMs -> appString(Res.string.ui_today_2)
-            diffMs < 2 * oneDayMs -> appString(Res.string.ui_yesterday)
-            diffMs < 3 * oneDayMs -> appString(Res.string.ui_the_day_yesterday)
-            diffMs < 7 * oneDayMs -> appString(Res.string.time_days_ago, (diffMs / oneDayMs).toInt())
+            diffMs < oneDayMs -> i18n("今天")
+            diffMs < 2 * oneDayMs -> i18n("昨天")
+            diffMs < 3 * oneDayMs -> i18n("前天")
+            diffMs < 7 * oneDayMs -> i18n("{}天前", (diffMs / oneDayMs).toInt())
             else -> formatDate(item.lastVisitTime)
         }
         grouped.getOrPut(label) { mutableListOf() }.add(item)
@@ -68,5 +66,4 @@ internal fun formatTime(timestamp: Long): String {
 private fun isLeapYear(year: Int): Boolean {
     return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)
 }
-
 

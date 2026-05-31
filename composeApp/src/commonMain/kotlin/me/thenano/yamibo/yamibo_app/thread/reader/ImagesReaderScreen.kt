@@ -1,8 +1,6 @@
 ﻿package me.thenano.yamibo.yamibo_app.thread.reader
 
-import me.thenano.yamibo.yamibo_app.i18n.appString
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
+import me.thenano.yamibo.yamibo_app.i18n.i18n
 
 import YamiboIcons
 import androidx.compose.animation.*
@@ -53,7 +51,7 @@ import me.thenano.yamibo.yamibo_app.LocalReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.LocalMangaReaderSettingsRepository
 import me.thenano.yamibo.yamibo_app.LocalTagRepository
 import me.thenano.yamibo.yamibo_app.LocalThreadRepository
-import me.thenano.yamibo.yamibo_app.components.ReadingTimeTracker
+import me.thenano.yamibo.yamibo_app.components.tracking.ReadingTimeTracker
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.theme.YamiboSnackbarHost
@@ -159,7 +157,7 @@ fun ImagesReaderScreen(
                     activeTid = currentThreads.first().tid
                 }
             } else {
-                snackbarHostState.showSnackbar(appString(Res.string.ui_unable_load_reading_directory))
+                snackbarHostState.showSnackbar(i18n("無法載入閱讀目錄"))
             }
         }
     }
@@ -176,7 +174,7 @@ fun ImagesReaderScreen(
                 prevThreadTitle = currentThreads.getOrNull(currentThreadIndex() - 1)?.title
             } else if (currentTagPage > 1) {
                 hasPrevChapter = true
-                prevThreadTitle = if (isLoadingImages) appString(Res.string.ui_loading_previous_tab) else appString(Res.string.ui_previous_page_2)
+                prevThreadTitle = if (isLoadingImages) i18n("正在載入上一個分頁...") else i18n("上一個分頁")
             } else {
                 hasPrevChapter = false
                 prevThreadTitle = null
@@ -187,7 +185,7 @@ fun ImagesReaderScreen(
                 nextThreadTitle = currentThreads.getOrNull(currentThreadIndex() + 1)?.title
             } else if (currentTagPage < (tagTotalPages ?: 1)) {
                 hasNextChapter = true
-                nextThreadTitle = if (isLoadingImages) appString(Res.string.ui_loading_next_page) else appString(Res.string.ui_next_page_2)
+                nextThreadTitle = if (isLoadingImages) i18n("正在載入下一個分頁...") else i18n("下一個分頁")
             } else {
                 hasNextChapter = false
                 nextThreadTitle = null
@@ -424,7 +422,7 @@ fun ImagesReaderScreen(
                         actualImageList = emptyList()
                         actualPostId = null
                     } else {
-                        snackbarHostState.showSnackbar(appString(Res.string.ui_unable_load_next_page))
+                        snackbarHostState.showSnackbar(i18n("無法載入下一頁"))
                     }
                 }
                 delay(600.milliseconds)
@@ -459,7 +457,7 @@ fun ImagesReaderScreen(
                         actualPostId = null
                         startFromLastPage = true
                     } else {
-                        snackbarHostState.showSnackbar(appString(Res.string.ui_unable_load_previous_page))
+                        snackbarHostState.showSnackbar(i18n("無法載入上一頁"))
                     }
                 }
                 delay(600.milliseconds)
@@ -807,13 +805,13 @@ fun ImagesReaderScreen(
                                             modifier = Modifier.size(48.dp)
                                         )
                                         Spacer(Modifier.height(16.dp))
-                                        Text(text = appString(Res.string.ui_no_picture_found), color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp)
+                                        Text(text = i18n("沒有找到圖片"), color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp)
                                         Spacer(Modifier.height(16.dp))
                                         OutlinedButton(
                                             onClick = { retryTrigger++ },
                                             colors = outlinedButtonColors(contentColor = Color.White.copy(alpha = 0.8f))
                                         ) {
-                                            Text(appString(Res.string.ui_reload))
+                                            Text(i18n("重新載入"))
                                         }
                                     }
                                 }
@@ -823,7 +821,7 @@ fun ImagesReaderScreen(
                         itemsIndexed(actualImageList) { index, url ->
                             ImageViewer(
                                 url = url,
-                                contentDescription = appString(Res.string.common_page_number_compact, index + 1),
+                                contentDescription = i18n("第{}頁", index + 1),
                                 contentScale = ContentScale.FillWidth,
                                 modifier = Modifier.fillMaxWidth(),
                                 enableContextMenu = false,
@@ -914,13 +912,13 @@ fun ImagesReaderScreen(
                                                 modifier = Modifier.size(48.dp)
                                             )
                                             Spacer(Modifier.height(16.dp))
-                                            Text(text = appString(Res.string.ui_no_picture_found), color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp)
+                                            Text(text = i18n("沒有找到圖片"), color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp)
                                             Spacer(Modifier.height(16.dp))
                                             OutlinedButton(
                                                 onClick = { retryTrigger++ },
                                                 colors = outlinedButtonColors(contentColor = Color.White.copy(alpha = 0.8f))
                                             ) {
-                                                Text(appString(Res.string.ui_reload))
+                                                Text(i18n("重新載入"))
                                             }
                                         }
                                     }
@@ -928,7 +926,7 @@ fun ImagesReaderScreen(
                             } else {
                                 ImageViewer(
                                     url = actualImageList.getOrElse(page) { "" },
-                                    contentDescription = appString(Res.string.common_page_number_compact, page + 1),
+                                    contentDescription = i18n("第{}頁", page + 1),
                                     contentScale = ContentScale.Fit,
                                     modifier = Modifier.fillMaxSize(),
                                     enableContextMenu = false,
@@ -1081,7 +1079,6 @@ fun ImagesReaderScreen(
             currentTouchZoneLayout = touchZoneLayout,
             onReadingModeChange = { mode -> mangaSettingsRepo.readingMode.setValue(mode); resetZoom() },
             onTouchZoneLayoutChange = { layout -> mangaSettingsRepo.touchZone.setValue(layout); showTouchZonePreview = true },
-            onDismiss = { showSettings = false },
             modifier = Modifier.align(Alignment.BottomCenter)
         )
 
@@ -1103,5 +1100,4 @@ fun ImagesReaderScreen(
         )
     }
 }
-
 

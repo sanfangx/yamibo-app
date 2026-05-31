@@ -1,9 +1,4 @@
-﻿package me.thenano.yamibo.yamibo_app.userspace
-
-import me.thenano.yamibo.yamibo_app.i18n.appString
-import me.thenano.yamibo.yamibo_app.i18n.localizedMessage
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
+package me.thenano.yamibo.yamibo_app.userspace
 
 import YamiboIcons
 import androidx.compose.animation.AnimatedContent
@@ -32,10 +27,17 @@ import io.github.littlesurvival.dto.value.UserId
 import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.LocalAuthRepository
 import me.thenano.yamibo.yamibo_app.LocalUserSpaceRepository
-import me.thenano.yamibo.yamibo_app.components.*
-import me.thenano.yamibo.yamibo_app.message.IPrivateMessageScreen
+import me.thenano.yamibo.yamibo_app.components.controls.YamiboActionChip
+import me.thenano.yamibo.yamibo_app.components.feedback.YamiboErrorContent
+import me.thenano.yamibo.yamibo_app.components.feedback.YamiboLoadingContent
+import me.thenano.yamibo.yamibo_app.components.navigation.YamiboMainTabTopBar
+import me.thenano.yamibo.yamibo_app.components.navigation.YamiboTopBar
+import me.thenano.yamibo.yamibo_app.components.navigation.YamiboTopBarIconAction
+import me.thenano.yamibo.yamibo_app.components.user.UserAvatar
+import me.thenano.yamibo.yamibo_app.i18n.i18n
+import me.thenano.yamibo.yamibo_app.i18n.localizedMessage
 import me.thenano.yamibo.yamibo_app.message.IMessageCenterScreen
-import me.thenano.yamibo.yamibo_app.message.MessageCenterTab
+import me.thenano.yamibo.yamibo_app.message.IPrivateMessageScreen
 import me.thenano.yamibo.yamibo_app.navigation.ComposableNavigator
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.theme.YamiboSnackbarHost
@@ -46,16 +48,16 @@ import me.thenano.yamibo.yamibo_app.userspace.blog.IBlogReaderScreen
 import me.thenano.yamibo.yamibo_app.webview.action.IActionWebView
 
 enum class UserSpaceSubPage(val selfTitle: String, val otherTitle: String = selfTitle) {
-    Profile(appString(Res.string.ui_my_profile), appString(Res.string.ui_their_profile)),
-    Threads(appString(Res.string.ui_my_threads), appString(Res.string.ui_their_threads)),
-    Replies(appString(Res.string.ui_my_reply), appString(Res.string.ui_their_replies)),
-    MyBlogs(appString(Res.string.ui_my_blogs), appString(Res.string.ui_their_blogs)),
-    FriendBlogs(appString(Res.string.ui_friends_blogs)),
-    ViewAllBlogs(appString(Res.string.ui_browse_random_blogs)),
-    Friends(appString(Res.string.ui_my_friends)),
-    Online(appString(Res.string.ui_online_members)),
-    Visitors(appString(Res.string.ui_my_visitors)),
-    Traces(appString(Res.string.ui_my_footprints));
+    Profile(i18n("我的資料"), i18n("Ta的資料")),
+    Threads(i18n("我的主題"), i18n("Ta的主題")),
+    Replies(i18n("我的回覆"), i18n("Ta的回覆")),
+    MyBlogs(i18n("我的日志"), i18n("Ta的日志")),
+    FriendBlogs(i18n("好友的日志")),
+    ViewAllBlogs(i18n("隨便看看")),
+    Friends(i18n("我的好友")),
+    Online(i18n("在線成員")),
+    Visitors(i18n("我的訪客")),
+    Traces(i18n("我的足跡"));
 
     fun title(isSelf: Boolean): String = if (isSelf) selfTitle else otherTitle
 }
@@ -85,8 +87,8 @@ private enum class ViewAllBlogFilter(
     val title: String,
     val apiType: YamiboRoute.UserSpace.Blog.ViewAllType,
 ) {
-    Latest(appString(Res.string.ui_latest_published_logs), YamiboRoute.UserSpace.Blog.ViewAllType.Latest),
-    Hot(appString(Res.string.ui_recommended_reading_diary), YamiboRoute.UserSpace.Blog.ViewAllType.Hot),
+    Latest(i18n("最新發表的日志"), YamiboRoute.UserSpace.Blog.ViewAllType.Latest),
+    Hot(i18n("推薦閱讀的日志"), YamiboRoute.UserSpace.Blog.ViewAllType.Hot),
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -116,6 +118,11 @@ fun UserSpaceScreen(
     var profile by remember { mutableStateOf(repository.getCachedProfile(userId)) }
     var isRefreshing by remember { mutableStateOf(false) }
     var viewAllBlogFilter by remember(userId, group) { mutableStateOf(ViewAllBlogFilter.Latest) }
+    var addFriendProfile by remember { mutableStateOf<ProfilePage?>(null) }
+    var addFriendPopout by remember { mutableStateOf<AddFriendPopoutScreen?>(null) }
+    var addFriendError by remember { mutableStateOf<String?>(null) }
+    var isAddFriendLoading by remember { mutableStateOf(false) }
+    var isAddFriendSubmitting by remember { mutableStateOf(false) }
 
     suspend fun loadTab(tab: UserSpaceSubPage, page: Int, preferCache: Boolean = true) {
         if (preferCache) {
@@ -249,6 +256,19 @@ fun UserSpaceScreen(
                                 onOpenMessageCenter = { tab ->
                                     navigator.navigate(IMessageCenterScreen(initialTab = tab))
                                 },
+                                onAddFriend = { targetProfile ->
+                                    addFriendProfile = targetProfile
+                                    addFriendPopout = null
+                                    addFriendError = null
+                                    isAddFriendLoading = true
+                                    scope.launch {
+                                        when (val result = repository.fetchAddFriendPopoutScreen(targetProfile.uid)) {
+                                            is YamiboResult.Success -> addFriendPopout = result.value
+                                            else -> addFriendError = result.localizedMessage()
+                                        }
+                                        isAddFriendLoading = false
+                                    }
+                                },
                                 onPageChange = { page ->
                                     state = UserSpaceState.Loading
                                     scope.launch { loadTab(selectedTab, page) }
@@ -267,12 +287,12 @@ fun UserSpaceScreen(
                                 },
                                 onReplyQuoteClick = {
                                     scope.launch {
-                                        snackbarHostState.showSnackbar(appString(Res.string.ui_todo_reply_positioning_jump_has_not_accessed_yet), duration = SnackbarDuration.Short)
+                                        snackbarHostState.showSnackbar(i18n("TODO: 回覆定位跳轉尚未接入"), duration = SnackbarDuration.Short)
                                     }
                                 },
                                 onMessageAction = {
                                     scope.launch {
-                                        snackbarHostState.showSnackbar(appString(Res.string.ui_todo_message_interaction_has_not_connected_yet), duration = SnackbarDuration.Short)
+                                        snackbarHostState.showSnackbar(i18n("TODO: 消息互動尚未接入"), duration = SnackbarDuration.Short)
                                     }
                                 },
                                 onOpenWebView = { title, url ->
@@ -291,6 +311,164 @@ fun UserSpaceScreen(
             }
         }
     }
+
+    val targetProfile = addFriendProfile
+    if (targetProfile != null) {
+        AddFriendDialog(
+            profile = targetProfile,
+            popout = addFriendPopout,
+            loading = isAddFriendLoading,
+            error = addFriendError,
+            submitting = isAddFriendSubmitting,
+            onDismiss = {
+                if (!isAddFriendSubmitting) {
+                    addFriendProfile = null
+                    addFriendPopout = null
+                    addFriendError = null
+                }
+            },
+            onSubmit = { note, option ->
+                val formHash = authRepository.currentUser()?.formHash ?: targetProfile.formHash
+                if (formHash == null) {
+                    scope.launch { snackbarHostState.showSnackbar(i18n("登入狀態已失效，請重新登入")) }
+                    return@AddFriendDialog
+                }
+                isAddFriendSubmitting = true
+                scope.launch {
+                    when (val result = repository.addFriend(targetProfile.uid, formHash, note, option.id)) {
+                        is YamiboResult.Success -> {
+                            repository.clearFriendPages()
+                            addFriendProfile = null
+                            addFriendPopout = null
+                            addFriendError = null
+                            snackbarHostState.showSnackbar(
+                                result.value.takeIf { it.isNotBlank() } ?: i18n("好友請求已送出"),
+                                duration = SnackbarDuration.Short,
+                            )
+                        }
+                        else -> snackbarHostState.showSnackbar(
+                            i18n("加為好友失敗：{}", result.localizedMessage()),
+                            duration = SnackbarDuration.Short,
+                        )
+                    }
+                    isAddFriendSubmitting = false
+                }
+            },
+        )
+    }
+}
+
+@Composable
+private fun AddFriendDialog(
+    profile: ProfilePage,
+    popout: AddFriendPopoutScreen?,
+    loading: Boolean,
+    error: String?,
+    submitting: Boolean,
+    onDismiss: () -> Unit,
+    onSubmit: (String, AddFriendOption) -> Unit,
+) {
+    val colors = YamiboTheme.colors
+    var note by remember(profile.uid) { mutableStateOf("") }
+    var selectedOption by remember(popout) {
+        mutableStateOf(popout?.availableOption?.firstOrNull { it.id == 1 } ?: popout?.availableOption?.firstOrNull())
+    }
+    var menuExpanded by remember { mutableStateOf(false) }
+    val targetName = popout?.user?.name?.takeIf { it.isNotBlank() } ?: profile.username
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = colors.creamBackground,
+        confirmButton = {},
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                UserAvatar(popout?.user?.avatarUrl ?: profile.avatarUrl, size = 132)
+                Spacer(Modifier.height(18.dp))
+                when {
+                    loading -> {
+                        CircularProgressIndicator(color = colors.brownPrimary)
+                        Spacer(Modifier.height(12.dp))
+                        Text(i18n("正在載入好友申請表單"), color = colors.textDark, fontSize = 14.sp)
+                    }
+                    error != null -> {
+                        Text(error, color = MaterialTheme.colorScheme.error, fontSize = 14.sp)
+                    }
+                    popout != null && selectedOption != null -> {
+                        Text(
+                            text = i18n("添加 {} 為好友，附言:", targetName),
+                            color = colors.textDark,
+                            fontSize = 14.sp,
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        OutlinedTextField(
+                            value = note,
+                            onValueChange = { if (it.length <= 10) note = it },
+                            enabled = !submitting,
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            text = i18n("(附言為可選，{} 會看到這條附言，最多 10 個字)", targetName),
+                            color = colors.brownPrimary.copy(alpha = 0.65f),
+                            fontSize = 12.sp,
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(i18n("分組:"), color = colors.textDark, fontSize = 14.sp)
+                            Box {
+                                TextButton(
+                                    enabled = !submitting,
+                                    onClick = { menuExpanded = true },
+                                ) {
+                                    Text(
+                                        selectedOption?.reason.orEmpty(),
+                                        color = colors.textDark,
+                                        fontSize = 14.sp,
+                                    )
+                                }
+                                DropdownMenu(
+                                    expanded = menuExpanded,
+                                    onDismissRequest = { menuExpanded = false },
+                                    containerColor = colors.creamSurface,
+                                ) {
+                                    popout.availableOption.forEach { option ->
+                                        DropdownMenuItem(
+                                            text = { Text(option.reason, color = colors.textDark) },
+                                            onClick = {
+                                                selectedOption = option
+                                                menuExpanded = false
+                                            },
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        Spacer(Modifier.height(16.dp))
+                        Button(
+                            enabled = !submitting,
+                            onClick = { selectedOption?.let { onSubmit(note, it) } },
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = colors.brownDeep),
+                            shape = RoundedCornerShape(4.dp),
+                        ) {
+                            if (submitting) {
+                                CircularProgressIndicator(color = colors.creamBackground, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+                            } else {
+                                Text(i18n("確定"), fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                    else -> {
+                        Text(i18n("沒有可用的好友分組"), color = colors.textDark, fontSize = 14.sp)
+                    }
+                }
+            }
+        },
+    )
 }
 
 private fun tabsFor(group: UserSpaceSection, isSelf: Boolean): List<UserSpaceSubPage> = when (group) {
@@ -310,10 +488,10 @@ private fun tabsFor(group: UserSpaceSection, isSelf: Boolean): List<UserSpaceSub
 }
 
 private fun UserSpaceSection.mainTitle(): String = when (this) {
-    UserSpaceSection.Space -> appString(Res.string.ui_my_profile)
-    UserSpaceSection.Threads -> appString(Res.string.ui_my_threads)
-    UserSpaceSection.Blogs -> appString(Res.string.ui_my_blogs)
-    UserSpaceSection.Friends -> appString(Res.string.ui_my_friends)
+    UserSpaceSection.Space -> i18n("我的資料")
+    UserSpaceSection.Threads -> i18n("我的主題")
+    UserSpaceSection.Blogs -> i18n("我的日志")
+    UserSpaceSection.Friends -> i18n("我的好友")
 }
 
 @Composable
@@ -351,7 +529,7 @@ private fun UserSpaceTopBar(
         onBack = onBack,
     ) {
         if (showEdit) {
-            YamiboTopBarIconAction(YamiboIcons.EditOrSign, appString(Res.string.ui_edit), onEdit)
+            YamiboTopBarIconAction(YamiboIcons.EditOrSign, i18n("編輯"), onEdit)
         }
     }
 }
@@ -374,7 +552,7 @@ private fun UserSpaceMainTopBar(
             ) {
                 UserAvatar(profile?.avatarUrl, size = 28)
                 Text(
-                    text = appString(Res.string.ui_my_space),
+                    text = i18n("我的空間"),
                     color = colors.brownDeep,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -517,11 +695,11 @@ private fun topBarTitle(
     tab: UserSpaceSubPage,
     isSelf: Boolean,
 ): String {
-    val name = profile?.username ?: titleHint ?: appString(Res.string.ui_user)
+    val name = profile?.username ?: titleHint ?: i18n("用戶")
     return when (group) {
-        UserSpaceSection.Space -> if (isSelf) appString(Res.string.ui_my_profile) else appString(Res.string.userspace_other_profile_title, name)
-        UserSpaceSection.Threads -> if (isSelf) appString(Res.string.ui_my_threads) else appString(Res.string.userspace_other_threads_title, name)
-        UserSpaceSection.Blogs -> if (isSelf) appString(Res.string.ui_my_blogs) else appString(Res.string.userspace_other_blogs_title, name)
+        UserSpaceSection.Space -> if (isSelf) i18n("我的資料") else i18n("{}的資料", name)
+        UserSpaceSection.Threads -> if (isSelf) i18n("我的主題") else i18n("{} - Ta的主題", name)
+        UserSpaceSection.Blogs -> if (isSelf) i18n("我的日志") else i18n("{} - Ta的日志", name)
         UserSpaceSection.Friends -> tab.title(isSelf)
     }
 }
@@ -541,7 +719,7 @@ private fun fullYamiboUrl(url: String): String =
 private fun userSpaceEditActionWebView(group: UserSpaceSection): IActionWebView {
     return when (group) {
         UserSpaceSection.Blogs -> IActionWebView(
-            title = appString(Res.string.ui_post_log),
+            title = i18n("發日志"),
             initialUrl = YamiboRoute.SendBlogPage.build(),
             successCondition = { url -> isSendBlogSuccessUrl(url) },
         )
@@ -553,6 +731,3 @@ private fun userSpaceEditActionWebView(group: UserSpaceSection): IActionWebView 
 private fun isSendBlogSuccessUrl(url: String): Boolean {
     return url.startsWith("https://bbs.yamibo.com/home.php?mod=spacecp&ac=blog&blogid=")
 }
-
-
-

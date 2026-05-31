@@ -1,27 +1,54 @@
 package me.thenano.yamibo.yamibo_app
 
+import me.thenano.yamibo.yamibo_app.i18n.i18n
+
 import androidx.compose.animation.*
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.zIndex
 import coil3.ImageLoader
 import coil3.compose.setSingletonImageLoaderFactory
 import coil3.memory.MemoryCache
 import coil3.network.ktor3.KtorNetworkFetcherFactory
+import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.home.HomePageScreen
 import me.thenano.yamibo.yamibo_app.i18n.AppLocaleProvider
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.navigation.NavAction
+import me.thenano.yamibo.yamibo_app.repository.appupdate.AppUpdateCheckResult
+import me.thenano.yamibo.yamibo_app.repository.appupdate.AppUpdateRelease
 import me.thenano.yamibo.yamibo_app.repository.chineseconversion.ChineseConversionMode
 import me.thenano.yamibo.yamibo_app.repository.settings.ReaderChineseConversionOption
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.util.state
+import me.thenano.yamibo.yamibo_app.util.time.currentLocalDateKey
+import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
 
 @Composable
 fun HomeScreenContent(
@@ -47,7 +74,11 @@ fun App() {
 
     val navigator = LocalNavigator.current
     val appSettingsRepository = LocalAppSettingsRepository.current
+    val authRepository = LocalAuthRepository.current
+    val signRepository = LocalSignRepository.current
+    val appUpdateRepository = LocalAppUpdateRepository.current
     val appLanguage = appSettingsRepository.language.state()
+    val signLaunchReminderEnabled = appSettingsRepository.signInLaunchReminderEnabled.state()
     val holder = rememberSaveableStateHolder()
     navigator.stateHolder = holder
     ChineseConversionModeSync()
@@ -55,6 +86,22 @@ fun App() {
     val stack = navigator.stack
     val poppingIdx by navigator.poppingIndex
     val duration = 250
+    var showSignReminder by remember { mutableStateOf(false) }
+    var launchUpdateRelease by remember { mutableStateOf<AppUpdateRelease?>(null) }
+    val coroutineScope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
+        val threshold = appSettingsRepository.appUpdateLaunchCheckThreshold.getValue()
+        val intervalMillis = threshold.hours?.times(60L * 60L * 1000L) ?: return@LaunchedEffect
+        val now = currentTimeMillis()
+        val lastCheckAt = appSettingsRepository.appUpdateLastCheckAt.getValue().toLongOrNull() ?: 0L
+        if (now - lastCheckAt >= intervalMillis) {
+            val result = appUpdateRepository.checkForUpdate(force = false)
+            if (result is AppUpdateCheckResult.UpdateAvailable) {
+                launchUpdateRelease = result.release
+            }
+        }
+    }
 
     AppLocaleProvider(appLanguage) {
         Surface(
@@ -105,6 +152,153 @@ fun App() {
                                 navigator.completePop()
                             }
                         }
+                    }
+                }
+            }
+            LaunchSignReminderDialog(
+                visible = showSignReminder,
+                onDismiss = {
+                    appSettingsRepository.signInLaunchReminderDismissedDate.setValue(currentLocalDateKey())
+                    showSignReminder = false
+                },
+                onGoSign = {
+                    showSignReminder = false
+                    navigator.popToRoot()
+                    navigator.replace(IMainScreen(MainTab.Profile))
+                },
+            )
+            LaunchUpdateAvailableDialog(
+                release = launchUpdateRelease,
+                onDismiss = { launchUpdateRelease = null },
+                onDownload = { release ->
+                    launchUpdateRelease = null
+                    coroutineScope.launch {
+                        appUpdateRepository.downloadAndInstall(release)
+                    }
+                },
+                onOpenReleasePage = { release ->
+                    launchUpdateRelease = null
+                    appUpdateRepository.openReleasePage(release)
+                },
+            )
+        }
+    }
+
+    LaunchedEffect(signLaunchReminderEnabled, appLanguage) {
+        if (!signLaunchReminderEnabled) {
+            showSignReminder = false
+            return@LaunchedEffect
+        }
+        val today = currentLocalDateKey()
+        if (appSettingsRepository.signInLaunchReminderDismissedDate.getValue() == today) return@LaunchedEffect
+        if (authRepository.currentUser() == null) return@LaunchedEffect
+        if (!signRepository.isSignedToday()) {
+            showSignReminder = true
+        }
+    }
+}
+
+@Composable
+private fun LaunchUpdateAvailableDialog(
+    release: AppUpdateRelease?,
+    onDismiss: () -> Unit,
+    onDownload: (AppUpdateRelease) -> Unit,
+    onOpenReleasePage: (AppUpdateRelease) -> Unit,
+) {
+    if (release == null) return
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(i18n("發現新版本 {}", release.versionName)) },
+        text = {
+            Text(
+                text = buildString {
+                    append(i18n("新版已可下載。你可以立即下載更新，或稍後到設定中的 App 更新頁處理。"))
+                    if (release.releaseNotes.isNotBlank()) {
+                        append("\n\n")
+                        append(release.releaseNotes)
+                    }
+                },
+            )
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(i18n("取消"))
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                if (release.asset == null) {
+                    onOpenReleasePage(release)
+                } else {
+                    onDownload(release)
+                }
+            }) {
+                Text(
+                    if (release.asset == null) {
+                        i18n("發布頁")
+                    } else {
+                        i18n("下載更新")
+                    }
+                )
+            }
+        },
+    )
+}
+
+@Composable
+private fun LaunchSignReminderDialog(
+    visible: Boolean,
+    onDismiss: () -> Unit,
+    onGoSign: () -> Unit,
+) {
+    if (!visible) return
+    val colors = YamiboTheme.colors
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(8.dp),
+            colors = CardDefaults.cardColors(containerColor = colors.creamSurface),
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(colors.creamSurface)
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                Text(
+                    text = i18n("你今天還沒簽到"),
+                    color = colors.brownDeep,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    text = i18n("今天尚未完成每日簽到。"),
+                    color = colors.textDark.copy(alpha = 0.78f),
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp,
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.End),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    OutlinedButton(
+                        onClick = onDismiss,
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = colors.brownDeep,
+                        ),
+                    ) {
+                        Text(i18n("取消"))
+                    }
+                    Button(
+                        onClick = onGoSign,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = colors.brownDeep,
+                            contentColor = colors.creamBackground,
+                        ),
+                    ) {
+                        Text(i18n("前往簽到"))
                     }
                 }
             }

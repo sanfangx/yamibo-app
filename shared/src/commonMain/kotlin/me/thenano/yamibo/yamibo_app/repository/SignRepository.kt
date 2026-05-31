@@ -62,6 +62,8 @@ interface SignRepository {
 
     suspend fun isSignedToday(): Boolean
 
+    suspend fun markTodaySigned(message: String? = null)
+
     fun getCachedPageInfo(): SignPageInfo?
 
     fun cacheObservedHtml(html: String): SignPageInfo?

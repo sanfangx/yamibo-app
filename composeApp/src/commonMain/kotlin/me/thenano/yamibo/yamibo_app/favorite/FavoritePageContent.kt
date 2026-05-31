@@ -1,59 +1,23 @@
 ﻿package me.thenano.yamibo.yamibo_app.favorite
 
-import me.thenano.yamibo.yamibo_app.i18n.appString
-import me.thenano.yamibo.yamibo_app.i18n.localizedAppMessage
-import me.thenano.yamibo.yamibo_app.i18n.localizedLabel
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
-
 import YamiboIcons
-import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.*
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyGridState
-import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
-import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
-import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
-import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
-import androidx.compose.foundation.lazy.staggeredgrid.items
-import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
+import androidx.compose.foundation.lazy.staggeredgrid.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateMapOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -62,22 +26,17 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import me.thenano.yamibo.yamibo_app.favorite.components.ActionChip
-import me.thenano.yamibo.yamibo_app.favorite.components.FavoriteGridScrollbar
-import me.thenano.yamibo.yamibo_app.favorite.components.FavoriteHeaderMenuRow
-import me.thenano.yamibo.yamibo_app.favorite.components.FavoriteListScrollbar
-import me.thenano.yamibo.yamibo_app.favorite.components.FavoriteSearchTopBar
-import me.thenano.yamibo.yamibo_app.favorite.components.FavoriteStaggeredScrollbar
-import me.thenano.yamibo.yamibo_app.favorite.components.HeaderRow
+import kotlinx.coroutines.launch
+import me.thenano.yamibo.yamibo_app.favorite.components.*
 import me.thenano.yamibo.yamibo_app.favorite.sync.FavoriteSyncStatusCard
+import me.thenano.yamibo.yamibo_app.i18n.i18n
+import me.thenano.yamibo.yamibo_app.i18n.localizedLabel
 import me.thenano.yamibo.yamibo_app.repository.FavoriteSyncRepository.FavoriteSyncState
 import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.FavoriteCollectionWithItems
 import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.FavoriteItem
 import me.thenano.yamibo.yamibo_app.repository.settings.FavoriteGridMode
 import me.thenano.yamibo.yamibo_app.repository.settings.FavoriteSortMode
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
-import kotlinx.coroutines.launch
-import me.thenano.yamibo.yamibo_app.favorite.components.FavoriteGridEntryCard
 
 @Composable
 internal fun FavoritePageContent(
@@ -139,7 +98,7 @@ internal fun FavoritePageContent(
             when (currentMode) {
                 FavoritePageMode.Normal -> {
                     FavoriteHeaderMenuRow(
-                        title = appString(Res.string.ui_my_favorites),
+                        title = i18n("我的收藏"),
                         onSearch = onEnterSearch,
                         onCreateCategory = onCreateCategory,
                         onManageCategory = onManageCategory,
@@ -155,17 +114,17 @@ internal fun FavoritePageContent(
                     )
                 }
                 FavoritePageMode.Select -> {
-                    HeaderRow(appString(Res.string.selected_items, selectedCount), buildList {
-                        add(appString(Res.string.common_select_all) to onSelectAll)
+                    HeaderRow(i18n("已選 {} 項", selectedCount), buildList {
+                        add(i18n("全選") to onSelectAll)
                         if (selectedItemIds.isNotEmpty() && selectedCollectionIds.isEmpty()) {
-                            add(appString(Res.string.ui_move) to onOpenMoveDialog)
-                            add(appString(Res.string.ui_synthetic_collection) to onOpenMergeDialog)
-                            add(appString(Res.string.common_delete) to onDeleteSelectedItems)
+                            add(i18n("移動") to onOpenMoveDialog)
+                            add(i18n("合成集合") to onOpenMergeDialog)
+                            add(i18n("刪除") to onDeleteSelectedItems)
                         }
-                        if (selectedCollectionIds.size == 1 && selectedItemIds.isEmpty()) add(appString(Res.string.ui_edit) to onEditSelectedCollection)
-                        if (selectedCollectionIds.isNotEmpty() && selectedItemIds.isEmpty() && openedCollection == null) add(appString(Res.string.ui_disband) to onDissolveSelectedCollections)
-                        if (selectedCollectionIds.isNotEmpty() && selectedItemIds.isEmpty()) add(appString(Res.string.ui_clear) to onClearSelection)
-                        add(appString(Res.string.ui_return) to onCancelSelection)
+                        if (selectedCollectionIds.size == 1 && selectedItemIds.isEmpty()) add(i18n("編輯") to onEditSelectedCollection)
+                        if (selectedCollectionIds.isNotEmpty() && selectedItemIds.isEmpty() && openedCollection == null) add(i18n("解散") to onDissolveSelectedCollections)
+                        if (selectedCollectionIds.isNotEmpty() && selectedItemIds.isEmpty()) add(i18n("清空") to onClearSelection)
+                        add(i18n("返回") to onCancelSelection)
                     })
                 }
             }
@@ -185,7 +144,7 @@ internal fun FavoritePageContent(
                     onClick = { onSelectCategory(category.id) },
                     text = {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(localizedAppMessage(category.name), fontSize = 15.sp, fontWeight = if (category.id == ready.selectedCategoryId) FontWeight.Bold else FontWeight.Medium)
+                            Text(category.name, fontSize = 15.sp, fontWeight = if (category.id == ready.selectedCategoryId) FontWeight.Bold else FontWeight.Medium)
                             if (mode == FavoritePageMode.Search && searchQuery.isNotBlank()) {
                                 Text(
                                     text = searchCategoryMatchCounts[category.id]?.toString() ?: "0",
@@ -225,20 +184,20 @@ internal fun FavoritePageContent(
                 ActionChip(YamiboIcons.Back, onBackToTab)
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(localizedAppMessage(openedCollection.collection.name), color = colors.brownDeep, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                    Text(appString(Res.string.common_item_count, openedCollection.items.size), color = colors.textDark.copy(alpha = 0.5f), fontSize = 12.sp)
+                    Text(openedCollection.collection.name, color = colors.brownDeep, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text(i18n("{} 項", openedCollection.items.size), color = colors.textDark.copy(alpha = 0.5f), fontSize = 12.sp)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ActionChip(appString(Res.string.favorite_layout_chip, favoriteGridMode.localizedLabel()), onShowGridMode)
-                    ActionChip(appString(Res.string.favorite_sort_chip, sortMode.localizedLabel(), if (sortDescending) " ↓" else " ↑"), onShowSort)
+                    ActionChip(i18n("排列: {}", favoriteGridMode.localizedLabel()), onShowGridMode)
+                    ActionChip(i18n("排序: {}{}", sortMode.localizedLabel(), if (sortDescending) " ↓" else " ↑"), onShowSort)
                 }
             }
         } else {
             Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(ready.categories.firstOrNull { it.id == ready.selectedCategoryId }?.name.orEmpty(), color = colors.textDark.copy(alpha = 0.6f), fontSize = 13.sp, modifier = Modifier.weight(1f))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ActionChip(appString(Res.string.favorite_layout_chip, favoriteGridMode.localizedLabel()), onShowGridMode)
-                    ActionChip(appString(Res.string.favorite_sort_chip, sortMode.localizedLabel(), if (sortDescending) " ↓" else " ↑"), onShowSort)
+                    ActionChip(i18n("排列: {}", favoriteGridMode.localizedLabel()), onShowGridMode)
+                    ActionChip(i18n("排序: {}{}", sortMode.localizedLabel(), if (sortDescending) " ↓" else " ↑"), onShowSort)
                 }
             }
         }
@@ -247,7 +206,7 @@ internal fun FavoritePageContent(
             Box(Modifier.fillMaxSize()) {
                 if (gridEntries.isEmpty()) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(appString(Res.string.ui_this_collection_has_no_content_yet), color = colors.textDark.copy(alpha = 0.52f), fontSize = 16.sp)
+                        Text(i18n("這個集合還沒有內容"), color = colors.textDark.copy(alpha = 0.52f), fontSize = 16.sp)
                     }
                 } else {
                     FavoriteGridLayout(
@@ -294,7 +253,7 @@ internal fun FavoritePageContent(
                 Box(Modifier.fillMaxSize()) {
                     if (gridEntries.isEmpty()) {
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text(appString(Res.string.ui_there_no_favorites_yet), color = colors.textDark.copy(alpha = 0.52f), fontSize = 16.sp)
+                            Text(i18n("目前還沒有收藏"), color = colors.textDark.copy(alpha = 0.52f), fontSize = 16.sp)
                         }
                     } else {
                         FavoriteGridLayout(
@@ -436,5 +395,4 @@ internal fun FavoriteGridLayout(
         }
     }
 }
-
 

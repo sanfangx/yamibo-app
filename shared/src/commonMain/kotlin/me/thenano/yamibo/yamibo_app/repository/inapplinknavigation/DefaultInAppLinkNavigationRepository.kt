@@ -1,4 +1,4 @@
-﻿package me.thenano.yamibo.yamibo_app.repository.inapplinknavigation
+package me.thenano.yamibo.yamibo_app.repository.inapplinknavigation
 
 import io.github.littlesurvival.YamiboForum
 import io.github.littlesurvival.core.YamiboResult
@@ -42,7 +42,7 @@ class DefaultInAppLinkNavigationRepository(
             else -> InAppLinkResolveResult.Resolved(InAppLinkTarget.WebOnlyTarget(normalized))
         }
     }
-
+
     private fun msg(key: String, vararg args: Any?): String = AppMessage.of(key, *args)
 
     private suspend fun resolveFindPost(

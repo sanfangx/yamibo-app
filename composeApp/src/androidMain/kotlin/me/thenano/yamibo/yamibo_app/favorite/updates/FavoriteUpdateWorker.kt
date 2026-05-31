@@ -1,8 +1,6 @@
-﻿package me.thenano.yamibo.yamibo_app.favorite.updates
+package me.thenano.yamibo.yamibo_app.favorite.updates
 
-import me.thenano.yamibo.yamibo_app.i18n.appString
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
+import me.thenano.yamibo.yamibo_app.i18n.i18n
 
 import android.content.Context
 import android.content.pm.ServiceInfo
@@ -52,13 +50,13 @@ class FavoriteUpdateWorker(
                     }
                 }
                 Result.success()
-            } catch (throwable: CancellationException) {
-                repository.markRunInterrupted(runId, appString(Res.string.ui_update_check_interrupted))
+            } catch (_: CancellationException) {
+                repository.markRunInterrupted(runId, i18n("更新檢查已中斷"))
                 Result.failure()
             } catch (throwable: Throwable) {
-                repository.markRunInterrupted(runId, throwable.message ?: appString(Res.string.ui_update_check_was_interrupted_by_system))
+                repository.markRunInterrupted(runId, throwable.message ?: i18n("更新檢查被系統中斷"))
                 @Suppress("MissingPermission")
-                notifications.showFailed(appString(Res.string.ui_favorite_update_interrupted), throwable.message ?: appString(Res.string.ui_update_check_was_interrupted_by_system))
+                notifications.showFailed(i18n("收藏更新中斷"), throwable.message ?: i18n("更新檢查被系統中斷"))
                 Result.retry()
             } finally {
                 notificationJob.cancel()

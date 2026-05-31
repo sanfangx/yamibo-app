@@ -2,6 +2,7 @@ package me.thenano.yamibo.yamibo_app.repository
 
 import io.github.littlesurvival.YamiboRoute
 import io.github.littlesurvival.core.YamiboResult
+import io.github.littlesurvival.dto.page.AddFriendPopoutScreen
 import io.github.littlesurvival.dto.page.PrivateMessagePage
 import io.github.littlesurvival.dto.page.ProfilePage
 import io.github.littlesurvival.dto.page.UserSpaceBlogPage
@@ -43,6 +44,13 @@ interface UserSpaceRepository {
         page: Int = 1
     ): YamiboResult<UserSpaceFriendPage>
     suspend fun fetchPrivateMessages(page: Int = 1): YamiboResult<UserSpacePrivateMessagePage>
+    suspend fun fetchAddFriendPopoutScreen(userId: UserId): YamiboResult<AddFriendPopoutScreen>
+    suspend fun addFriend(
+        userId: UserId,
+        formHash: FormHash,
+        note: String = "",
+        groupId: Int = 1,
+    ): YamiboResult<String>
     suspend fun fetchPrivateMessagePage(toUser: UserId, page: Int? = null): YamiboResult<PrivateMessagePage>
     suspend fun sendPrivateMessage(
         privateMessageId: PrivateMessageId,

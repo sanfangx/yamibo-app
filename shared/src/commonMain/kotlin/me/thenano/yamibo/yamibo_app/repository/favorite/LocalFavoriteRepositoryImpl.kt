@@ -791,4 +791,3 @@ class LocalFavoriteRepositoryImpl(
     }
 }
 
-

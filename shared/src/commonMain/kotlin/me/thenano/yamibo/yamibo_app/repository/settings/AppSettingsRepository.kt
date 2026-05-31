@@ -1,4 +1,4 @@
-﻿package me.thenano.yamibo.yamibo_app.repository.settings
+package me.thenano.yamibo.yamibo_app.repository.settings
 
 import me.thenano.yamibo.yamibo_app.repository.scheme.YamiboColorScheme
 import me.thenano.yamibo.yamibo_app.repository.settings.core.SettingsRegistry
@@ -72,6 +72,15 @@ enum class FavoriteUpdateInterval(val label: String, val hours: Long?, val smart
     DAYS_3("3d", 72L),
     DAYS_7("7d", 168L),
     SMART("smart_todo", null, smart = true),
+}
+
+enum class AppUpdateLaunchCheckThreshold(val label: String, val hours: Long?) {
+    MANUAL("manual", null),
+    HOURS_6("6h", 6L),
+    HOURS_12("12h", 12L),
+    HOURS_24("24h", 24L),
+    DAYS_3("3d", 72L),
+    DAYS_7("7d", 168L),
 }
 
 enum class SignInMode(val label: String) {
@@ -167,9 +176,39 @@ class AppSettingsRepository(store: SettingsStore) : SettingsRegistry(store, pref
         default = "",
     )
 
+    val appUpdateLastCheckAt by stringSetting(
+        name = "app_update_last_check_at",
+        default = "",
+    )
+
+    val appUpdateIgnoredVersionCode by intSetting(
+        name = "app_update_ignored_version_code",
+        default = 0,
+    )
+
+    val appUpdatePreferredSourceIndex by intSetting(
+        name = "app_update_preferred_source_index",
+        default = 0,
+    )
+
+    val appUpdateLaunchCheckThreshold by enumSetting(
+        name = "app_update_launch_check_threshold",
+        default = AppUpdateLaunchCheckThreshold.HOURS_6,
+    )
+
     val signInMode by enumSetting(
         name = "sign_in_mode",
         default = SignInMode.SEMI_AUTOMATIC,
+    )
+
+    val signInLaunchReminderEnabled by boolSetting(
+        name = "sign_in_launch_reminder_enabled",
+        default = true,
+    )
+
+    val signInLaunchReminderDismissedDate by stringSetting(
+        name = "sign_in_launch_reminder_dismissed_date",
+        default = "",
     )
 
     val signInAllowRepair by boolSetting(
@@ -187,7 +226,6 @@ class AppSettingsRepository(store: SettingsStore) : SettingsRegistry(store, pref
         default = "",
     )
 
-
     companion object {
         @Suppress("unused")
         val themeModeOptions = AppThemeMode.entries.map { it to it.label }
@@ -196,8 +234,8 @@ class AppSettingsRepository(store: SettingsStore) : SettingsRegistry(store, pref
         val favoriteGridModeOptions = FavoriteGridMode.entries.map { it to it.label }
         val favoriteSortModeOptions = FavoriteSortMode.entries.map { it to it.label }
         val favoriteUpdateIntervalOptions = FavoriteUpdateInterval.entries.map { it to it.label }
+        val appUpdateLaunchCheckThresholdOptions = AppUpdateLaunchCheckThreshold.entries.map { it to it.label }
         val signInModeOptions = SignInMode.entries.map { it to it.label }
         val languageOptions = AppLanguage.entries.map { it to it.label }
     }
 }
-

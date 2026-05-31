@@ -1,8 +1,6 @@
-﻿package me.thenano.yamibo.yamibo_app.thread.image
+package me.thenano.yamibo.yamibo_app.thread.image
 
-import me.thenano.yamibo.yamibo_app.i18n.appString
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
+import me.thenano.yamibo.yamibo_app.i18n.i18n
 
 import YamiboIcons
 import androidx.compose.animation.*
@@ -155,7 +153,7 @@ private fun ContextMenuContainer(
                 ) {
                     ContextMenuItem(
                         icon = YamiboIcons.Copy,
-                        label = appString(Res.string.ui_copy),
+                        label = i18n("複製"),
                         onClick = {
                             scope.launch {
                                 copyImageToClipboard(context, imageUrl, cookie, referer)
@@ -165,7 +163,7 @@ private fun ContextMenuContainer(
                     )
                     ContextMenuItem(
                         icon = YamiboIcons.Share,
-                        label = appString(Res.string.ui_share),
+                        label = i18n("分享"),
                         onClick = {
                             scope.launch {
                                 shareImageToApp(context, imageUrl, cookie, referer)
@@ -175,7 +173,7 @@ private fun ContextMenuContainer(
                     )
                     ContextMenuItem(
                         icon = YamiboIcons.Save,
-                        label = appString(Res.string.ui_store),
+                        label = i18n("儲存"),
                         onClick = {
                             scope.launch {
                                 saveImageToGallery(context, imageUrl, cookie, referer)
@@ -186,7 +184,7 @@ private fun ContextMenuContainer(
                     if (onSetAsCover != null) {
                         ContextMenuItem(
                             icon = YamiboIcons.StarOutline,
-                            label = appString(Res.string.ui_set_as_cover),
+                            label = i18n("設為封面"),
                             onClick = {
                                 onSetAsCover(imageUrl)
                                 onDismiss()
@@ -204,7 +202,7 @@ private fun ContextMenuContainer(
             ) {
                 ContextMenuItem(
                     icon = YamiboIcons.Copy,
-                    label = appString(Res.string.ui_copy),
+                    label = i18n("複製"),
                     onClick = {
                         scope.launch {
                             copyImageToClipboard(context, imageUrl, cookie, referer)
@@ -214,7 +212,7 @@ private fun ContextMenuContainer(
                 )
                 ContextMenuItem(
                     icon = YamiboIcons.Share,
-                    label = appString(Res.string.ui_share),
+                    label = i18n("分享"),
                     onClick = {
                         scope.launch {
                             shareImageToApp(context, imageUrl, cookie, referer)
@@ -224,7 +222,7 @@ private fun ContextMenuContainer(
                 )
                 ContextMenuItem(
                     icon = YamiboIcons.Save,
-                    label = appString(Res.string.ui_store),
+                    label = i18n("儲存"),
                     onClick = {
                         scope.launch {
                             saveImageToGallery(context, imageUrl, cookie, referer)
@@ -235,7 +233,7 @@ private fun ContextMenuContainer(
                 if (onSetAsCover != null) {
                     ContextMenuItem(
                         icon = YamiboIcons.StarOutline,
-                        label = appString(Res.string.ui_set_as_cover),
+                        label = i18n("設為封面"),
                         onClick = {
                             onSetAsCover(imageUrl)
                             onDismiss()

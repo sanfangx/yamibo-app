@@ -1,9 +1,8 @@
-﻿package me.thenano.yamibo.yamibo_app.profile.settings.components
+package me.thenano.yamibo.yamibo_app.profile.settings.components
 
-import me.thenano.yamibo.yamibo_app.i18n.appString
+import me.thenano.yamibo.yamibo_app.i18n.i18n
+
 import me.thenano.yamibo.yamibo_app.i18n.localizedLabel
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -42,7 +41,7 @@ fun ThemeSelectorContent(
 
     Column(modifier = modifier) {
         Text(
-            text = appString(Res.string.ui_color_theme),
+            text = i18n("顏色主題"),
             color = colors.textDark,
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold,

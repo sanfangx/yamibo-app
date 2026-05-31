@@ -1,10 +1,8 @@
 ﻿package me.thenano.yamibo.yamibo_app.profile.sign
 
-import me.thenano.yamibo.yamibo_app.i18n.appString
-import me.thenano.yamibo.yamibo_app.i18n.localizedAppMessage
+import me.thenano.yamibo.yamibo_app.i18n.i18n
+
 import me.thenano.yamibo.yamibo_app.i18n.localizedMessage
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
 
 import YamiboIcons
 import androidx.compose.foundation.background
@@ -101,9 +99,9 @@ private fun SignInfoScreen(onInfoLoaded: () -> Unit) {
                 }
 
                 is YamiboResult.NotLoggedIn -> errorMessage = result.localizedMessage()
-                is YamiboResult.NoPermission -> errorMessage = localizedAppMessage(result.reason)
+                is YamiboResult.NoPermission -> errorMessage = (result.reason)
                 is YamiboResult.Maintenance -> errorMessage = result.localizedMessage()
-                is YamiboResult.Failure -> errorMessage = localizedAppMessage(result.reason)
+                is YamiboResult.Failure -> errorMessage = (result.reason)
             }
             loading = false
         }
@@ -114,7 +112,7 @@ private fun SignInfoScreen(onInfoLoaded: () -> Unit) {
             TopAppBar(
                 title = {
                     Text(
-                        text = appString(Res.string.ui_sign_in_information),
+                        text = i18n("簽到資訊"),
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
@@ -155,7 +153,7 @@ private fun SignInfoScreen(onInfoLoaded: () -> Unit) {
                             .padding(20.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
-                        SectionCard(title = appString(Res.string.ui_read_failed), items = listOf(localizedAppMessage(errorMessage!!)))
+                        SectionCard(title = i18n("讀取失敗"), items = listOf(errorMessage!!))
                         OutlinedButton(
                             onClick = ::refreshInfo,
                             modifier = Modifier.fillMaxWidth(),
@@ -165,7 +163,7 @@ private fun SignInfoScreen(onInfoLoaded: () -> Unit) {
                             ),
                             border = BorderStroke(1.dp, colors.brownLight.copy(alpha = 0.65f)),
                         ) {
-                            Text(appString(Res.string.ui_manually_refresh_information))
+                            Text(i18n("手動刷新資訊"))
                         }
                         ElevatedButton(
                             onClick = { navigator.navigate(IPlatformWebView(YamiboRoute.Sign.build())) },
@@ -175,7 +173,7 @@ private fun SignInfoScreen(onInfoLoaded: () -> Unit) {
                                 contentColor = colors.creamSurface,
                             ),
                         ) {
-                            Text(appString(Res.string.ui_open_check_in_page_webview))
+                            Text(i18n("打開簽到頁 WebView"))
                         }
                     }
                 }
@@ -191,28 +189,28 @@ private fun SignInfoScreen(onInfoLoaded: () -> Unit) {
                     ) {
                         val summaryItems = buildList {
                             pageInfo.currentDateText?.let { add(it) }
-                            pageInfo.monthLabel?.let { add(appString(Res.string.sign_calendar_month, it)) }
-                            add(if (pageInfo.hasSignedToday) appString(Res.string.ui_today_s_status_signed_in) else appString(Res.string.ui_today_s_status_not_signed_in))
+                            pageInfo.monthLabel?.let { add(i18n("日曆月份：{}", it)) }
+                            add(if (pageInfo.hasSignedToday) i18n("今天狀態：已簽到") else i18n("今天狀態：未簽到"))
                             if (pageInfo.repairOptions.isNotEmpty()) {
-                                add(appString(Res.string.sign_repair_options, pageInfo.repairOptions.joinToString { it.label }))
+                                add(i18n("可補簽：{}", pageInfo.repairOptions.joinToString { it.label }))
                             }
                         }
                         if (summaryItems.isNotEmpty()) {
-                            SectionCard(title = appString(Res.string.ui_summary), items = summaryItems)
+                            SectionCard(title = i18n("摘要"), items = summaryItems)
                         }
-                        pageInfo.notice?.let { SectionCard(title = appString(Res.string.ui_check_in_announcement), items = listOf(it)) }
+                        pageInfo.notice?.let { SectionCard(title = i18n("打卡公告"), items = listOf(it)) }
                         if (pageInfo.calendarDays.isNotEmpty()) {
                             CalendarSectionCard(
-                                title = appString(Res.string.ui_sign_in_form_for_month),
+                                title = i18n("本月簽到表格"),
                                 monthLabel = pageInfo.monthLabel,
                                 days = pageInfo.calendarDays,
                             )
                         }
                         if (pageInfo.myActivity.isNotEmpty()) {
-                            SectionCard(title = appString(Res.string.ui_my_check_in_status_2), items = pageInfo.myActivity)
+                            SectionCard(title = i18n("我的打卡動態"), items = pageInfo.myActivity)
                         }
                         if (pageInfo.statistics.isNotEmpty()) {
-                            SectionCard(title = appString(Res.string.ui_check_in_statistics), items = pageInfo.statistics)
+                            SectionCard(title = i18n("打卡統計"), items = pageInfo.statistics)
                         }
                         pageInfo.extraSections.forEach { section ->
                             SectionCard(title = section.title, items = section.items)
@@ -225,7 +223,7 @@ private fun SignInfoScreen(onInfoLoaded: () -> Unit) {
                                 contentColor = colors.creamSurface,
                             ),
                         ) {
-                            Text(appString(Res.string.ui_open_check_in_page_webview))
+                            Text(i18n("打開簽到頁 WebView"))
                         }
                         OutlinedButton(
                             onClick = ::refreshInfo,
@@ -236,7 +234,7 @@ private fun SignInfoScreen(onInfoLoaded: () -> Unit) {
                             ),
                             border = BorderStroke(1.dp, colors.brownLight.copy(alpha = 0.65f)),
                         ) {
-                            Text(appString(Res.string.ui_manually_refresh_information))
+                            Text(i18n("手動刷新資訊"))
                         }
                     }
                 }
@@ -249,8 +247,8 @@ private fun SignInfoScreen(onInfoLoaded: () -> Unit) {
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
                         SectionCard(
-                            title = appString(Res.string.ui_sign_in_information_has_not_obtained_yet),
-                            items = listOf(appString(Res.string.ui_please_open_check_in_page_webview_first_let_program_capture)),
+                            title = i18n("尚未取得簽到資訊"),
+                            items = listOf(i18n("請先打開簽到頁 WebView 讓程式抓到頁面內容，或使用下方按鈕手動刷新。")),
                         )
                         ElevatedButton(
                             onClick = { navigator.navigate(IPlatformWebView(YamiboRoute.Sign.build())) },
@@ -260,7 +258,7 @@ private fun SignInfoScreen(onInfoLoaded: () -> Unit) {
                                 contentColor = colors.creamSurface,
                             ),
                         ) {
-                            Text(appString(Res.string.ui_open_check_in_page_webview))
+                            Text(i18n("打開簽到頁 WebView"))
                         }
                         OutlinedButton(
                             onClick = ::refreshInfo,
@@ -271,7 +269,7 @@ private fun SignInfoScreen(onInfoLoaded: () -> Unit) {
                             ),
                             border = BorderStroke(1.dp, colors.brownLight.copy(alpha = 0.65f)),
                         ) {
-                            Text(appString(Res.string.ui_manually_refresh_information))
+                            Text(i18n("手動刷新資訊"))
                         }
                     }
                 }
@@ -288,7 +286,7 @@ private fun CalendarSectionCard(
 ) {
     val colors = YamiboTheme.colors
     val rows = days.chunked(7)
-    val weekLabels = listOf(appString(Res.string.ui_one), appString(Res.string.ui_two), appString(Res.string.ui_three), appString(Res.string.ui_four), appString(Res.string.ui_five), appString(Res.string.ui_six), appString(Res.string.ui_day))
+    val weekLabels = listOf(i18n("一"), i18n("二"), i18n("三"), i18n("四"), i18n("五"), i18n("六"), i18n("日"))
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -387,9 +385,9 @@ private fun RowScope.CalendarDayCell(day: SignRepository.CalendarDay) {
             )
             Text(
                 text = when {
-                    day.isToday && day.isSigned -> appString(Res.string.ui_signed_today)
-                    day.isToday -> appString(Res.string.ui_today_2)
-                    day.isSigned -> appString(Res.string.ui_signed)
+                    day.isToday && day.isSigned -> i18n("今日已簽")
+                    day.isToday -> i18n("今天")
+                    day.isSigned -> i18n("已簽")
                     else -> ""
                 },
                 fontSize = 10.sp,
@@ -434,6 +432,3 @@ private fun SectionCard(
         }
     }
 }
-
-
-

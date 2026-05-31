@@ -1,0 +1,38 @@
+package me.thenano.yamibo.yamibo_app.repository.appupdate
+
+data class AppUpdateSource(
+    val name: String,
+    val manifestUrl: String,
+)
+
+data class AppUpdateAsset(
+    val type: String,
+    val url: String,
+    val sha256: String?,
+    val size: Long?,
+)
+
+data class AppUpdateRelease(
+    val source: AppUpdateSource,
+    val versionName: String,
+    val versionCode: Long,
+    val minVersionCode: Long?,
+    val releaseNotes: String,
+    val releaseUrl: String,
+    val asset: AppUpdateAsset?,
+)
+
+sealed interface AppUpdateCheckResult {
+    data class UpdateAvailable(val release: AppUpdateRelease) : AppUpdateCheckResult
+    data class UpToDate(val currentVersionName: String) : AppUpdateCheckResult
+    data class Ignored(val release: AppUpdateRelease) : AppUpdateCheckResult
+    data class Failed(val message: String) : AppUpdateCheckResult
+}
+
+sealed interface AppUpdateDownloadState {
+    data object Idle : AppUpdateDownloadState
+    data class Running(val release: AppUpdateRelease, val downloadedBytes: Long, val totalBytes: Long?) : AppUpdateDownloadState
+    data class Completed(val release: AppUpdateRelease) : AppUpdateDownloadState
+    data class PermissionRequired(val release: AppUpdateRelease) : AppUpdateDownloadState
+    data class Failed(val release: AppUpdateRelease?, val message: String) : AppUpdateDownloadState
+}

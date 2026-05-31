@@ -2,6 +2,7 @@ package me.thenano.yamibo.yamibo_app.repository
 
 import io.github.littlesurvival.YamiboClient
 import io.github.littlesurvival.core.YamiboResult
+import io.github.littlesurvival.dto.page.RatePopoutPage
 import io.github.littlesurvival.dto.page.ThreadPage
 import io.github.littlesurvival.dto.value.FormHash
 import io.github.littlesurvival.dto.value.ForumId
@@ -59,9 +60,14 @@ class AndroidThreadRepository(
         return yamiboClient.votePoll(fId, tId, pollOptionIds, formHash)
     }
 
-    override suspend fun ratePost(tId: ThreadId, pId: PostId, score: Int, reason: String, formHash: FormHash): YamiboResult<String> {
+    override suspend fun fetchRatePopoutPage(tId: ThreadId, pId: PostId): YamiboResult<RatePopoutPage> {
         yamiboClient.setCookie(cookieStore.load() ?: "")
-        return yamiboClient.fetchRatePost(tId, pId, score, reason, formHash)
+        return yamiboClient.fetchRatePopoutPage(tId, pId)
+    }
+
+    override suspend fun ratePost(tId: ThreadId, pId: PostId, score: Int, reason: String, formHash: FormHash, noticeAuthor: Boolean): YamiboResult<String> {
+        yamiboClient.setCookie(cookieStore.load() ?: "")
+        return yamiboClient.fetchRatePost(tId, pId, score, reason, formHash, noticeAuthor)
     }
 
     override suspend fun commentPost(tId: ThreadId, pId: PostId, message: String, formHash: FormHash): YamiboResult<String> {

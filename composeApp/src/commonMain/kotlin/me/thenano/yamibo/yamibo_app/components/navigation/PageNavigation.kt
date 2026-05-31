@@ -1,8 +1,6 @@
-﻿package me.thenano.yamibo.yamibo_app.components
+﻿package me.thenano.yamibo.yamibo_app.components.navigation
 
-import me.thenano.yamibo.yamibo_app.i18n.appString
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
+import me.thenano.yamibo.yamibo_app.i18n.i18n
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -29,7 +27,7 @@ import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
  * Use this whenever a page is backed by `PageNav`. If `PageNav` contains
  * `currentPage` and `totalPages`, the existing full page selector is used. If a
  * Discuz page only exposes previous/next links, this falls back to compact
- * appString(Res.string.ui_previous_page_next_page) buttons using `prevPageIndex` / `nextPageIndex` when
+ * i18n("上一頁 / 下一頁") buttons using `prevPageIndex` / `nextPageIndex` when
  * available.
  *
  * This is intended for ForumPage, UserSpace subpages, BlogReader comments, and
@@ -62,11 +60,11 @@ fun YamiboPageNavigation(
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        YamiboNavButton(appString(Res.string.ui_previous_page), enabled = prevPage != null) {
+        YamiboNavButton(i18n("上一頁"), enabled = prevPage != null) {
             prevPage?.let(onPageChange)
         }
         Spacer(Modifier.width(14.dp))
-        YamiboNavButton(appString(Res.string.ui_next_page), enabled = nextPage != null) {
+        YamiboNavButton(i18n("下一頁"), enabled = nextPage != null) {
             nextPage?.let(onPageChange)
         }
     }

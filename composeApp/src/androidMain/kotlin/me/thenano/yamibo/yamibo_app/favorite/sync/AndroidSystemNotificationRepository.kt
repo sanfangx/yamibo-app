@@ -1,8 +1,6 @@
-﻿package me.thenano.yamibo.yamibo_app.favorite.sync
+package me.thenano.yamibo.yamibo_app.favorite.sync
 
-import me.thenano.yamibo.yamibo_app.i18n.appString
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
+import me.thenano.yamibo.yamibo_app.i18n.i18n
 
 import android.Manifest
 import android.app.Notification
@@ -98,10 +96,10 @@ class AndroidSystemNotificationRepository(
         val manager = appContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val channel = NotificationChannel(
             CHANNEL_ID,
-            appString(Res.string.ui_favorite_synchronization),
+            i18n("收藏同步"),
             NotificationManager.IMPORTANCE_LOW,
         ).apply {
-            description = appString(Res.string.ui_display_yamibo_favorite_synchronization_progress)
+            description = i18n("顯示百合會收藏同步進度")
         }
         manager.createNotificationChannel(channel)
     }

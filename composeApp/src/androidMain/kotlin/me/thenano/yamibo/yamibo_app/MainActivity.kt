@@ -1,8 +1,6 @@
-﻿package me.thenano.yamibo.yamibo_app
+package me.thenano.yamibo.yamibo_app
 
-import me.thenano.yamibo.yamibo_app.i18n.appString
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
+import me.thenano.yamibo.yamibo_app.i18n.i18n
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -38,6 +36,7 @@ import me.thenano.yamibo.yamibo_app.repository.*
 import me.thenano.yamibo.yamibo_app.repository.chineseconversion.createChineseConversionRepository
 import me.thenano.yamibo.yamibo_app.repository.favorite.FavoriteSyncRepositoryImpl
 import me.thenano.yamibo.yamibo_app.repository.favorite.FavoriteUpdateRepositoryImpl
+import me.thenano.yamibo.yamibo_app.repository.appupdate.DefaultAppUpdateRepository
 import me.thenano.yamibo.yamibo_app.repository.inapplinknavigation.DefaultInAppLinkNavigationRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.AppSettingsRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.MangaReaderSettingsRepository
@@ -47,6 +46,7 @@ import me.thenano.yamibo.yamibo_app.repository.userspace.UserSpaceRepositoryImpl
 import me.thenano.yamibo.yamibo_app.store.AndroidCookieStore
 import me.thenano.yamibo.yamibo_app.store.AndroidUserStore
 import me.thenano.yamibo.yamibo_app.store.settings.AndroidSettingsStore
+import me.thenano.yamibo.yamibo_app.update.AndroidAppUpdatePlatform
 import me.thenano.yamibo.yamibo_app.util.state
 
 class MainActivity : ComponentActivity() {
@@ -87,7 +87,7 @@ class MainActivity : ComponentActivity() {
                         finish()
                     } else {
                         lastBackTime = now
-                        Toast.makeText(this@MainActivity, appString(Res.string.ui_press_again_exit_app), Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@MainActivity, i18n("再按一次退出應用"), Toast.LENGTH_SHORT).show()
                     }
                 }
                 onDispose { callback.remove() }
@@ -162,11 +162,18 @@ class MainActivity : ComponentActivity() {
                 )
             }
             val themeRepository = remember { AndroidThemeRepository() }
+            val appUpdateRepository = remember {
+                DefaultAppUpdateRepository(
+                    appSettingsRepository = appSettingsRepository,
+                    platform = AndroidAppUpdatePlatform(context),
+                )
+            }
 
             /** Provide Repositories */
             CompositionLocalProvider(
                 LocalNavigator provides navigator,
                 LocalAuthRepository provides authRepository,
+                LocalAppUpdateRepository provides appUpdateRepository,
                 LocalForumRepository provides forumRepository,
                 LocalThreadRepository provides threadRepository,
                 LocalInAppLinkNavigationRepository provides inAppLinkNavigationRepository,
@@ -231,4 +238,3 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-

@@ -1,23 +1,12 @@
 ﻿package me.thenano.yamibo.yamibo_app.thread.detail.tag
 
-import me.thenano.yamibo.yamibo_app.i18n.appString
-import me.thenano.yamibo.yamibo_app.i18n.localizedMessage
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
-
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import coil3.compose.LocalPlatformContext
 import io.github.littlesurvival.YamiboForum
@@ -30,32 +19,17 @@ import io.github.littlesurvival.dto.value.TagId
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import me.thenano.yamibo.yamibo_app.LocalAppSettingsRepository
-import me.thenano.yamibo.yamibo_app.LocalBookMarkRepository
-import me.thenano.yamibo.yamibo_app.LocalDetailNoteRepository
-import me.thenano.yamibo.yamibo_app.LocalFavoriteRepository
-import me.thenano.yamibo.yamibo_app.LocalFavoriteSyncRepository
-import me.thenano.yamibo.yamibo_app.LocalReadHistoryRepository
-import me.thenano.yamibo.yamibo_app.LocalTagRepository
-import me.thenano.yamibo.yamibo_app.favorite.FavoriteCollectionPickerDialog
-import me.thenano.yamibo.yamibo_app.favorite.FavoriteLocationSelection
-import me.thenano.yamibo.yamibo_app.favorite.FavoriteMultiPathRemoveDialog
-import me.thenano.yamibo.yamibo_app.favorite.FavoriteRemovalConfirmDialog
-import me.thenano.yamibo.yamibo_app.favorite.FavoriteTargetPayload
-import me.thenano.yamibo.yamibo_app.favorite.IFavoriteCategoryManageScreen
-import me.thenano.yamibo.yamibo_app.favorite.findFavoriteItem
-import me.thenano.yamibo.yamibo_app.favorite.getFavoriteLocationSelection
-import me.thenano.yamibo.yamibo_app.favorite.removeFavoriteWithSync
-import me.thenano.yamibo.yamibo_app.favorite.saveFavorite
+import me.thenano.yamibo.yamibo_app.*
+import me.thenano.yamibo.yamibo_app.favorite.*
+import me.thenano.yamibo.yamibo_app.i18n.i18n
+import me.thenano.yamibo.yamibo_app.i18n.localizedMessage
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
-import me.thenano.yamibo.yamibo_app.repository.LocalBookMarkRepository as BookMarkRepository
-import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.repository.DetailNoteRepository
+import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
-import me.thenano.yamibo.yamibo_app.util.state
-import me.thenano.yamibo.yamibo_app.thread.detail.novel.INovelThreadDetailScreen
 import me.thenano.yamibo.yamibo_app.thread.detail.components.DetailNoteEditorDialog
+import me.thenano.yamibo.yamibo_app.thread.detail.novel.INovelThreadDetailScreen
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.components.ThreadErrorContent
 import me.thenano.yamibo.yamibo_app.thread.detail.tag.components.TagDetailContent
 import me.thenano.yamibo.yamibo_app.thread.detail.tag.components.TagDetailTopBar
@@ -63,6 +37,8 @@ import me.thenano.yamibo.yamibo_app.thread.detail.tag.components.TagLoadingSkele
 import me.thenano.yamibo.yamibo_app.thread.reader.IImageReaderScreen
 import me.thenano.yamibo.yamibo_app.thread.reader.IThreadReaderScreen
 import me.thenano.yamibo.yamibo_app.util.shareText
+import me.thenano.yamibo.yamibo_app.util.state
+import me.thenano.yamibo.yamibo_app.repository.LocalBookMarkRepository as BookMarkRepository
 
 /** Tag page state */
 internal sealed interface TagDetailState {
@@ -219,7 +195,7 @@ internal fun TagDetailScreen(
                 } else {
                     withContext(Dispatchers.Default) { removeFavoriteWithSync(favoriteRepository, favoriteSyncRepository, target) }
                     favoriteRefreshToken += 1
-                    snackbarHostState.showSnackbar(appString(Res.string.ui_favorite_removed))
+                    snackbarHostState.showSnackbar(i18n("已移除收藏"))
                     pendingFavoriteRemovalSelection = null
                 }
             } else {
@@ -230,7 +206,7 @@ internal fun TagDetailScreen(
 
         favoriteRepository.saveFavorite(target)
         favoriteRefreshToken += 1
-        snackbarHostState.showSnackbar(appString(Res.string.ui_added_favorites))
+        snackbarHostState.showSnackbar(i18n("已加入收藏"))
     }
 
     LaunchedEffect(tagId, currentTagName, favoriteRefreshToken) {
@@ -241,9 +217,9 @@ internal fun TagDetailScreen(
     val readingProgressText = remember(mangaTagHistory, isMangaMode) {
         val h = mangaTagHistory ?: return@remember null
         if (isMangaMode) {
-            appString(Res.string.tag_read_progress_with_image, h.tagPage, h.threadTitle, h.threadImagePageIndex + 1, h.threadImageTotalPages)
+            i18n("第{} ‧ {} ‧ {}/{}", h.tagPage, h.threadTitle, h.threadImagePageIndex + 1, h.threadImageTotalPages)
         } else {
-            appString(Res.string.tag_read_progress, h.tagPage, h.threadTitle)
+            i18n("第{} ‧ {}", h.tagPage, h.threadTitle)
         }
     }
 
@@ -381,7 +357,7 @@ internal fun TagDetailScreen(
 
                                     else -> {
                                         snackbarHostState.showSnackbar(
-                                            message = appString(Res.string.tag_refresh_failed, result.localizedMessage()),
+                                            message = i18n("重新整理標籤頁失敗：{}", result.localizedMessage()),
                                             duration = SnackbarDuration.Short,
                                         )
                                     }
@@ -474,7 +450,7 @@ internal fun TagDetailScreen(
                         )
                         showFavoriteDialog = false
                         favoriteRefreshToken += 1
-                        snackbarHostState.showSnackbar(appString(Res.string.ui_added_favorites))
+                        snackbarHostState.showSnackbar(i18n("已加入收藏"))
                     } else if (selectedCategories.isEmpty() && selectedCollections.isEmpty()) {
                         showFavoriteDialog = false
                         pendingFavoriteRemovalSelection = favoriteRepository.getFavoriteLocationSelection(target)
@@ -484,7 +460,7 @@ internal fun TagDetailScreen(
                             } else {
                                 withContext(Dispatchers.Default) { removeFavoriteWithSync(favoriteRepository, favoriteSyncRepository, target) }
                                 favoriteRefreshToken += 1
-                                snackbarHostState.showSnackbar(appString(Res.string.ui_favorite_removed_from_all_locations))
+                                snackbarHostState.showSnackbar(i18n("已從所有位置移除收藏"))
                                 pendingFavoriteRemovalSelection = null
                             }
                         } else {
@@ -494,7 +470,7 @@ internal fun TagDetailScreen(
                         favoriteRepository.setItemLocations(existing.id, selectedCategories, selectedCollections)
                         showFavoriteDialog = false
                         favoriteRefreshToken += 1
-                        snackbarHostState.showSnackbar(appString(Res.string.ui_favorite_location_updated))
+                        snackbarHostState.showSnackbar(i18n("收藏位置已更新"))
                     }
                 }
             }
@@ -517,7 +493,7 @@ internal fun TagDetailScreen(
                     } else {
                         withContext(Dispatchers.Default) { removeFavoriteWithSync(favoriteRepository, favoriteSyncRepository, favoriteTarget()) }
                         favoriteRefreshToken += 1
-                        snackbarHostState.showSnackbar(appString(Res.string.ui_favorite_removed))
+                        snackbarHostState.showSnackbar(i18n("已移除收藏"))
                         pendingFavoriteRemovalSelection = null
                     }
                 }
@@ -528,7 +504,7 @@ internal fun TagDetailScreen(
     if (showFavoriteMultiPathDialog) {
         FavoriteMultiPathRemoveDialog(
             paths = pendingFavoriteRemovalSelection?.paths.orEmpty(),
-            tip = appString(Res.string.ui_tip_long_press_edit_favorite_path_in_detail),
+            tip = i18n("tip：長按可詳細編輯收藏路徑"),
             onDismiss = {
                 showFavoriteMultiPathDialog = false
                 pendingFavoriteRemovalSelection = null
@@ -538,7 +514,7 @@ internal fun TagDetailScreen(
                 scope.launch {
                         withContext(Dispatchers.Default) { removeFavoriteWithSync(favoriteRepository, favoriteSyncRepository, favoriteTarget()) }
                     favoriteRefreshToken += 1
-                    snackbarHostState.showSnackbar(appString(Res.string.ui_favorite_removed_from_all_locations))
+                    snackbarHostState.showSnackbar(i18n("已從所有位置移除收藏"))
                     pendingFavoriteRemovalSelection = null
                 }
             },
@@ -559,7 +535,7 @@ internal fun TagDetailScreen(
                     )
                     reloadNote()
                     snackbarHostState.showSnackbar(
-                        if (content.isBlank()) appString(Res.string.ui_note_deleted) else appString(Res.string.ui_note_saved),
+                        if (content.isBlank()) i18n("已刪除筆記") else i18n("已保存筆記"),
                         duration = SnackbarDuration.Short,
                     )
                 }
@@ -572,7 +548,7 @@ internal fun TagDetailScreen(
                         targetId = tagId.value.toLong(),
                     )
                     reloadNote()
-                    snackbarHostState.showSnackbar(appString(Res.string.ui_note_deleted), duration = SnackbarDuration.Short)
+                    snackbarHostState.showSnackbar(i18n("已刪除筆記"), duration = SnackbarDuration.Short)
                 }
             },
         )
@@ -597,7 +573,7 @@ internal fun TagDetailScreen(
                     )
                     reloadThreadBookMarks()
                     snackbarHostState.showSnackbar(
-                        if (next) appString(Res.string.ui_bookmark_added) else appString(Res.string.ui_bookmark_removed),
+                        if (next) i18n("已新增書籤") else i18n("已移除書籤"),
                         duration = SnackbarDuration.Short,
                     )
                 }
@@ -615,7 +591,7 @@ internal fun TagDetailScreen(
                     )
                     reloadThreadBookMarks()
                     snackbarHostState.showSnackbar(
-                        if (next) appString(Res.string.ui_marked_as_read) else appString(Res.string.ui_marked_as_unread),
+                        if (next) i18n("已標為已讀") else i18n("已標為未讀"),
                         duration = SnackbarDuration.Short,
                     )
                 }
@@ -634,7 +610,7 @@ internal fun TagDetailScreen(
                         mangaTagHistory = null
                     }
                     reloadThreadBookMarks()
-                    snackbarHostState.showSnackbar(appString(Res.string.ui_reading_history_cleared), duration = SnackbarDuration.Short)
+                    snackbarHostState.showSnackbar(i18n("已清除閱讀紀錄"), duration = SnackbarDuration.Short)
                 }
             },
         )
@@ -653,17 +629,17 @@ private fun BookMarkActionDialog(
     val colors = YamiboTheme.colors
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(appString(Res.string.ui_read_mark), color = colors.brownDeep) },
+        title = { Text(i18n("閱讀標記"), color = colors.brownDeep) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                YamiboActionRow(if (bookmarked) appString(Res.string.ui_remove_bookmark) else appString(Res.string.ui_add_bookmark), onToggleBookMark)
-                YamiboActionRow(if (read) appString(Res.string.ui_mark_as_unread) else appString(Res.string.ui_mark_as_read), onToggleRead)
-                YamiboActionRow(appString(Res.string.ui_clear_reading_history), onClearHistory)
+                YamiboActionRow(if (bookmarked) i18n("移除書籤") else i18n("新增書籤"), onToggleBookMark)
+                YamiboActionRow(if (read) i18n("標為未讀") else i18n("標為已讀"), onToggleRead)
+                YamiboActionRow(i18n("清除閱讀紀錄"), onClearHistory)
             }
         },
         confirmButton = {},
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(appString(Res.string.common_cancel), color = colors.brownDeep) }
+            TextButton(onClick = onDismiss) { Text(i18n("取消"), color = colors.brownDeep) }
         },
         containerColor = colors.creamSurface,
     )
@@ -685,7 +661,4 @@ private fun YamiboActionRow(text: String, onClick: () -> Unit) {
         )
     }
 }
-
-
-
 

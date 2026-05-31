@@ -1,81 +1,70 @@
 package me.thenano.yamibo.yamibo_app.i18n
 
-import me.thenano.yamibo.yamibo_app.i18n.appString
-import me.thenano.yamibo.yamibo_app.repository.settings.AppThemeMode
-import me.thenano.yamibo.yamibo_app.repository.settings.AppThemeScheme
-import me.thenano.yamibo.yamibo_app.repository.settings.FavoriteGridMode
-import me.thenano.yamibo.yamibo_app.repository.settings.FavoriteSortMode
-import me.thenano.yamibo.yamibo_app.repository.settings.FavoriteUpdateInterval
-import me.thenano.yamibo.yamibo_app.repository.settings.ReaderChineseConversionOption
-import me.thenano.yamibo.yamibo_app.repository.settings.ReadingMode
-import me.thenano.yamibo.yamibo_app.repository.settings.SignInMode
-import me.thenano.yamibo.yamibo_app.repository.settings.TouchZoneLayout
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
+import me.thenano.yamibo.yamibo_app.repository.settings.*
 
 fun AppThemeMode.localizedLabel(): String = when (this) {
-    AppThemeMode.SYSTEM -> appString(Res.string.settings_theme_mode_system)
-    AppThemeMode.LIGHT -> appString(Res.string.settings_theme_mode_light)
-    AppThemeMode.DARK -> appString(Res.string.settings_theme_mode_dark)
+    AppThemeMode.SYSTEM -> i18n("跟隨系統")
+    AppThemeMode.LIGHT -> i18n("淺色模式")
+    AppThemeMode.DARK -> i18n("深色模式")
 }
 
 fun AppThemeScheme.localizedLabel(): String = when (this) {
-    AppThemeScheme.DEFAULT -> appString(Res.string.settings_theme_scheme_default)
-    AppThemeScheme.DEFAULT_DARK -> appString(Res.string.settings_theme_scheme_default_dark)
-    AppThemeScheme.CLASSIC_BLACK -> appString(Res.string.settings_theme_scheme_classic_black)
-    AppThemeScheme.CLASSIC_WHITE -> appString(Res.string.settings_theme_scheme_classic_white)
+    AppThemeScheme.DEFAULT -> i18n("預設")
+    AppThemeScheme.DEFAULT_DARK -> i18n("預設（深色）")
+    AppThemeScheme.CLASSIC_BLACK -> i18n("傳統黑")
+    AppThemeScheme.CLASSIC_WHITE -> i18n("傳統白")
     else -> label
 }
 
 fun FavoriteGridMode.localizedLabel(): String = when (this) {
-    FavoriteGridMode.FIXED_GRID -> appString(Res.string.favorite_grid_fixed)
-    FavoriteGridMode.STAGGERED -> appString(Res.string.favorite_grid_staggered)
-    FavoriteGridMode.ROW_CARD -> appString(Res.string.favorite_grid_row_card)
-    FavoriteGridMode.ROW_CARD_TEXT -> appString(Res.string.favorite_grid_row_card_text)
+    FavoriteGridMode.FIXED_GRID -> i18n("固定網格")
+    FavoriteGridMode.STAGGERED -> i18n("瀑布貼齊")
+    FavoriteGridMode.ROW_CARD -> i18n("橫排卡片")
+    FavoriteGridMode.ROW_CARD_TEXT -> i18n("橫排卡片(無封面)")
 }
 
 fun FavoriteSortMode.localizedLabel(): String = when (this) {
-    FavoriteSortMode.DEFAULT -> appString(Res.string.favorite_sort_default)
-    FavoriteSortMode.UPDATED_AT -> appString(Res.string.favorite_sort_updated_at)
-    FavoriteSortMode.FAVORITED_ORDER -> appString(Res.string.favorite_sort_favorited_order)
-    FavoriteSortMode.NAME -> appString(Res.string.favorite_sort_name)
-    FavoriteSortMode.FORUM_NAME -> appString(Res.string.favorite_sort_forum_name)
-    FavoriteSortMode.LAST_READ -> appString(Res.string.favorite_sort_last_read)
+    FavoriteSortMode.DEFAULT -> i18n("默認")
+    FavoriteSortMode.UPDATED_AT -> i18n("更新時間")
+    FavoriteSortMode.FAVORITED_ORDER -> i18n("收藏順序")
+    FavoriteSortMode.NAME -> i18n("名稱")
+    FavoriteSortMode.FORUM_NAME -> i18n("版區")
+    FavoriteSortMode.LAST_READ -> i18n("最後一次閱讀")
 }
 
 fun FavoriteUpdateInterval.localizedLabel(): String = when (this) {
-    FavoriteUpdateInterval.MANUAL -> appString(Res.string.favorite_update_interval_manual)
-    FavoriteUpdateInterval.HOURS_6 -> appString(Res.string.favorite_update_interval_6h)
-    FavoriteUpdateInterval.HOURS_12 -> appString(Res.string.favorite_update_interval_12h)
-    FavoriteUpdateInterval.HOURS_24 -> appString(Res.string.favorite_update_interval_24h)
-    FavoriteUpdateInterval.DAYS_3 -> appString(Res.string.favorite_update_interval_3d)
-    FavoriteUpdateInterval.DAYS_7 -> appString(Res.string.favorite_update_interval_7d)
-    FavoriteUpdateInterval.SMART -> appString(Res.string.favorite_update_interval_smart)
+    FavoriteUpdateInterval.MANUAL -> i18n("手動刷新")
+    FavoriteUpdateInterval.HOURS_6 -> i18n("6 小時")
+    FavoriteUpdateInterval.HOURS_12 -> i18n("12 小時")
+    FavoriteUpdateInterval.HOURS_24 -> i18n("24 小時")
+    FavoriteUpdateInterval.DAYS_3 -> i18n("3 天")
+    FavoriteUpdateInterval.DAYS_7 -> i18n("7 天")
+    FavoriteUpdateInterval.SMART -> i18n("智能更新（TODO）")
 }
 
 fun SignInMode.localizedLabel(): String = when (this) {
-    SignInMode.SEMI_AUTOMATIC -> appString(Res.string.sign_mode_semi_automatic)
-    SignInMode.FULL_MANUAL -> appString(Res.string.sign_mode_full_manual)
+    SignInMode.SEMI_AUTOMATIC -> i18n("半自動簽到")
+    SignInMode.FULL_MANUAL -> i18n("全手動簽到")
 }
 
 fun ReadingMode.localizedLabel(): String = when (this) {
-    ReadingMode.SINGLE_LTR -> appString(Res.string.manga_reading_mode_single_ltr)
-    ReadingMode.SINGLE_RTL -> appString(Res.string.manga_reading_mode_single_rtl)
-    ReadingMode.SINGLE_TTB -> appString(Res.string.manga_reading_mode_single_ttb)
-    ReadingMode.SCROLL_CONTINUOUS -> appString(Res.string.manga_reading_mode_scroll_continuous)
-    ReadingMode.SCROLL_GAP -> appString(Res.string.manga_reading_mode_scroll_gap)
+    ReadingMode.SINGLE_LTR -> i18n("單頁(左至右)")
+    ReadingMode.SINGLE_RTL -> i18n("單頁(右至左)")
+    ReadingMode.SINGLE_TTB -> i18n("單頁(上至下)")
+    ReadingMode.SCROLL_CONTINUOUS -> i18n("捲動(連續)")
+    ReadingMode.SCROLL_GAP -> i18n("捲動(留空)")
 }
 
 fun TouchZoneLayout.localizedLabel(): String = when (this) {
-    TouchZoneLayout.L_SHAPE -> appString(Res.string.manga_touch_zone_l_shape)
-    TouchZoneLayout.KINDLE -> appString(Res.string.manga_touch_zone_kindle)
-    TouchZoneLayout.EDGE -> appString(Res.string.manga_touch_zone_edge)
-    TouchZoneLayout.LEFT_RIGHT -> appString(Res.string.manga_touch_zone_left_right)
-    TouchZoneLayout.DISABLED -> appString(Res.string.common_disabled)
+    TouchZoneLayout.L_SHAPE -> i18n("L式")
+    TouchZoneLayout.KINDLE -> i18n("Kindle式")
+    TouchZoneLayout.EDGE -> i18n("邊緣式")
+    TouchZoneLayout.LEFT_RIGHT -> i18n("左右式")
+    TouchZoneLayout.DISABLED -> i18n("停用")
 }
 
 fun ReaderChineseConversionOption.localizedLabel(): String = when (this) {
-    ReaderChineseConversionOption.DEFAULT -> appString(Res.string.chinese_conversion_default)
-    ReaderChineseConversionOption.SIMPLIFIED -> appString(Res.string.chinese_conversion_simplified)
-    ReaderChineseConversionOption.TRADITIONAL -> appString(Res.string.chinese_conversion_traditional)
+    ReaderChineseConversionOption.DEFAULT -> i18n("默認")
+    ReaderChineseConversionOption.SIMPLIFIED -> i18n("簡體")
+    ReaderChineseConversionOption.TRADITIONAL -> i18n("繁體")
 }

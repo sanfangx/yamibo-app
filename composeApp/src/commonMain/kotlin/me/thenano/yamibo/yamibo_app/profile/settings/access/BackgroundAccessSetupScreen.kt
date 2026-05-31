@@ -1,8 +1,6 @@
-﻿package me.thenano.yamibo.yamibo_app.profile.settings.access
+package me.thenano.yamibo.yamibo_app.profile.settings.access
 
-import me.thenano.yamibo.yamibo_app.i18n.appString
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
+import me.thenano.yamibo.yamibo_app.i18n.i18n
 
 import YamiboIcons
 import androidx.compose.foundation.background
@@ -71,7 +69,7 @@ internal fun BackgroundAccessSetupScreen() {
             TopAppBar(
                 title = {
                     Text(
-                        text = appString(Res.string.settings_background_title),
+                        text = i18n("通知與背景同步"),
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
@@ -124,7 +122,7 @@ internal fun BackgroundAccessSetupScreen() {
                     contentColor = Color.White,
                 ),
             ) {
-                Text(appString(Res.string.ui_recheck))
+                Text(i18n("重新檢查"))
             }
 
             Spacer(Modifier.height(24.dp))
@@ -156,10 +154,10 @@ private fun BackgroundAccessItemCard(
 ) {
     val colors = YamiboTheme.colors
     val (statusText, statusColor) = when (item.status) {
-        BackgroundAccessRepository.SetupStatus.Granted -> appString(Res.string.ui_ready) to colors.brownPrimary
-        BackgroundAccessRepository.SetupStatus.Required -> appString(Res.string.ui_must_dealt_with) to Color(0xFFB4573B)
-        BackgroundAccessRepository.SetupStatus.Recommended -> appString(Res.string.ui_recommended_treatment) to Color(0xFF8A6A2C)
-        BackgroundAccessRepository.SetupStatus.Info -> appString(Res.string.ui_illustrate) to colors.textDark.copy(alpha = 0.55f)
+        BackgroundAccessRepository.SetupStatus.Granted -> i18n("已就緒") to colors.brownPrimary
+        BackgroundAccessRepository.SetupStatus.Required -> i18n("必須處理") to Color(0xFFB4573B)
+        BackgroundAccessRepository.SetupStatus.Recommended -> i18n("建議處理") to Color(0xFF8A6A2C)
+        BackgroundAccessRepository.SetupStatus.Info -> i18n("說明") to colors.textDark.copy(alpha = 0.55f)
     }
 
     Column(

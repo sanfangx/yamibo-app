@@ -1,10 +1,8 @@
 ﻿package me.thenano.yamibo.yamibo_app.message
 
-import me.thenano.yamibo.yamibo_app.i18n.appString
-import me.thenano.yamibo.yamibo_app.i18n.localizedAppMessage
+import me.thenano.yamibo.yamibo_app.i18n.i18n
+
 import me.thenano.yamibo.yamibo_app.i18n.localizedLabel
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -16,18 +14,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CheckboxDefaults
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -46,9 +39,11 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.SubcomposeAsyncImage
 import io.github.littlesurvival.dto.model.PageNav
 import io.github.littlesurvival.dto.model.User
-import me.thenano.yamibo.yamibo_app.components.YamiboActionChip
-import me.thenano.yamibo.yamibo_app.components.YamiboEmptyContent
-import me.thenano.yamibo.yamibo_app.components.YamiboPageNavigation
+import me.thenano.yamibo.yamibo_app.components.controls.YamiboActionChip
+import me.thenano.yamibo.yamibo_app.components.feedback.YamiboEmptyContent
+import me.thenano.yamibo.yamibo_app.components.controls.YamiboMultiSelectDialog
+import me.thenano.yamibo.yamibo_app.components.navigation.YamiboPageNavigation
+import me.thenano.yamibo.yamibo_app.components.controls.YamiboSingleSelectDialog
 import me.thenano.yamibo.yamibo_app.favorite.updates.FavoriteUpdateStatusCard
 import me.thenano.yamibo.yamibo_app.favorite.updates.snapshotOrNull
 import me.thenano.yamibo.yamibo_app.repository.FavoriteUpdateRepository
@@ -64,7 +59,6 @@ internal fun MessageCenterMainContent(
     currentPage: Int,
     onPageChange: (Int) -> Unit,
     onUpdateEventClick: (FavoriteUpdateRepository.UpdateEvent) -> Unit,
-    onDismissUpdateEvent: (FavoriteUpdateRepository.UpdateEvent) -> Unit,
     onGlobalFavoriteUpdate: () -> Unit,
     onCancelFavoriteUpdate: (String) -> Unit,
     onInterruptFavoriteUpdate: (String) -> Unit,
@@ -99,7 +93,7 @@ internal fun MessageCenterMainContent(
                         onToggleFavoriteUpdateFid = onToggleFavoriteUpdateFid,
                     )
                 }
-                if (content.events.isEmpty()) item { MessageCenterEmptyListMessage(appString(Res.string.ui_no_updates_detected)) }
+                if (content.events.isEmpty()) item { MessageCenterEmptyListMessage(i18n("沒有偵測到更新")) }
                 items(content.events, key = { it.id }) { event ->
                     FavoriteUpdateCard(event = event, onClick = { onUpdateEventClick(event) })
                 }
@@ -164,13 +158,13 @@ private fun FavoriteUpdateHeader(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(appString(Res.string.ui_favorite_updates), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+            Text(i18n("收藏更新"), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                YamiboActionChip(appString(Res.string.message_update_interval_chip, favoriteUpdateInterval.localizedLabel()), onClick = { showIntervalDialog = true })
-                YamiboActionChip(appString(Res.string.read_history_filter_prefix), onClick = { showFilterDialog = true })
+                YamiboActionChip(i18n("刷新週期: {}", favoriteUpdateInterval.localizedLabel()), onClick = { showIntervalDialog = true })
+                YamiboActionChip(i18n("篩選"), onClick = { showFilterDialog = true })
                 when {
-                    interrupted != null -> YamiboActionChip(appString(Res.string.ui_continue), onClick = onResumeFavoriteUpdate)
-                    running == null -> YamiboActionChip(appString(Res.string.ui_global_refresh), onClick = onGlobalFavoriteUpdate)
+                    interrupted != null -> YamiboActionChip(i18n("繼續"), onClick = onResumeFavoriteUpdate)
+                    running == null -> YamiboActionChip(i18n("全域刷新"), onClick = onGlobalFavoriteUpdate)
                 }
             }
         }
@@ -209,39 +203,14 @@ private fun FavoriteUpdateIntervalDialog(
     onDismiss: () -> Unit,
     onSelect: (FavoriteUpdateInterval) -> Unit,
 ) {
-    val colors = YamiboTheme.colors
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(appString(Res.string.ui_refresh_cycle), color = colors.brownDeep, fontWeight = FontWeight.Bold) },
-        text = {
-            LazyColumn(modifier = Modifier.height(360.dp)) {
-                items(FavoriteUpdateInterval.entries, key = { it.name }) { interval ->
-                    Surface(
-                        onClick = { onSelect(interval) },
-                        color = if (interval == selected) colors.brownPrimary.copy(alpha = 0.16f) else colors.creamSurface,
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                text = interval.localizedLabel(),
-                                color = colors.textDark,
-                                fontWeight = FontWeight.Medium,
-                                modifier = Modifier.weight(1f),
-                            )
-                            if (interval == selected) {
-                                Text(appString(Res.string.ui_selected), color = colors.brownDeep, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = { YamiboActionChip(appString(Res.string.common_close), onDismiss) },
-        containerColor = colors.creamSurface,
+    YamiboSingleSelectDialog(
+        title = i18n("刷新週期"),
+        options = FavoriteUpdateInterval.entries,
+        selected = selected,
+        onDismiss = onDismiss,
+        onSelect = onSelect,
+        label = { it.localizedLabel() },
+        dismissOnSelect = true,
     )
 }
 
@@ -251,55 +220,22 @@ private fun FavoriteUpdateFidFilterDialog(
     onDismiss: () -> Unit,
     onToggle: (Int, Boolean) -> Unit,
 ) {
-    val colors = YamiboTheme.colors
-    var localFilters by remember(filters) { mutableStateOf(filters) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(appString(Res.string.ui_filter_categories), color = colors.brownDeep, fontWeight = FontWeight.Bold) },
-        text = {
-            LazyColumn(modifier = Modifier.height(360.dp)) {
-                items(localFilters, key = { it.fid }) { filter ->
-                    Surface(
-                        onClick = {
-                            val enabled = !filter.enabled
-                            localFilters = localFilters.map { if (it.fid == filter.fid) it.copy(enabled = enabled) else it }
-                            onToggle(filter.fid, enabled)
-                        },
-                        color = if (filter.enabled) colors.brownPrimary.copy(alpha = 0.16f) else colors.creamSurface,
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Checkbox(
-                                checked = filter.enabled,
-                                onCheckedChange = { checked ->
-                                    localFilters = localFilters.map { if (it.fid == filter.fid) it.copy(enabled = checked) else it }
-                                    onToggle(filter.fid, checked)
-                                },
-                                colors = CheckboxDefaults.colors(
-                                    checkedColor = colors.brownDeep,
-                                    uncheckedColor = colors.brownDeep.copy(alpha = 0.6f),
-                                    checkmarkColor = colors.creamSurface,
-                                ),
-                            )
-                            Text(
-                                text = "${filter.forumName} (${filter.itemCount})",
-                                color = colors.textDark,
-                                fontWeight = FontWeight.Medium,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f),
-                            )
-                        }
-                    }
+    if (filters.isEmpty()) return
+    YamiboMultiSelectDialog(
+        title = i18n("篩選類別"),
+        options = filters,
+        selected = filters.filter { it.enabled }.toSet(),
+        onConfirm = { selected ->
+            filters.forEach { filter ->
+                val enabled = selected.any { it.fid == filter.fid }
+                if (enabled != filter.enabled) {
+                    onToggle(filter.fid, enabled)
                 }
             }
+            onDismiss()
         },
-        confirmButton = { YamiboActionChip(appString(Res.string.common_close), onDismiss) },
-        containerColor = colors.creamSurface,
+        onCancel = onDismiss,
+        label = { "${it.forumName} (${it.itemCount})" },
     )
 }
 
@@ -373,7 +309,7 @@ private fun FavoriteUpdateCard(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    text = event.latestPostTitle?.takeIf { it.isNotBlank() } ?: localizedAppMessage(event.summary),
+                    text = event.latestPostTitle?.takeIf { it.isNotBlank() } ?: event.summary,
                     color = colors.textDark.copy(alpha = 0.72f),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
@@ -384,7 +320,7 @@ private fun FavoriteUpdateCard(
                     Text("#$it", color = colors.textDark.copy(alpha = 0.56f), fontSize = 12.sp)
                 }
                 Text(
-                    text = "${localizedAppMessage(event.summary)} / ${formatUpdateRelativeTime(event.detectedAt)}",
+                    text = "${event.summary} / ${formatUpdateRelativeTime(event.detectedAt)}",
                     color = colors.textDark.copy(alpha = 0.48f),
                     fontSize = 12.sp,
                     maxLines = 1,
@@ -401,22 +337,20 @@ private fun formatUpdateRelativeTime(timestamp: Long): String {
     val hours = minutes / 60L
     val days = hours / 24L
     return when {
-        days > 0L -> appString(Res.string.time_days_ago, days)
-        hours > 0L -> appString(Res.string.time_hours_ago, hours)
-        minutes > 0L -> appString(Res.string.time_minutes_ago, minutes)
-        else -> appString(Res.string.ui_just)
+        days > 0L -> i18n("{}天前", days)
+        hours > 0L -> i18n("{}小時前", hours)
+        minutes > 0L -> i18n("{}分鐘前", minutes)
+        else -> i18n("剛剛")
     }
 }
 
 private fun emptyMessage(tab: MessageCenterTab): String = when (tab) {
-    MessageCenterTab.Updates -> appString(Res.string.ui_no_updates_detected)
-    MessageCenterTab.PrivateMessages -> appString(Res.string.ui_no_message_found)
-    MessageCenterTab.Notices -> appString(Res.string.ui_reminder_not_found)
+    MessageCenterTab.Updates -> i18n("沒有偵測到更新")
+    MessageCenterTab.PrivateMessages -> i18n("沒有找到消息")
+    MessageCenterTab.Notices -> i18n("沒有找到提醒")
 }
 
 @Composable
 private fun MessageCenterPageNavigation(pageNav: PageNav, currentPage: Int, onPageChange: (Int) -> Unit) {
     YamiboPageNavigation(pageNav = pageNav, currentPage = currentPage, onPageChange = onPageChange)
 }
-
-

@@ -3,6 +3,7 @@ package me.thenano.yamibo.yamibo_app.repository.userspace
 import io.github.littlesurvival.YamiboClient
 import io.github.littlesurvival.YamiboRoute
 import io.github.littlesurvival.core.YamiboResult
+import io.github.littlesurvival.dto.page.AddFriendPopoutScreen
 import io.github.littlesurvival.dto.page.PrivateMessagePage
 import io.github.littlesurvival.dto.page.ProfilePage
 import io.github.littlesurvival.dto.page.UserSpaceBlogPage
@@ -103,6 +104,21 @@ class UserSpaceRepositoryImpl(
             messageCache.set(page.toString(), result.value)
         }
         return result
+    }
+
+    override suspend fun fetchAddFriendPopoutScreen(userId: UserId): YamiboResult<AddFriendPopoutScreen> {
+        yamiboClient.setCookie(cookieStore.load() ?: "")
+        return yamiboClient.fetchAddFriendPopoutScreen(userId)
+    }
+
+    override suspend fun addFriend(
+        userId: UserId,
+        formHash: FormHash,
+        note: String,
+        groupId: Int,
+    ): YamiboResult<String> {
+        yamiboClient.setCookie(cookieStore.load() ?: "")
+        return yamiboClient.fetchAddFriend(userId, formHash, note, groupId)
     }
 
     override suspend fun fetchPrivateMessagePage(toUser: UserId, page: Int?): YamiboResult<PrivateMessagePage> {

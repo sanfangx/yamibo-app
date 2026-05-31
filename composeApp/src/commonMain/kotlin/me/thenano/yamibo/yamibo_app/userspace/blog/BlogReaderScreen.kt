@@ -1,49 +1,16 @@
-﻿package me.thenano.yamibo.yamibo_app.userspace.blog
-
-import me.thenano.yamibo.yamibo_app.i18n.appString
-import me.thenano.yamibo.yamibo_app.i18n.localizedMessage
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
+package me.thenano.yamibo.yamibo_app.userspace.blog
 
 import YamiboIcons
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.littlesurvival.YamiboRoute
@@ -57,16 +24,18 @@ import io.github.littlesurvival.dto.value.UserId
 import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.LocalAuthRepository
 import me.thenano.yamibo.yamibo_app.LocalBlogRepository
-import me.thenano.yamibo.yamibo_app.components.UserAvatar
-import me.thenano.yamibo.yamibo_app.components.UserIdentityRow
-import me.thenano.yamibo.yamibo_app.components.YamiboEmptyContent
-import me.thenano.yamibo.yamibo_app.components.YamiboErrorContent
-import me.thenano.yamibo.yamibo_app.components.YamiboLoadingContent
-import me.thenano.yamibo.yamibo_app.components.YamiboPageNavigation
-import me.thenano.yamibo.yamibo_app.components.YamiboPrimaryButton
-import me.thenano.yamibo.yamibo_app.components.YamiboSmallActionButton
-import me.thenano.yamibo.yamibo_app.components.YamiboStatBadge
-import me.thenano.yamibo.yamibo_app.components.YamiboTopBar
+import me.thenano.yamibo.yamibo_app.components.controls.YamiboPrimaryButton
+import me.thenano.yamibo.yamibo_app.components.controls.YamiboSmallActionButton
+import me.thenano.yamibo.yamibo_app.components.controls.YamiboStatBadge
+import me.thenano.yamibo.yamibo_app.components.feedback.YamiboEmptyContent
+import me.thenano.yamibo.yamibo_app.components.feedback.YamiboErrorContent
+import me.thenano.yamibo.yamibo_app.components.feedback.YamiboLoadingContent
+import me.thenano.yamibo.yamibo_app.components.navigation.YamiboPageNavigation
+import me.thenano.yamibo.yamibo_app.components.navigation.YamiboTopBar
+import me.thenano.yamibo.yamibo_app.components.user.UserAvatar
+import me.thenano.yamibo.yamibo_app.components.user.UserIdentityRow
+import me.thenano.yamibo.yamibo_app.i18n.i18n
+import me.thenano.yamibo.yamibo_app.i18n.localizedMessage
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
@@ -94,7 +63,7 @@ fun BlogReaderScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     var currentPage by remember(blogId, userId) { mutableIntStateOf(1) }
     var state by remember(blogId, userId) {
-        mutableStateOf<BlogReaderState>(
+        mutableStateOf(
             repository.getCachedBlogPage(blogId, userId, 1)?.let { BlogReaderState.Success(it) }
                 ?: BlogReaderState.Loading
         )
@@ -130,7 +99,7 @@ fun BlogReaderScreen(
         snackbarHost = { YamiboSnackbarHost(hostState = snackbarHostState) },
         topBar = {
             BlogReaderTopBar(
-                title = appString(Res.string.ui_blog),
+                title = i18n("日志"),
                 onBack = { navigator.pop() },
             )
         },
@@ -171,7 +140,7 @@ fun BlogReaderScreen(
                                     comment = comment,
                                     onUserClick = { user -> navigator.navigate(IUserSpaceScreen(user.uid, user.name)) },
                                     onReplyClick = { url ->
-                                        navigator.navigate(IPlatformWebView(YamiboRoute.Domain.toFullLink(url), title = appString(Res.string.ui_reply_verb)))
+                                        navigator.navigate(IPlatformWebView(YamiboRoute.Domain.toFullLink(url), title = i18n("回覆")))
                                     },
                                 )
                             }
@@ -195,10 +164,10 @@ fun BlogReaderScreen(
                                     val message = commentText.trim()
                                     when {
                                         formHash == null -> scope.launch {
-                                            snackbarHostState.showSnackbar(appString(Res.string.ui_please_log_in_first_commenting), duration = SnackbarDuration.Short)
+                                            snackbarHostState.showSnackbar(i18n("請先登入後再評論"), duration = SnackbarDuration.Short)
                                         }
                                         message.isBlank() -> scope.launch {
-                                            snackbarHostState.showSnackbar(appString(Res.string.ui_please_enter_comment_content), duration = SnackbarDuration.Short)
+                                            snackbarHostState.showSnackbar(i18n("請輸入評論內容"), duration = SnackbarDuration.Short)
                                         }
                                         else -> scope.launch {
                                             submitting = true
@@ -240,7 +209,7 @@ private fun RootBlogCard(
     val root = page.rootBlog
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 14.dp)) {
         Text(
-            text = page.blogInfo.title.ifBlank { titleHint ?: appString(Res.string.ui_blog) },
+            text = page.blogInfo.title.ifBlank { titleHint ?: i18n("日志") },
             color = colors.brownDeep,
             fontSize = 22.sp,
             fontWeight = FontWeight.Bold,
@@ -269,9 +238,9 @@ private fun RootBlogCard(
 @Composable
 private fun BlogActionRow(page: BlogPage, onUrlClick: (String, String) -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        page.blogInfo.collectUrl?.let { BlogSmallButton(appString(Res.string.main_favorite)) { onUrlClick(appString(Res.string.ui_favorite_log), it) } }
-        page.blogInfo.shareUrl?.let { BlogSmallButton(appString(Res.string.ui_share)) { onUrlClick(appString(Res.string.ui_share_log), it) } }
-        page.blogInfo.inviteUrl?.let { BlogSmallButton(appString(Res.string.ui_invite)) { onUrlClick(appString(Res.string.ui_invitation_read), it) } }
+        page.blogInfo.collectUrl?.let { BlogSmallButton(i18n("收藏")) { onUrlClick(i18n("收藏日志"), it) } }
+        page.blogInfo.shareUrl?.let { BlogSmallButton(i18n("分享")) { onUrlClick(i18n("分享日志"), it) } }
+        page.blogInfo.inviteUrl?.let { BlogSmallButton(i18n("邀請")) { onUrlClick(i18n("邀請閱讀"), it) } }
     }
 }
 
@@ -281,7 +250,7 @@ private fun BlogCommentSectionTitle(count: Int) {
     Column(Modifier.fillMaxWidth()) {
         HorizontalDivider(color = colors.brownLight.copy(alpha = 0.45f))
         Text(
-            text = if (count > 0) appString(Res.string.ui_log_comments) else appString(Res.string.ui_log_comments),
+            text = if (count > 0) i18n("日志評論") else i18n("日志評論"),
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 16.dp),
             color = colors.brownDeep,
             fontSize = 16.sp,
@@ -300,7 +269,10 @@ private fun BlogCommentCard(
     val colors = YamiboTheme.colors
     Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            UserAvatar(comment.author.avatarUrl, size = 38, modifier = Modifier.clickable { onUserClick(comment.author) })
+            UserAvatar(
+                comment.author.avatarUrl,
+                size = 38,
+                modifier = Modifier.clickable { onUserClick(comment.author) })
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
                 Text(
@@ -314,7 +286,7 @@ private fun BlogCommentCard(
             }
             comment.replyUrl?.let { url ->
                 Text(
-                    text = appString(Res.string.ui_reply_verb),
+                    text = i18n("回覆"),
                     modifier = Modifier.clickable { onReplyClick(url) }.padding(6.dp),
                     color = colors.orangeAccent,
                     fontSize = 13.sp,
@@ -336,19 +308,18 @@ private fun BlogCommentEditor(
     onValueChange: (String) -> Unit,
     onSubmit: () -> Unit,
 ) {
-    val colors = YamiboTheme.colors
     Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 14.dp)) {
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
             modifier = Modifier.fillMaxWidth().height(142.dp),
             enabled = enabled,
-            placeholder = { Text(if (enabled) appString(Res.string.ui_content_area) else appString(Res.string.ui_please_log_in_first_commenting)) },
+            placeholder = { Text(if (enabled) i18n("內容區") else i18n("請先登入後再評論")) },
         )
         Spacer(Modifier.height(12.dp))
         YamiboPrimaryButton(
-            text = appString(Res.string.ui_comment),
-            busyText = appString(Res.string.ui_commenting),
+            text = i18n("評論"),
+            busyText = i18n("評論中..."),
             enabled = enabled,
             busy = submitting,
             onClick = onSubmit,
@@ -375,7 +346,10 @@ private fun BlogPageNavigation(nav: PageNav, currentPage: Int, onPageChange: (In
 
 @Composable
 private fun BlogEmptyComments() {
-    YamiboEmptyContent(message = appString(Res.string.ui_no_comments_found), modifier = Modifier.padding(horizontal = 24.dp, vertical = 48.dp))
+    YamiboEmptyContent(
+        message = i18n("沒有找到評論"),
+        modifier = Modifier.padding(horizontal = 24.dp, vertical = 48.dp)
+    )
 }
 
 @Composable
@@ -387,5 +361,4 @@ private fun BlogReaderLoading() {
 private fun BlogReaderError(message: String, onRetry: () -> Unit) {
     YamiboErrorContent(message = message, onRetry = onRetry)
 }
-
 

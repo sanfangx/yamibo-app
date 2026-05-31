@@ -1,9 +1,7 @@
-﻿package me.thenano.yamibo.yamibo_app.favorite.sync
+package me.thenano.yamibo.yamibo_app.favorite.sync
 
-import me.thenano.yamibo.yamibo_app.i18n.appString
-import me.thenano.yamibo.yamibo_app.i18n.localizedAppMessage
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
+import me.thenano.yamibo.yamibo_app.i18n.i18n
+
 
 import YamiboIcons
 import androidx.compose.foundation.BorderStroke
@@ -88,7 +86,7 @@ fun FavoriteSyncProgressScreen(runId: String) {
                 TopAppBar(
                     title = {
                         Text(
-                            text = appString(Res.string.ui_synchronous_yamibo_favorite),
+                            text = i18n("同步百合會收藏"),
                             color = Color.White,
                             fontWeight = FontWeight.Bold,
                             fontSize = 18.sp,
@@ -118,7 +116,7 @@ fun FavoriteSyncProgressScreen(runId: String) {
                 when {
                     snapshot == null || snapshot.runId != runId -> {
                         Text(
-                            text = appString(Res.string.ui_the_synchronization_task_cannot_found),
+                            text = i18n("找不到這個同步任務。"),
                             color = colors.textDark,
                             style = MaterialTheme.typography.bodyLarge,
                         )
@@ -140,7 +138,7 @@ fun FavoriteSyncProgressScreen(runId: String) {
                             },
                         )
                         Text(
-                            text = appString(Res.string.ui_closing_screen_not_abort_synchronization_can_still_check_progress),
+                            text = i18n("關閉這個畫面不會中止同步，你之後仍可從收藏頁或設定頁重新查看進度。"),
                             color = colors.textDark.copy(alpha = 0.72f),
                             fontSize = 13.sp,
                         )
@@ -213,7 +211,7 @@ fun FavoriteSyncStatusCard(
                         fontSize = 18.sp,
                     )
                     Text(
-                        text = appString(Res.string.favorite_sync_target_category, categoryName?.let(::localizedAppMessage) ?: appString(Res.string.ui_default)),
+                        text = i18n("目標類別：{}", (categoryName?.takeIf { it.isNotBlank() } ?: i18n("預設"))),
                         color = colors.textDark.copy(alpha = 0.72f),
                         fontSize = 13.sp,
                     )
@@ -241,8 +239,8 @@ fun FavoriteSyncStatusCard(
                     color = colors.brownDeep,
                     trackColor = colors.brownPrimary.copy(alpha = 0.18f),
                 )
-                SyncMetricRow(appString(Res.string.ui_last_sync_time), formatSyncDateTime(lastSyncTimestamp))
-                SyncMetricRow(appString(Res.string.ui_synchronization_takes_time), formatSyncDuration(displayedElapsedDuration))
+                SyncMetricRow(i18n("最後一次同步時間"), formatSyncDateTime(lastSyncTimestamp))
+                SyncMetricRow(i18n("同步花費時間"), formatSyncDuration(displayedElapsedDuration))
                 progressUi.lines.forEach { line ->
                     SyncMetricRow(line.first, line.second)
                 }
@@ -250,8 +248,8 @@ fun FavoriteSyncStatusCard(
 
             snapshot.logMessage?.takeIf { it.isNotBlank() }?.let {
                 SyncMessageBlock(
-                    title = appString(Res.string.ui_blog_traditional_label),
-                    message = localizedAppMessage(it),
+                    title = i18n("日誌"),
+                    message = it,
                     tint = colors.brownPrimary,
                     maxHeight = messageMaxHeight,
                 )
@@ -259,8 +257,8 @@ fun FavoriteSyncStatusCard(
 
             snapshot.warningMessage?.takeIf { it.isNotBlank() }?.let {
                 SyncMessageBlock(
-                    title = appString(Res.string.ui_remind),
-                    message = localizedAppMessage(it),
+                    title = i18n("提醒"),
+                    message = it,
                     tint = colors.brownDeep,
                     maxHeight = messageMaxHeight,
                 )
@@ -268,8 +266,8 @@ fun FavoriteSyncStatusCard(
 
             snapshot.errorMessage?.takeIf { it.isNotBlank() }?.let {
                 SyncMessageBlock(
-                    title = appString(Res.string.ui_mistake),
-                    message = localizedAppMessage(it),
+                    title = i18n("錯誤"),
+                    message = it,
                     tint = Color(0xFFB74D42),
                     maxHeight = messageMaxHeight,
                 )
@@ -287,7 +285,7 @@ fun FavoriteSyncStatusCard(
                             contentColor = Color.White,
                         ),
                     ) {
-                        Text(if (state is FavoriteSyncState.Running) appString(Res.string.ui_view_progress) else appString(Res.string.ui_open_progress))
+                        Text(if (state is FavoriteSyncState.Running) i18n("查看進度") else i18n("打開進度"))
                     }
                 }
                 if (onInterrupt != null && state is FavoriteSyncState.Running) {
@@ -298,7 +296,7 @@ fun FavoriteSyncStatusCard(
                             contentColor = Color.White,
                         ),
                     ) {
-                        Text(appString(Res.string.ui_interrupt_synchronization))
+                        Text(i18n("中斷同步"))
                     }
                 }
                 if (onResume != null && state !is FavoriteSyncState.Running) {
@@ -309,7 +307,7 @@ fun FavoriteSyncStatusCard(
                             contentColor = colors.brownDeep,
                         ),
                     ) {
-                        Text(if (state is FavoriteSyncState.Completed) appString(Res.string.ui_resync) else appString(Res.string.ui_continue_syncing))
+                        Text(if (state is FavoriteSyncState.Completed) i18n("重新同步") else i18n("繼續同步"))
                     }
                 }
                 if (onDismiss != null) {
@@ -320,7 +318,7 @@ fun FavoriteSyncStatusCard(
                             contentColor = colors.textDark.copy(alpha = 0.82f),
                         ),
                     ) {
-                        Text(appString(Res.string.ui_hide))
+                        Text(i18n("隱藏"))
                     }
                 }
             }
@@ -437,7 +435,6 @@ private fun SyncMessageBlock(
     }
 }
 
-
 private fun formatSyncDateTime(timestamp: Long): String {
     val totalDays = timestamp / (24 * 60 * 60 * 1000L)
     var year = 1970
@@ -469,16 +466,15 @@ private fun formatSyncDuration(durationMs: Long): String {
     val minutes = (totalSeconds % 3600L) / 60L
     val seconds = totalSeconds % 60L
     return if (hours > 0) {
-        appString(Res.string.favorite_sync_elapsed_hms, hours, minutes, seconds)
+        i18n("{}時 {}分 {}秒", hours, minutes, seconds)
     } else if (minutes > 0) {
-        appString(Res.string.favorite_sync_elapsed_ms, minutes, seconds)
+        i18n("{}分 {}秒", minutes, seconds)
     } else {
-        appString(Res.string.favorite_sync_elapsed_s, seconds)
+        i18n("{}秒", seconds)
     }
 }
 
 private fun isLeapYear(year: Int): Boolean {
     return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)
 }
-
 

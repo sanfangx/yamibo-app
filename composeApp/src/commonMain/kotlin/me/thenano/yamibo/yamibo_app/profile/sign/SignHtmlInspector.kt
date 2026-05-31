@@ -1,8 +1,6 @@
-﻿package me.thenano.yamibo.yamibo_app.profile.sign
+package me.thenano.yamibo.yamibo_app.profile.sign
 
-import me.thenano.yamibo.yamibo_app.i18n.appString
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
+import me.thenano.yamibo.yamibo_app.i18n.i18n
 
 internal fun isCloudflareChallengeHtml(html: String): Boolean {
     val body = html.lowercase()
@@ -13,24 +11,17 @@ internal fun isCloudflareChallengeHtml(html: String): Boolean {
         body.contains("cloudflare") && body.contains("challenge")
 }
 
-internal fun isSignPageHtml(html: String): Boolean {
-    return html.contains(appString(Res.string.ui_click_check_in)) ||
-        html.contains(appString(Res.string.ui_check_in_announcement)) ||
-        html.contains("repairday") ||
-        html.contains(appString(Res.string.ui_my_check_in_status))
-}
-
 internal fun isSignResultPageHtml(html: String): Boolean {
-    return html.contains(appString(Res.string.ui_prompt_message)) && (
-        html.contains(appString(Res.string.ui_check_in_successfully)) ||
-            html.contains(appString(Res.string.ui_already_checked_in)) ||
-            html.contains(appString(Res.string.ui_re_signing_2)) ||
-            html.contains(appString(Res.string.ui_return_signature_details))
+    return html.contains(i18n("提示信息")) && (
+        html.contains(i18n("打卡成功")) ||
+            html.contains(i18n("已经打过卡")) ||
+            html.contains(i18n("补签")) ||
+            html.contains(i18n("返回签详情"))
         )
 }
 
 internal fun isMaintenancePageHtml(html: String): Boolean {
-    return html.contains(appString(Res.string.ui_title_yamibo_daily_maintenance_title)) ||
-        html.contains("""<img class="pic" src="/images/backup01.jpg" alt=appString(Res.string.ui_daily_maintenance)>""")
+    return html.contains(i18n("<title>百合会每日维护</title>")) ||
+        html.contains("""<img class="pic" src="/images/backup01.jpg" alt=i18n("每日维护")>""")
 }
 

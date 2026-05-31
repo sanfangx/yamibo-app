@@ -171,6 +171,12 @@
     <string name="ui_send_message">發消息</string>
     <string name="ui_their_profile">Ta的資料</string>
     <string name="ui_reason_for_rating">評分理由</string>
+    <string name="ui_rate_options_loading">正在載入選項</string>
+    <string name="ui_rate_options_failed_manual">載入失敗, 可選擇直接填寫</string>
+    <string name="ui_notify_author">通知作者</string>
+    <string name="ui_select">選擇</string>
+    <string name="ui_select_score">選擇分數</string>
+    <string name="ui_select_rate_reason">選擇評分理由</string>
     <string name="ui_enter_keyword_post_link">輸入關鍵字或帖子連結</string>
     <string name="ui_7_days_week">本周 7 天</string>
     <string name="ui_try_again">重試</string>
@@ -797,11 +803,41 @@
     <string name="msg_sign_already_signed">今天已經打卡過了。</string>
     <string name="msg_sign_repair_completed">%1$s 已完成 %2$d 次補簽。</string>
     <string name="msg_sign_cloudflare_required">尚未通過簽到頁的 Cloudflare 驗證，請先在 WebView 完成驗證。</string>
-    <string name="msg_sign_action_completed">操作完成</string></resources>
-
-
-
-
+    <string name="msg_sign_action_completed">操作完成</string>
+    <string name="app_name_display">百合會論壇</string>
+    <string name="settings_app_update_title">App 更新</string>
+    <string name="settings_app_update_subtitle">檢查版本、下載 APK 與打開安裝流程</string>
+    <string name="ui_checking">檢查中...</string>
+    <string name="ui_check_update">檢查更新</string>
+    <string name="ui_checking_update">正在檢查更新</string>
+    <string name="ui_download_update">下載更新</string>
+    <string name="ui_release_page">發布頁</string>
+    <string name="ui_update_manifest_source_hint">更新資訊來自 manifest；牆內使用者可優先使用 Gitee/GitCode 鏡像源。</string>
+    <string name="ui_update_not_checked">尚未檢查更新</string>
+    <string name="ui_update_available">發現新版本 %1$s</string>
+    <string name="ui_update_ignored">已忽略版本 %1$s</string>
+    <string name="ui_update_up_to_date">目前已是最新版本：%1$s</string>
+    <string name="ui_update_check_failed">檢查更新失敗</string>
+    <string name="ui_update_source">來源：%1$s</string>
+    <string name="ui_downloading_update">正在下載更新...</string>
+    <string name="ui_update_install_started">下載完成，已打開系統安裝流程。</string>
+    <string name="ui_update_install_permission_required">需要允許此 app 安裝未知來源應用，完成授權後請重新點擊下載。</string>
+    <string name="ui_update_download_failed">下載失敗：%1$s</string>
+    <string name="ui_app_update_launch_threshold">開屏檢查更新間隔</string>
+    <string name="ui_app_update_launch_threshold_desc">啟動 app 後在背景檢查更新；未超過間隔不會發出網路請求。</string>
+    <string name="app_update_launch_threshold_manual">不自動檢查</string>
+    <string name="app_update_launch_threshold_6h">6 小時</string>
+    <string name="app_update_launch_threshold_12h">12 小時</string>
+    <string name="app_update_launch_threshold_24h">24 小時</string>
+    <string name="app_update_launch_threshold_3d">3 天</string>
+    <string name="app_update_launch_threshold_7d">7 天</string>
+    <string name="ui_update_available_dialog_title">發現新版本 %1$s</string>
+    <string name="ui_update_available_dialog_message">新版已可下載。你可以立即下載更新，或稍後到設定中的 App 更新頁處理。</string>
+    <string name="ui_check_in_launch_reminder">開屏簽到提醒</string>
+    <string name="ui_check_in_launch_reminder_desc">今天尚未簽到時，在 app 開屏後提醒你前往簽到。</string>
+    <string name="ui_check_in_launch_reminder_title">你今天還沒簽到</string>
+    <string name="ui_check_in_launch_reminder_message">今天尚未完成每日簽到。</string>
+    <string name="ui_go_to_check_in">前往簽到</string></resources>
 
 
 

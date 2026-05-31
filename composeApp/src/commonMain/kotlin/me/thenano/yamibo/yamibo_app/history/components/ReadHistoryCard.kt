@@ -1,8 +1,6 @@
-﻿package me.thenano.yamibo.yamibo_app.history.components
+package me.thenano.yamibo.yamibo_app.history.components
 
-import me.thenano.yamibo.yamibo_app.i18n.appString
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
+import me.thenano.yamibo.yamibo_app.i18n.i18n
 
 import YamiboIcons
 import androidx.compose.animation.core.animateFloatAsState
@@ -66,10 +64,10 @@ fun ReadHistoryCard(
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val timingSummary = buildString {
-        append(appString(Res.string.ui_recently_read))
+        append(i18n("最近閱讀 "))
         append(timeLabel)
         history.lastUpdatedTime?.takeIf { it > 0L }?.let {
-            append(appString(Res.string.ui_last_updated))
+            append(i18n(" / 最後更新 "))
             append(formatHistoryRelativeTime(it))
         }
     }
@@ -187,7 +185,7 @@ fun ReadHistoryCard(
                 val progress = if (history.postTitle.isNotEmpty()) {
                     "P.${history.page} ${history.postTitle}"
                 } else {
-                    appString(Res.string.common_page_number, history.page)
+                    i18n("第 {} 頁", history.page)
                 }
                 Text(
                     text = progress,
@@ -237,7 +235,7 @@ fun ReadHistoryCard(
                     ) {
                         Icon(
                             imageVector = YamiboIcons.Trashcan,
-                            contentDescription = appString(Res.string.common_delete),
+                            contentDescription = i18n("刪除"),
                             modifier = Modifier.size(16.dp),
                             tint = colors.textDark.copy(alpha = 0.4f)
                         )
@@ -254,11 +252,10 @@ private fun formatHistoryRelativeTime(timestamp: Long): String {
     val hours = minutes / 60L
     val days = hours / 24L
     return when {
-        days > 0L -> appString(Res.string.time_days_ago, days)
-        hours > 0L -> appString(Res.string.time_hours_ago, hours)
-        minutes > 0L -> appString(Res.string.time_minutes_ago, minutes)
-        else -> appString(Res.string.ui_just)
+        days > 0L -> i18n("{}天前", days)
+        hours > 0L -> i18n("{}小時前", hours)
+        minutes > 0L -> i18n("{}分鐘前", minutes)
+        else -> i18n("剛剛")
     }
 }
-
 

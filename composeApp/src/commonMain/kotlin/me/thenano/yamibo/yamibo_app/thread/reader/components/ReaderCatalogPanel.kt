@@ -1,8 +1,6 @@
 ﻿package me.thenano.yamibo.yamibo_app.thread.reader.components
 
-import me.thenano.yamibo.yamibo_app.i18n.appString
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
+import me.thenano.yamibo.yamibo_app.i18n.i18n
 
 import YamiboIcons
 import androidx.compose.animation.*
@@ -29,7 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.littlesurvival.dto.page.Post
 import io.github.littlesurvival.dto.value.PostId
-import me.thenano.yamibo.yamibo_app.components.rememberConvertedText
+import me.thenano.yamibo.yamibo_app.components.text.rememberConvertedText
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 
 /** Catalog drawer panel showing pages and post-entries */
@@ -63,7 +61,7 @@ internal fun ReaderCatalogPanel(
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = appString(Res.string.ui_table_contents_2),
+                text = i18n("目錄"),
                 color = colors.creamBackground,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold
@@ -99,7 +97,7 @@ internal fun ReaderCatalogPanel(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = appString(Res.string.common_page_number, page),
+                                text = i18n("第 {} 頁", page),
                                 color = colors.brownPrimary,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 16.sp
@@ -208,5 +206,4 @@ internal fun ReaderCatalogPanel(
         }
     }
 }
-
 

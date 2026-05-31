@@ -18,6 +18,7 @@ import me.thenano.yamibo.yamibo_app.repository.*
 import me.thenano.yamibo.yamibo_app.repository.chineseconversion.createChineseConversionRepository
 import me.thenano.yamibo.yamibo_app.repository.favorite.FavoriteSyncRepositoryImpl
 import me.thenano.yamibo.yamibo_app.repository.favorite.FavoriteUpdateRepositoryImpl
+import me.thenano.yamibo.yamibo_app.repository.appupdate.DefaultAppUpdateRepository
 import me.thenano.yamibo.yamibo_app.repository.inapplinknavigation.DefaultInAppLinkNavigationRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.AppSettingsRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.MangaReaderSettingsRepository
@@ -27,6 +28,7 @@ import me.thenano.yamibo.yamibo_app.repository.userspace.UserSpaceRepositoryImpl
 import me.thenano.yamibo.yamibo_app.store.IOSCookieStore
 import me.thenano.yamibo.yamibo_app.store.IOSUserStore
 import me.thenano.yamibo.yamibo_app.store.settings.IOSSettingsStore
+import me.thenano.yamibo.yamibo_app.update.IOSAppUpdatePlatform
 
 fun MainViewController() = ComposeUIViewController {
     /** Navigator Logic */
@@ -102,11 +104,18 @@ fun MainViewController() = ComposeUIViewController {
         )
     }
     val themeRepository = remember { IOSThemeRepository() }
+    val appUpdateRepository = remember {
+        DefaultAppUpdateRepository(
+            appSettingsRepository = appSettingsRepository,
+            platform = IOSAppUpdatePlatform(),
+        )
+    }
 
     /** Provide Repositories */
     CompositionLocalProvider(
         LocalNavigator provides navigator,
         LocalAuthRepository provides authRepository,
+        LocalAppUpdateRepository provides appUpdateRepository,
         LocalForumRepository provides forumRepository,
         LocalThreadRepository provides threadRepository,
         LocalInAppLinkNavigationRepository provides inAppLinkNavigationRepository,

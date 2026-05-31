@@ -1,9 +1,8 @@
 ﻿package me.thenano.yamibo.yamibo_app.thread.reader
 
-import me.thenano.yamibo.yamibo_app.i18n.appString
+import me.thenano.yamibo.yamibo_app.i18n.i18n
+
 import me.thenano.yamibo.yamibo_app.i18n.localizedMessage
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -39,7 +38,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import me.thenano.yamibo.yamibo_app.*
 import me.thenano.yamibo.yamibo_app.favorite.*
-import me.thenano.yamibo.yamibo_app.components.ReadingTimeTracker
+import me.thenano.yamibo.yamibo_app.components.tracking.ReadingTimeTracker
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.inapplinknavigation.InAppLinkContext
 import me.thenano.yamibo.yamibo_app.repository.LocalBookMarkRepository as BookMarkRepository
@@ -225,7 +224,7 @@ internal fun ThreadReaderScreen(
     var isFavorited by remember { mutableStateOf(false) }
     var favoriteRefreshToken by remember { mutableIntStateOf(0) }
     var pendingFavoriteRemovalSelection by remember { mutableStateOf<FavoriteLocationSelection?>(null) }
-    var pendingFavoriteRemovalSuccessMessage by remember { mutableStateOf(appString(Res.string.ui_canceled_favorites)) }
+    var pendingFavoriteRemovalSuccessMessage by remember { mutableStateOf(i18n("已取消收藏")) }
     var showFavoriteRemovalConfirm by remember { mutableStateOf(false) }
     var showFavoriteMultiPathDialog by remember { mutableStateOf(false) }
     var showFavoriteAddSyncConfirm by remember { mutableStateOf(false) }
@@ -324,7 +323,7 @@ internal fun ThreadReaderScreen(
             scope = scope,
             snackbarHostState = snackbarHostState,
             successMessage = pendingFavoriteRemovalSuccessMessage,
-            failureMessage = appString(Res.string.ui_failed_cancel_favorite),
+            failureMessage = i18n("取消收藏失敗"),
             onRefreshRequested = { favoriteRefreshToken += 1 },
         )
         pendingFavoriteRemovalSelection = null
@@ -351,7 +350,7 @@ internal fun ThreadReaderScreen(
         val selection = favoriteRepository.getFavoriteLocationSelection(target)
         if (selection.item != null) {
             pendingFavoriteRemovalSelection = selection
-            pendingFavoriteRemovalSuccessMessage = appString(Res.string.ui_canceled_favorites)
+            pendingFavoriteRemovalSuccessMessage = i18n("已取消收藏")
             if (appSettingsRepository.skipFavoriteRemovalConfirm.getValue()) {
                 if (selection.paths.size > 1) {
                     showFavoriteMultiPathDialog = true
@@ -389,32 +388,32 @@ internal fun ThreadReaderScreen(
         val formHash = getFormHash()
         val fId = threadInfo?.forum?.fid
         if (formHash == null || fId == null) {
-            snackbarHostState.showSnackbar(appString(Res.string.ui_failed_obtain_login_information_log_in_again))
+            snackbarHostState.showSnackbar(i18n("獲取登入資訊失敗，請重新登入"))
             false
         } else {
             when (val res = threadRepository.votePoll(fId, tid, optionIds, formHash)) {
                 is YamiboResult.Success -> {
-                    snackbarHostState.showSnackbar(appString(Res.string.ui_the_vote_was_successful_refreshing_page))
+                    snackbarHostState.showSnackbar(i18n("投票成功，正在刷新頁面..."))
                     refreshThreadAfterVote?.invoke()
                     true
                 }
                 else -> {
-                    snackbarHostState.showSnackbar(appString(Res.string.thread_vote_failed, res.localizedMessage()))
+                    snackbarHostState.showSnackbar(i18n("投票失敗: {}", res.localizedMessage()))
                     false
                 }
             }
         }
     }
 
-    val handleRate: (PostId, Int, String) -> Unit = { pid, score, reason ->
+    val handleRate: (PostId, Int, String, Boolean) -> Unit = { pid, score, reason, noticeAuthor ->
         val formHash = getFormHash()
         if (formHash == null) {
-            scope.launch { snackbarHostState.showSnackbar(appString(Res.string.ui_failed_obtain_login_information_log_in_again)) }
+            scope.launch { snackbarHostState.showSnackbar(i18n("獲取登入資訊失敗，請重新登入")) }
         } else {
             scope.launch {
-                when (val res = threadRepository.ratePost(tid, pid, score, reason, formHash)) {
-                    is YamiboResult.Success -> snackbarHostState.showSnackbar(appString(Res.string.ui_rating_successful_update_rating_review_status_refreshing))
-                    else -> snackbarHostState.showSnackbar(appString(Res.string.thread_rate_failed, res.localizedMessage()))
+                when (val res = threadRepository.ratePost(tid, pid, score, reason, formHash, noticeAuthor)) {
+                    is YamiboResult.Success -> snackbarHostState.showSnackbar(i18n("評分成功，刷新後更新評分/點評狀態"))
+                    else -> snackbarHostState.showSnackbar(i18n("評分失敗: {}", res.localizedMessage()))
                 }
             }
         }
@@ -423,12 +422,12 @@ internal fun ThreadReaderScreen(
     val handleComment: (PostId, String) -> Unit = { pid, message ->
         val formHash = getFormHash()
         if (formHash == null) {
-            scope.launch { snackbarHostState.showSnackbar(appString(Res.string.ui_failed_obtain_login_information_log_in_again)) }
+            scope.launch { snackbarHostState.showSnackbar(i18n("獲取登入資訊失敗，請重新登入")) }
         } else {
             scope.launch {
                 when (val res = threadRepository.commentPost(tid, pid, message, formHash)) {
-                    is YamiboResult.Success -> snackbarHostState.showSnackbar(appString(Res.string.ui_the_review_successful_rating_review_status_updated_refreshing))
-                    else -> snackbarHostState.showSnackbar(appString(Res.string.thread_comment_failed, res.localizedMessage()))
+                    is YamiboResult.Success -> snackbarHostState.showSnackbar(i18n("點評成功，刷新後更新評分/點評狀態"))
+                    else -> snackbarHostState.showSnackbar(i18n("點評失敗: {}", res.localizedMessage()))
                 }
             }
         }
@@ -438,10 +437,10 @@ internal fun ThreadReaderScreen(
         val replyPageUrl = YamiboRoute.PostReply(tid, pid).build()
         navigator.navigate(
             IActionWebView(
-                title = appString(Res.string.ui_leave_reply),
+                title = i18n("發表回復"),
                 initialUrl = replyPageUrl,
                 successCondition = { url -> url.contains("mod=viewthread") && url.contains("tid=") },
-                onSuccess = { scope.launch { snackbarHostState.showSnackbar(appString(Res.string.ui_reply_successful)) } },
+                onSuccess = { scope.launch { snackbarHostState.showSnackbar(i18n("回復成功")) } },
             )
         )
     }
@@ -625,7 +624,7 @@ internal fun ThreadReaderScreen(
         }
     }
     val entryIndexByPid = remember(readerEntries) {
-        buildMap<Long, Int> {
+        buildMap {
             readerEntries.forEachIndexed { index, entry ->
                 val postId = entry.post.pid.value.toLong()
                 if (!containsKey(postId)) {
@@ -635,7 +634,7 @@ internal fun ThreadReaderScreen(
         }
     }
     val entryIndexByAnchorBlockId = remember(readerEntries) {
-        buildMap<String, Int> {
+        buildMap {
             readerEntries.forEachIndexed { index, entry ->
                 entry.anchorBlockId?.let { anchorBlockId ->
                     if (!containsKey(anchorBlockId)) {
@@ -734,9 +733,6 @@ internal fun ThreadReaderScreen(
         val viewportBottom = layoutInfo.viewportEndOffset
         val viewportCenter = (viewportTop + viewportBottom) / 2
 
-        val centerItem = visibleItems.firstOrNull { item ->
-            item.offset <= viewportCenter && item.offset + item.size >= viewportCenter
-        } ?: visibleItems.first()
         val centerEntry = visibleItems
             .mapNotNull { item ->
                 readerEntries.getOrNull(item.index)?.takeIf { it.isScrollAnchor }?.let { entry -> item to entry }
@@ -832,7 +828,7 @@ internal fun ThreadReaderScreen(
                 favoriteRepository.syncFavoriteMetadata(favoriteTarget(coverOverride = resolvedCoverUrl))
             } catch (_: Exception) {
             }
-            snackbarHostState.showSnackbar(appString(Res.string.ui_already_set_as_cover))
+            snackbarHostState.showSnackbar(i18n("已設為封面"))
         }
     }
 
@@ -873,7 +869,7 @@ internal fun ThreadReaderScreen(
                     loadSucceeded = true
                 }
                 else -> {
-                    snackbarHostState.showSnackbar(appString(Res.string.thread_refresh_failed_try_cache, result.localizedMessage()))
+                    snackbarHostState.showSnackbar(i18n("刷新失敗: {}，嘗試讀取緩存", result.localizedMessage()))
                     if (loadFromCache()) {
                         loadSucceeded = true
                     } else if (page == initialPage || page == 1) {
@@ -897,7 +893,7 @@ internal fun ThreadReaderScreen(
                         failedAutoLoadPages[page] = result.localizedMessage()
                     }
                     if (page == initialPage || page == 1) state = ReaderState.Error(result.localizedMessage())
-                    else snackbarHostState.showSnackbar(appString(Res.string.thread_load_failed, result.localizedMessage()))
+                    else snackbarHostState.showSnackbar(i18n("載入失敗: {}", result.localizedMessage()))
                 }
             }
         }
@@ -934,7 +930,7 @@ internal fun ThreadReaderScreen(
             listState.scrollToItem(entryIndex)
             hasRestoredPosition = true
             if (nearestPost.pid.value.toLong() != targetPidLong) {
-                snackbarHostState.showSnackbar(appString(Res.string.ui_the_specified_floor_cannot_found_jumped_nearest_floor))
+                snackbarHostState.showSnackbar(i18n("找不到指定的樓層，已跳轉至最接近的樓層"))
             }
         }
     }
@@ -942,9 +938,9 @@ internal fun ThreadReaderScreen(
     suspend fun restoreSavedListOffset(index: Int, offset: Int) {
         listState.scrollToItem(index, offset)
         withFrameNanos { }
-        delay(120)
+        delay(120.milliseconds)
         listState.scrollToItem(index, offset)
-        delay(300)
+        delay(300.milliseconds)
         listState.scrollToItem(index, offset)
     }
 
@@ -1017,7 +1013,7 @@ internal fun ThreadReaderScreen(
         } finally {
             pendingSavedPosition = null
             hasRestoredPosition = true
-            delay(300)
+            delay(300.milliseconds)
             isRestoringSavedPosition = false
         }
     }
@@ -1042,7 +1038,7 @@ internal fun ThreadReaderScreen(
     LaunchedEffect(listState, state) {
         if (state != ReaderState.Success) return@LaunchedEffect
         snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }
-            .debounce(2000)
+            .debounce(2000.milliseconds)
             .collect {
                 if (!hasRestoredPosition || pendingSavedPosition != null || isRestoringSavedPosition) return@collect
                 val history = buildHistory() ?: return@collect
@@ -1311,7 +1307,8 @@ internal fun ThreadReaderScreen(
                                             totalReplies = threadInfo?.totalReplies.takeIf { post.floor == 1 },
                                             linkContext = htmlLinkContext,
                                             onVote = { optionIds -> handleVote(optionIds) },
-                                            onRate = { score, reason -> handleRate(post.pid, score, reason) },
+                                            onLoadRateOptions = { threadRepository.fetchRatePopoutPage(tid, post.pid) },
+                                            onRate = { score, reason, noticeAuthor -> handleRate(post.pid, score, reason, noticeAuthor) },
                                             onComment = { message -> handleComment(post.pid, message) },
                                             onReply = { handleReply(post.pid) },
                                             cachedHeightPx = if (hasTrackedImages) postHeightCache[postId] else null,
@@ -1418,7 +1415,8 @@ internal fun ThreadReaderScreen(
                                             linkContext = htmlLinkContext,
                                             verticalPadding = 0.dp,
                                             onVote = { optionIds -> handleVote(optionIds) },
-                                            onRate = { score, reason -> handleRate(post.pid, score, reason) },
+                                            onLoadRateOptions = { threadRepository.fetchRatePopoutPage(tid, post.pid) },
+                                            onRate = { score, reason, noticeAuthor -> handleRate(post.pid, score, reason, noticeAuthor) },
                                             onComment = { message -> handleComment(post.pid, message) },
                                             onReply = { handleReply(post.pid) },
                                         )
@@ -1427,7 +1425,7 @@ internal fun ThreadReaderScreen(
                                     ReaderEntryKind.RegularTagBanner,
                                     ReaderEntryKind.NovelTagBanner -> {
                                         CommentBanner(
-                                            text = appString(Res.string.ui_view_tag_list),
+                                            text = i18n("查看標籤列表"),
                                             icon = "🏷️",
                                             onClick = {
                                                 navigator.navigate(
@@ -1442,12 +1440,12 @@ internal fun ThreadReaderScreen(
 
                                     ReaderEntryKind.NovelCommentBanner -> {
                                         CommentBanner(
-                                            text = appString(Res.string.ui_click_jump_comment_area),
+                                            text = i18n("點擊跳轉到評論區"),
                                             onClick = {
                                                 navigator.navigate(
                                                     ICommentReaderScreen(
                                                         tid = tid,
-                                                        postTitle = post.title.ifEmpty { appString(Res.string.thread_floor_title, post.floor) },
+                                                        postTitle = post.title.ifEmpty { i18n("第{}樓", post.floor) },
                                                         oPostId = post.pid,
                                                         authorId = authorId ?: post.author.uid
                                                     )
@@ -1484,7 +1482,7 @@ internal fun ThreadReaderScreen(
                             if (nextFailedAutoLoadPage != null) {
                                 item(key = "retry_page_$nextFailedAutoLoadPage") {
                                     CommentBanner(
-                                        text = appString(Res.string.thread_page_load_retry, nextFailedAutoLoadPage),
+                                        text = i18n("第 {} 頁載入失敗，點擊重試", nextFailedAutoLoadPage),
                                         icon = "↻",
                                         onClick = {
                                             scope.launch {
@@ -1505,7 +1503,7 @@ internal fun ThreadReaderScreen(
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Text(
-                                            text = appString(Res.string.ui_no_more_content),
+                                            text = i18n("- 沒有更多內容了 -"),
                                             color = colors.textDark.copy(alpha = 0.5f),
                                             fontSize = 12.sp
                                         )
@@ -1564,11 +1562,11 @@ internal fun ThreadReaderScreen(
                         val replyUrl = YamiboRoute.ThreadReply(tid, loadedPages.maxOrNull() ?: 1).build()
                         navigator.navigate(
                             IActionWebView(
-                                title = appString(Res.string.ui_leave_reply),
+                                title = i18n("發表回復"),
                                 initialUrl = replyUrl,
                                 successCondition = { url -> url.contains("mod=viewthread") && url.contains("tid=") },
                                 onSuccess = {
-                                    scope.launch { snackbarHostState.showSnackbar(appString(Res.string.ui_reply_successful)) }
+                                    scope.launch { snackbarHostState.showSnackbar(i18n("回復成功")) }
                                 },
                             )
                         )
@@ -1623,9 +1621,7 @@ internal fun ThreadReaderScreen(
 
                 NovelReaderSettingsPanel(
                     visible = showSettingsPanel,
-                    novelSettingsRepo = novelSettingsRepository,
                     appSettingsRepo = appSettingsRepo,
-                    onDismiss = { showSettingsPanel = false },
                     modifier = Modifier.align(Alignment.BottomCenter)
                 )
             }
@@ -1673,7 +1669,7 @@ internal fun ThreadReaderScreen(
                     } else if (selectedCategories.isEmpty() && selectedCollections.isEmpty()) {
                         showFavoriteDialog = false
                         pendingFavoriteRemovalSelection = favoriteRepository.getFavoriteLocationSelection(target)
-                        pendingFavoriteRemovalSuccessMessage = appString(Res.string.ui_all_favorites_have_canceled)
+                        pendingFavoriteRemovalSuccessMessage = i18n("已取消所有收藏")
                         if (appSettingsRepository.skipFavoriteRemovalConfirm.getValue()) {
                             if ((pendingFavoriteRemovalSelection?.paths?.size ?: 0) > 1) {
                                 showFavoriteMultiPathDialog = true
@@ -1687,7 +1683,7 @@ internal fun ThreadReaderScreen(
                         favoriteRepository.setItemLocations(existing.id, selectedCategories, selectedCollections)
                         showFavoriteDialog = false
                         favoriteRefreshToken += 1
-                        snackbarHostState.showSnackbar(appString(Res.string.ui_favorite_path_updated))
+                        snackbarHostState.showSnackbar(i18n("已更新收藏路徑"))
                     }
                 }
             }
@@ -1708,7 +1704,7 @@ internal fun ThreadReaderScreen(
                     if ((selection?.paths?.size ?: 0) > 1) {
                         showFavoriteMultiPathDialog = true
                     } else {
-                        pendingFavoriteRemovalSuccessMessage = appString(Res.string.ui_canceled_favorites)
+                        pendingFavoriteRemovalSuccessMessage = i18n("已取消收藏")
                         maybePromptRemoteRemoval()
                     }
                 }
@@ -1753,14 +1749,14 @@ internal fun ThreadReaderScreen(
     if (showFavoriteMultiPathDialog) {
         FavoriteMultiPathRemoveDialog(
             paths = pendingFavoriteRemovalSelection?.paths.orEmpty(),
-            tip = appString(Res.string.ui_tip_long_press_edit_favorite_path_in_detail),
+            tip = i18n("tip：長按可詳細編輯收藏路徑"),
             onDismiss = {
                 showFavoriteMultiPathDialog = false
                 pendingFavoriteRemovalSelection = null
             },
             onRemoveAll = {
                 showFavoriteMultiPathDialog = false
-                pendingFavoriteRemovalSuccessMessage = appString(Res.string.ui_all_favorites_have_canceled)
+                pendingFavoriteRemovalSuccessMessage = i18n("已取消所有收藏")
                 scope.launch {
                     maybePromptRemoteRemoval()
                 }
@@ -1782,12 +1778,12 @@ internal fun ThreadReaderScreen(
                         targetType = BookMarkRepository.TargetType.ThreadPost,
                         parentId = tid.value.toLong(),
                         targetId = post.pid.value.toLong(),
-                        title = post.title.ifBlank { appString(Res.string.ui_untitled) },
+                        title = post.title.ifBlank { i18n("（無標題）") },
                         bookmarked = next,
                     )
                     reloadPostBookMarks()
                     snackbarHostState.showSnackbar(
-                        if (next) appString(Res.string.ui_bookmark_added) else appString(Res.string.ui_bookmark_removed),
+                        if (next) i18n("已新增書籤") else i18n("已移除書籤"),
                         duration = SnackbarDuration.Short,
                     )
                 }
@@ -1800,12 +1796,12 @@ internal fun ThreadReaderScreen(
                         targetType = BookMarkRepository.TargetType.ThreadPost,
                         parentId = tid.value.toLong(),
                         targetId = post.pid.value.toLong(),
-                        title = post.title.ifBlank { appString(Res.string.ui_untitled) },
+                        title = post.title.ifBlank { i18n("（無標題）") },
                         read = next,
                     )
                     reloadPostBookMarks()
                     snackbarHostState.showSnackbar(
-                        if (next) appString(Res.string.ui_marked_as_read) else appString(Res.string.ui_marked_as_unread),
+                        if (next) i18n("已標為已讀") else i18n("已標為未讀"),
                         duration = SnackbarDuration.Short,
                     )
                 }
@@ -1817,11 +1813,11 @@ internal fun ThreadReaderScreen(
                         targetType = BookMarkRepository.TargetType.ThreadPost,
                         parentId = tid.value.toLong(),
                         targetId = post.pid.value.toLong(),
-                        title = post.title.ifBlank { appString(Res.string.ui_untitled) },
+                        title = post.title.ifBlank { i18n("（無標題）") },
                         read = false,
                     )
                     reloadPostBookMarks()
-                    snackbarHostState.showSnackbar(appString(Res.string.ui_reading_history_cleared), duration = SnackbarDuration.Short)
+                    snackbarHostState.showSnackbar(i18n("已清除閱讀紀錄"), duration = SnackbarDuration.Short)
                 }
             },
         )
@@ -1840,17 +1836,17 @@ private fun CatalogBookMarkActionDialog(
     val colors = YamiboTheme.colors
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(appString(Res.string.ui_read_mark), color = colors.brownDeep) },
+        title = { Text(i18n("閱讀標記"), color = colors.brownDeep) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                CatalogActionRow(if (bookmarked) appString(Res.string.ui_remove_bookmark) else appString(Res.string.ui_add_bookmark), onToggleBookMark)
-                CatalogActionRow(if (read) appString(Res.string.ui_mark_as_unread) else appString(Res.string.ui_mark_as_read), onToggleRead)
-                CatalogActionRow(appString(Res.string.ui_clear_reading_history), onClearHistory)
+                CatalogActionRow(if (bookmarked) i18n("移除書籤") else i18n("新增書籤"), onToggleBookMark)
+                CatalogActionRow(if (read) i18n("標為未讀") else i18n("標為已讀"), onToggleRead)
+                CatalogActionRow(i18n("清除閱讀紀錄"), onClearHistory)
             }
         },
         confirmButton = {},
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(appString(Res.string.common_cancel), color = colors.brownDeep) }
+            TextButton(onClick = onDismiss) { Text(i18n("取消"), color = colors.brownDeep) }
         },
         containerColor = colors.creamSurface,
     )
@@ -1872,6 +1868,4 @@ private fun CatalogActionRow(text: String, onClick: () -> Unit) {
         )
     }
 }
-
-
 

@@ -1,8 +1,6 @@
-﻿package me.thenano.yamibo.yamibo_app.thread.detail.components
+package me.thenano.yamibo.yamibo_app.thread.detail.components
 
-import me.thenano.yamibo.yamibo_app.i18n.appString
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
+import me.thenano.yamibo.yamibo_app.i18n.i18n
 
 import YamiboIcons
 import androidx.compose.foundation.BorderStroke
@@ -32,7 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import me.thenano.yamibo.yamibo_app.components.YamiboActionChip
+import me.thenano.yamibo.yamibo_app.components.controls.YamiboActionChip
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 
 @Composable
@@ -61,7 +59,7 @@ internal fun DetailNoteActionButton(
                 tint = colors.brownDeep,
             )
             Text(
-                text = if (hasNote) appString(Res.string.ui_edit_notes) else appString(Res.string.ui_add_new_note),
+                text = if (hasNote) i18n("編輯筆記") else i18n("新增筆記"),
                 color = colors.brownDeep,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -108,13 +106,13 @@ internal fun DetailNoteCard(
                         tint = colors.brownDeep,
                     )
                     Text(
-                        text = appString(Res.string.ui_notes),
+                        text = i18n("筆記"),
                         color = colors.brownDeep,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
                     )
                 }
-                YamiboActionChip(appString(Res.string.ui_edit), onClick = onEdit)
+                YamiboActionChip(i18n("編輯"), onClick = onEdit)
             }
             Text(
                 text = content,
@@ -143,7 +141,7 @@ internal fun DetailNoteEditorDialog(
         containerColor = colors.creamBackground,
         title = {
             Text(
-                text = if (hasExistingNote) appString(Res.string.ui_edit_notes) else appString(Res.string.ui_add_new_note),
+                text = if (hasExistingNote) i18n("編輯筆記") else i18n("新增筆記"),
                 color = colors.textDark,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -153,7 +151,7 @@ internal fun DetailNoteEditorDialog(
                 value = content,
                 onValueChange = { content = it },
                 modifier = Modifier.fillMaxWidth().heightIn(min = 150.dp),
-                placeholder = { Text(appString(Res.string.ui_enter_local_note)) },
+                placeholder = { Text(i18n("輸入本地筆記...")) },
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = colors.creamSurface,
                     unfocusedContainerColor = colors.creamSurface,
@@ -172,7 +170,7 @@ internal fun DetailNoteEditorDialog(
                 shape = RoundedCornerShape(12.dp),
             ) {
                 Box(Modifier.padding(horizontal = 16.dp, vertical = 9.dp), contentAlignment = Alignment.Center) {
-                    Text(appString(Res.string.ui_save), color = colors.creamBackground, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    Text(i18n("保存"), color = colors.creamBackground, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
         },
@@ -185,7 +183,7 @@ internal fun DetailNoteEditorDialog(
                         shape = RoundedCornerShape(12.dp),
                     ) {
                         Box(Modifier.padding(horizontal = 14.dp, vertical = 9.dp), contentAlignment = Alignment.Center) {
-                            Text(appString(Res.string.common_delete), color = colors.brownDeep, fontSize = 13.sp)
+                            Text(i18n("刪除"), color = colors.brownDeep, fontSize = 13.sp)
                         }
                     }
                 }
@@ -195,7 +193,7 @@ internal fun DetailNoteEditorDialog(
                     shape = RoundedCornerShape(12.dp),
                 ) {
                     Box(Modifier.padding(horizontal = 14.dp, vertical = 9.dp), contentAlignment = Alignment.Center) {
-                        Text(appString(Res.string.common_cancel), color = colors.brownDeep, fontSize = 13.sp)
+                        Text(i18n("取消"), color = colors.brownDeep, fontSize = 13.sp)
                     }
                 }
             }

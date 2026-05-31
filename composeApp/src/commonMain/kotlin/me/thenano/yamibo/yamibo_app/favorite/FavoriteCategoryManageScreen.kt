@@ -1,49 +1,15 @@
-﻿package me.thenano.yamibo.yamibo_app.favorite
+package me.thenano.yamibo.yamibo_app.favorite
 
-import me.thenano.yamibo.yamibo_app.i18n.appString
-import me.thenano.yamibo.yamibo_app.i18n.localizedAppMessage
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
 
 import YamiboIcons
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.absoluteOffset
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CheckboxDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Snackbar
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -59,17 +25,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.thenano.yamibo.yamibo_app.LocalFavoriteRepository
-import me.thenano.yamibo.yamibo_app.favorite.components.ReorderActionChip
-import me.thenano.yamibo.yamibo_app.favorite.components.calculateReorderTargetIndex
-import me.thenano.yamibo.yamibo_app.favorite.components.fastReorderDrag
-import me.thenano.yamibo.yamibo_app.favorite.components.rememberReorderGapOffset
-import me.thenano.yamibo.yamibo_app.favorite.components.reorderedList
+import me.thenano.yamibo.yamibo_app.favorite.components.*
+import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
-import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository as FavoriteRepositoryContract
 import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.FavoriteCategory
 import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.FavoriteCategoryDeletePreview
 import me.thenano.yamibo.yamibo_app.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository as FavoriteRepositoryContract
 
 private val ManageRowHeight = 82.dp
 private val ManageRowSpacing = 12.dp
@@ -114,7 +77,7 @@ internal fun FavoriteCategoryManageScreen() {
                 favoriteRepository.getCategoryDeletePreview(categoryId)
             } ?: return@launch
             if (preview.isDefaultCategory) {
-                snackbarHostState.showSnackbar(appString(Res.string.favorite_default_category_cannot_delete, FavoriteRepositoryContract.DEFAULT_CATEGORY_NAME))
+                snackbarHostState.showSnackbar(i18n("{}類別不可刪除", FavoriteRepositoryContract.DEFAULT_CATEGORY_NAME))
                 return@launch
             }
             moveItemsToDefaultOnDelete = true
@@ -160,7 +123,7 @@ internal fun FavoriteCategoryManageScreen() {
             TopAppBar(
                 title = {
                     Text(
-                        text = appString(Res.string.ui_management_category),
+                        text = i18n("管理類別"),
                         color = Color.White,
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp,
@@ -178,7 +141,7 @@ internal fun FavoriteCategoryManageScreen() {
                         shape = RoundedCornerShape(12.dp),
                     ) {
                         Text(
-                            text = appString(Res.string.ui_add_category),
+                            text = i18n("新增類別"),
                             color = Color.White,
                             modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
                             fontWeight = FontWeight.SemiBold,
@@ -301,7 +264,7 @@ internal fun FavoriteCategoryManageScreen() {
                     shape = RoundedCornerShape(12.dp),
                 ) {
                     Text(
-                        text = appString(Res.string.common_delete),
+                        text = i18n("刪除"),
                         color = Color.White,
                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
                         fontWeight = FontWeight.SemiBold,
@@ -316,7 +279,7 @@ internal fun FavoriteCategoryManageScreen() {
                     border = BorderStroke(1.dp, colors.brownPrimary.copy(alpha = 0.18f)),
                 ) {
                     Text(
-                        text = appString(Res.string.ui_return),
+                        text = i18n("返回"),
                         color = colors.brownDeep,
                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
                         fontWeight = FontWeight.SemiBold,
@@ -324,16 +287,17 @@ internal fun FavoriteCategoryManageScreen() {
                 }
             },
             title = {
-                Text(appString(Res.string.ui_delete_category), color = colors.brownDeep, fontWeight = FontWeight.Bold)
+                Text(i18n("刪除類別"), color = colors.brownDeep, fontWeight = FontWeight.Bold)
             },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
-                        text = appString(Res.string.favorite_category_preview_summary, localizedAppMessage(preview.categoryName), preview.totalDistinctItemCount, preview.collectionCount),
+                        text = i18n("「{}」目前包含 {} 筆收藏與 {} 個集合。",
+                            preview.categoryName, preview.totalDistinctItemCount, preview.collectionCount),
                         color = colors.textDark,
                     )
                     Text(
-                        text = appString(Res.string.favorite_category_preview_detail, preview.directItemCount, preview.collectionItemCount),
+                        text = i18n("直屬收藏 {} 筆，集合內收藏 {} 筆。", preview.directItemCount, preview.collectionItemCount),
                         color = colors.textDark.copy(alpha = 0.72f),
                         fontSize = 13.sp,
                     )
@@ -351,7 +315,7 @@ internal fun FavoriteCategoryManageScreen() {
                             ),
                         )
                         Text(
-                            text = appString(Res.string.favorite_move_all_to_category, FavoriteRepositoryContract.DEFAULT_CATEGORY_NAME),
+                            text = i18n("將當前所有收藏移動到{}", FavoriteRepositoryContract.DEFAULT_CATEGORY_NAME),
                             color = colors.textDark,
                             fontSize = 14.sp,
                         )
@@ -405,9 +369,9 @@ private fun FavoriteCategoryCard(
             Text("⋮⋮", color = colors.brownDeep.copy(alpha = 0.8f), fontSize = 20.sp, fontWeight = FontWeight.Bold)
             Box(modifier = Modifier.size(10.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(localizedAppMessage(category.name), color = colors.textDark, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                Text(category.name, color = colors.textDark, fontWeight = FontWeight.Bold, fontSize = 18.sp)
             }
-            ReorderActionChip(text = appString(Res.string.ui_edit), onClick = onEdit)
+            ReorderActionChip(text = i18n("編輯"), onClick = onEdit)
             Box(modifier = Modifier.size(8.dp))
             if (isDefaultCategory) {
                 Surface(
@@ -424,10 +388,9 @@ private fun FavoriteCategoryCard(
                     )
                 }
             } else {
-                ReorderActionChip(text = appString(Res.string.common_delete), onClick = onDelete, emphasized = true)
+                ReorderActionChip(text = i18n("刪除"), onClick = onDelete, emphasized = true)
             }
         }
     }
 }
-
 

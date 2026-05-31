@@ -3,6 +3,7 @@ package me.thenano.yamibo.yamibo_app
 import androidx.compose.runtime.compositionLocalOf
 import me.thenano.yamibo.yamibo_app.core.cache.DiskCacheFactory
 import me.thenano.yamibo.yamibo_app.repository.AuthRepository
+import me.thenano.yamibo.yamibo_app.repository.AppUpdateRepository
 import me.thenano.yamibo.yamibo_app.repository.BlogRepository
 import me.thenano.yamibo.yamibo_app.repository.ChineseConversionRepository
 import me.thenano.yamibo.yamibo_app.repository.DetailNoteRepository
@@ -29,6 +30,9 @@ import me.thenano.yamibo.yamibo_app.favorite.updates.FavoriteUpdateRunner
 
 val LocalAuthRepository =
     compositionLocalOf<AuthRepository> { error("LocalAuthRepository not provided") }
+
+val LocalAppUpdateRepository =
+    compositionLocalOf<AppUpdateRepository> { error("LocalAppUpdateRepository not provided") }
 
 val LocalForumRepository =
     compositionLocalOf<ForumRepository> { error("LocalForumRepository not provided") }

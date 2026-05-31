@@ -1,8 +1,6 @@
-﻿package me.thenano.yamibo.yamibo_app.thread.reader.components.manga
+package me.thenano.yamibo.yamibo_app.thread.reader.components.manga
 
-import me.thenano.yamibo.yamibo_app.i18n.appString
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
+import me.thenano.yamibo.yamibo_app.i18n.i18n
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.animateFloatAsState
@@ -49,18 +47,18 @@ internal fun InterstitialCard(item: ReaderItem.InterstitialItem) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             if (item.isPrev) {
                 if (item.isEnd) {
-                    Text(appString(Res.string.ui_already_first_episode), color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text(i18n("已經是第一話"), color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                     if (item.nextTitle != null) {
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            appString(Res.string.tag_current_chapter, item.nextTitle ?: ""),
+                            i18n("目前章節：{}", item.nextTitle),
                             color = Color.White.copy(alpha = 0.6f),
                             fontSize = 14.sp,
                             textAlign = TextAlign.Center
                         )
                     }
                 } else {
-                    Text(appString(Res.string.ui_previous_episode), color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp)
+                    Text(i18n("上一話"), color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp)
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         item.prevTitle ?: "",
@@ -78,7 +76,7 @@ internal fun InterstitialCard(item: ReaderItem.InterstitialItem) {
                     Text(arrow, color = Color.White.copy(alpha = 0.4f), fontSize = 24.sp)
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        appString(Res.string.tag_chapter_start, item.nextTitle ?: ""),
+                        i18n("「{}」開始", (item.nextTitle ?: "")),
                         color = Color.White.copy(alpha = 0.6f),
                         fontSize = 13.sp,
                         textAlign = TextAlign.Center
@@ -86,11 +84,11 @@ internal fun InterstitialCard(item: ReaderItem.InterstitialItem) {
                 }
             } else {
                 if (item.isEnd) {
-                    Text(appString(Res.string.ui_read_all_chapters), color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text(i18n("已讀完所有章節"), color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                     if (item.prevTitle != null) {
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            appString(Res.string.tag_last_chapter, item.prevTitle ?: ""),
+                            i18n("最後章節：{}", item.prevTitle),
                             color = Color.White.copy(alpha = 0.6f),
                             fontSize = 14.sp,
                             textAlign = TextAlign.Center
@@ -98,7 +96,7 @@ internal fun InterstitialCard(item: ReaderItem.InterstitialItem) {
                     }
                 } else {
                     Text(
-                        appString(Res.string.tag_chapter_end, item.prevTitle ?: ""),
+                        i18n("「{}」結束", (item.prevTitle ?: "")),
                         color = Color.White.copy(alpha = 0.6f),
                         fontSize = 13.sp,
                         textAlign = TextAlign.Center
@@ -112,7 +110,7 @@ internal fun InterstitialCard(item: ReaderItem.InterstitialItem) {
                     Text(arrow, color = Color.White.copy(alpha = 0.4f), fontSize = 24.sp)
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        appString(Res.string.ui_next_chapter), color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp
+                        i18n("下一話"), color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
@@ -127,8 +125,6 @@ internal fun InterstitialCard(item: ReaderItem.InterstitialItem) {
         }
     }
 }
-
-
 
 /** Chapter navigation panel for Tag */
 @Composable
@@ -170,7 +166,7 @@ internal fun TagCatalogPanel(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    appString(Res.string.ui_chapter_list), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = colors.textDark
+                    i18n("章節列表"), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = colors.textDark
                 )
                 IconButton(onClick = onDismiss) {
                     Text(
@@ -211,7 +207,7 @@ internal fun TagCatalogPanel(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = appString(Res.string.common_page_number, page),
+                                    text = i18n("第 {} 頁", page),
                                     color = colors.brownPrimary,
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 16.sp
@@ -297,5 +293,4 @@ internal fun TagCatalogPanel(
         }
     }
 }
-
 

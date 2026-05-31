@@ -1,47 +1,16 @@
 ﻿package me.thenano.yamibo.yamibo_app.profile.settings
 
-import me.thenano.yamibo.yamibo_app.i18n.appString
-import me.thenano.yamibo.yamibo_app.i18n.localizedAppMessage
-import me.thenano.yamibo.yamibo_app.i18n.localizedLabel
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
-
 import YamiboIcons
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -51,38 +20,27 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
-import kotlin.math.roundToInt
-import me.thenano.yamibo.yamibo_app.core.cache.CacheStorageBreakdown
 import me.thenano.yamibo.yamibo_app.LocalAppSettingsRepository
 import me.thenano.yamibo.yamibo_app.LocalDiskCacheFactory
 import me.thenano.yamibo.yamibo_app.LocalFavoriteSyncRunner
 import me.thenano.yamibo.yamibo_app.LocalFavoriteUpdateRunner
+import me.thenano.yamibo.yamibo_app.core.cache.CacheStorageBreakdown
 import me.thenano.yamibo.yamibo_app.favorite.IFavoriteCategoryManageScreen
 import me.thenano.yamibo.yamibo_app.favorite.sync.FavoriteSyncStatusCard
 import me.thenano.yamibo.yamibo_app.favorite.sync.IFavoriteSyncProgressScreen
+import me.thenano.yamibo.yamibo_app.i18n.i18n
+import me.thenano.yamibo.yamibo_app.i18n.localizedLabel
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.profile.settings.access.IBackgroundAccessSetupScreen
-import me.thenano.yamibo.yamibo_app.profile.settings.bound.MangaReadingModeSetting
-import me.thenano.yamibo.yamibo_app.profile.settings.bound.MangaTouchZoneSetting
-import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelContentWidthSetting
-import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelChineseConversionSetting
-import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelFontSizeSetting
-import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelLineSpacingSetting
-import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelReaderPreviewSetting
-import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelSystemBarsBackgroundSetting
+import me.thenano.yamibo.yamibo_app.profile.settings.bound.*
 import me.thenano.yamibo.yamibo_app.profile.settings.components.SettingsChipRow
 import me.thenano.yamibo.yamibo_app.profile.settings.components.ThemeSelectorContent
 import me.thenano.yamibo.yamibo_app.repository.FavoriteSyncRepository.FavoriteSyncState
-import me.thenano.yamibo.yamibo_app.repository.settings.AppLanguage
-import me.thenano.yamibo.yamibo_app.repository.settings.AppSettingsRepository
-import me.thenano.yamibo.yamibo_app.repository.settings.FavoriteGridMode
-import me.thenano.yamibo.yamibo_app.repository.settings.FavoriteSortMode
-import me.thenano.yamibo.yamibo_app.repository.settings.FavoriteUpdateInterval
-import me.thenano.yamibo.yamibo_app.repository.settings.SignInMode
+import me.thenano.yamibo.yamibo_app.repository.settings.*
 import me.thenano.yamibo.yamibo_app.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.util.state
-import org.jetbrains.compose.resources.stringResource
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -91,14 +49,14 @@ internal fun SettingsCategoryScreen(category: String) {
     val navigator = LocalNavigator.current
 
     val title = when (category) {
-        "appearance" -> stringResource(Res.string.settings_appearance_title)
-        "language" -> stringResource(Res.string.settings_language_title)
-        "novel_reader" -> stringResource(Res.string.settings_novel_reader_title)
-        "manga_reader" -> stringResource(Res.string.settings_manga_reader_title)
-        "favorite" -> stringResource(Res.string.settings_favorite_title)
-        "storage" -> stringResource(Res.string.settings_storage_title)
-        "sign" -> stringResource(Res.string.settings_sign_title)
-        else -> stringResource(Res.string.settings_title)
+        "appearance" -> i18n("外觀")
+        "language" -> i18n("語言")
+        "novel_reader" -> i18n("小說閱讀器")
+        "manga_reader" -> i18n("漫畫閱讀器")
+        "favorite" -> i18n("收藏管理")
+        "storage" -> i18n("儲存空間")
+        "sign" -> i18n("簽到設定")
+        else -> i18n("設定")
     }
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -181,9 +139,9 @@ private fun LanguageContent() {
     val appSettingsRepo = LocalAppSettingsRepository.current
     val language = appSettingsRepo.language.state()
 
-    SectionLabel(stringResource(Res.string.language_section_title))
+    SectionLabel(i18n("介面語言"))
     Text(
-        text = stringResource(Res.string.language_current_title),
+        text = i18n("語言"),
         fontSize = 16.sp,
         fontWeight = FontWeight.Medium,
         color = YamiboTheme.colors.textDark,
@@ -192,9 +150,9 @@ private fun LanguageContent() {
     Spacer(Modifier.height(6.dp))
     SettingsChipRow(
         options = listOf(
-            AppLanguage.TRADITIONAL_CHINESE to stringResource(Res.string.language_traditional_chinese),
-            AppLanguage.SIMPLIFIED_CHINESE to stringResource(Res.string.language_simplified_chinese),
-            AppLanguage.ENGLISH to stringResource(Res.string.language_english),
+            AppLanguage.TRADITIONAL_CHINESE to i18n("繁體中文"),
+            AppLanguage.SIMPLIFIED_CHINESE to i18n("简体中文"),
+            AppLanguage.ENGLISH to i18n("English"),
         ),
         selectedValue = language,
         onSelect = { appSettingsRepo.language.setValue(it) },
@@ -204,37 +162,37 @@ private fun LanguageContent() {
 
 @Composable
 private fun NovelReaderContent() {
-    SectionLabel(appString(Res.string.ui_preview))
+    SectionLabel(i18n("預覽"))
     NovelReaderPreviewSetting()
     Spacer(Modifier.height(24.dp))
 
-    SectionLabel(appString(Res.string.ui_font_size))
+    SectionLabel(i18n("字體大小"))
     NovelFontSizeSetting()
     Spacer(Modifier.height(24.dp))
 
-    SectionLabel(appString(Res.string.ui_line_spacing))
+    SectionLabel(i18n("行距"))
     NovelLineSpacingSetting()
     Spacer(Modifier.height(24.dp))
 
-    SectionLabel(appString(Res.string.ui_content_width))
+    SectionLabel(i18n("內容寬度"))
     NovelContentWidthSetting()
     Spacer(Modifier.height(24.dp))
 
-    SectionLabel(appString(Res.string.ui_system_column))
+    SectionLabel(i18n("系統列"))
     NovelSystemBarsBackgroundSetting()
     Spacer(Modifier.height(24.dp))
 
-    SectionLabel(appString(Res.string.ui_conversion_between_simplified_traditional_chinese))
+    SectionLabel(i18n("簡繁轉換"))
     NovelChineseConversionSetting()
 }
 
 @Composable
 private fun MangaReaderContent() {
-    SectionLabel(appString(Res.string.ui_reading_mode))
+    SectionLabel(i18n("閱讀模式"))
     MangaReadingModeSetting()
     Spacer(Modifier.height(24.dp))
 
-    SectionLabel(appString(Res.string.ui_touch_area_2))
+    SectionLabel(i18n("觸控分區"))
     MangaTouchZoneSetting()
 }
 
@@ -257,18 +215,18 @@ private fun FavoriteSettingsContent(snackbarHostState: SnackbarHostState) {
     val syncState by favoriteSyncRunner.state.collectAsState()
     val coroutineScope = rememberCoroutineScope()
 
-    SectionLabel(appString(Res.string.settings_favorite_title))
+    SectionLabel(i18n("收藏管理"))
     SettingsActionRow(
-        title = appString(Res.string.ui_manage_favorite_categories),
-        subtitle = appString(Res.string.ui_add_edit_delete_adjust_favorite_categories),
+        title = i18n("管理收藏類別"),
+        subtitle = i18n("新增、編輯、刪除或調整你的收藏類別"),
         onClick = { navigator.navigate(IFavoriteCategoryManageScreen()) },
     )
 
     Spacer(Modifier.height(24.dp))
 
-    SectionLabel(appString(Res.string.ui_favorite_display))
+    SectionLabel(i18n("收藏顯示"))
     Text(
-        text = appString(Res.string.ui_arrangement),
+        text = i18n("排列方式"),
         fontSize = 16.sp,
         fontWeight = FontWeight.Medium,
         color = colors.textDark,
@@ -284,7 +242,7 @@ private fun FavoriteSettingsContent(snackbarHostState: SnackbarHostState) {
 
     Spacer(Modifier.height(18.dp))
     Text(
-        text = appString(Res.string.ui_sort_by),
+        text = i18n("排序方式"),
         fontSize = 16.sp,
         fontWeight = FontWeight.Medium,
         color = colors.textDark,
@@ -312,7 +270,7 @@ private fun FavoriteSettingsContent(snackbarHostState: SnackbarHostState) {
 
     Spacer(Modifier.height(24.dp))
 
-    SectionLabel(appString(Res.string.ui_favorite_delete))
+    SectionLabel(i18n("收藏刪除"))
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -325,14 +283,14 @@ private fun FavoriteSettingsContent(snackbarHostState: SnackbarHostState) {
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = appString(Res.string.ui_skip_deletion_confirmation),
+                text = i18n("略過刪除確認"),
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Medium,
                 color = colors.textDark,
             )
             Spacer(Modifier.height(2.dp))
             Text(
-                text = appString(Res.string.ui_after_turning_on_confirmation_window_no_longer_pop_up_deleting),
+                text = i18n("開啟後，刪除收藏時不再跳出確認視窗。"),
                 fontSize = 13.sp,
                 color = colors.textDark.copy(alpha = 0.6f),
             )
@@ -351,16 +309,16 @@ private fun FavoriteSettingsContent(snackbarHostState: SnackbarHostState) {
 
     Spacer(Modifier.height(24.dp))
 
-    SectionLabel(appString(Res.string.ui_favorite_sync_preferences))
+    SectionLabel(i18n("收藏同步偏好"))
     SettingsActionRow(
-        title = appString(Res.string.ui_notification_background_synchronization_settings),
-        subtitle = appString(Res.string.ui_check_system_settings_required_for_notification_permissions_battery),
+        title = i18n("通知與背景同步設定"),
+        subtitle = i18n("檢查通知權限、電池最佳化與背景同步所需的系統設定。"),
         onClick = { navigator.navigate(IBackgroundAccessSetupScreen()) },
     )
 
     Spacer(Modifier.height(18.dp))
     Text(
-        text = appString(Res.string.ui_favorite_update_check_cycle),
+        text = i18n("收藏更新檢查週期"),
         fontSize = 16.sp,
         fontWeight = FontWeight.Medium,
         color = colors.textDark,
@@ -375,7 +333,7 @@ private fun FavoriteSettingsContent(snackbarHostState: SnackbarHostState) {
             coroutineScope.launch {
                 favoriteUpdateRunner.schedulePeriodicUpdate(interval)
                 if (interval == FavoriteUpdateInterval.SMART) {
-                    snackbarHostState.showSnackbar(appString(Res.string.ui_the_smart_update_policy_has_not_accessed_yet_periodic_background))
+                    snackbarHostState.showSnackbar(i18n("智能更新策略尚未接入，暫停週期背景檢查。"))
                 }
             }
         },
@@ -385,14 +343,14 @@ private fun FavoriteSettingsContent(snackbarHostState: SnackbarHostState) {
     Spacer(Modifier.height(18.dp))
 
     SettingsToggleRow(
-        title = appString(Res.string.ui_ask_for_synchronization_adding_favorite),
-        subtitle = appString(Res.string.ui_after_turning_on_creating_new_favorite_asked_whether_synchronize),
+        title = i18n("新增收藏時詢問同步"),
+        subtitle = i18n("開啟後，新建收藏時會詢問是否同步到百合會。"),
         checked = addSyncPromptEnabled,
         onCheckedChange = { appSettingsRepository.favoriteAddSyncPromptEnabled.setValue(it) },
     )
     Spacer(Modifier.height(10.dp))
     Text(
-        text = appString(Res.string.ui_added_new_favorite_preset_actions),
+        text = i18n("新增收藏預設動作"),
         fontSize = 16.sp,
         fontWeight = FontWeight.Medium,
         color = colors.textDark,
@@ -400,7 +358,7 @@ private fun FavoriteSettingsContent(snackbarHostState: SnackbarHostState) {
     )
     Spacer(Modifier.height(6.dp))
     SettingsChipRow(
-        options = listOf(true to appString(Res.string.ui_sync_yamibo), false to appString(Res.string.ui_only_save_local)),
+        options = listOf(true to i18n("同步到百合會"), false to i18n("只存本地")),
         selectedValue = addSyncDefault,
         onSelect = { appSettingsRepository.favoriteAddSyncDefault.setValue(it) },
         modifier = Modifier.padding(horizontal = 4.dp),
@@ -408,14 +366,14 @@ private fun FavoriteSettingsContent(snackbarHostState: SnackbarHostState) {
 
     Spacer(Modifier.height(18.dp))
     SettingsToggleRow(
-        title = appString(Res.string.ui_ask_for_simultaneous_deletion_completely_removing_favorites),
-        subtitle = appString(Res.string.ui_after_turning_on_favorite_disappears_completely_asked_whether),
+        title = i18n("完全移除收藏時詢問同步刪除"),
+        subtitle = i18n("開啟後，收藏將完全消失時會詢問是否同步從百合會移除。"),
         checked = removeSyncPromptEnabled,
         onCheckedChange = { appSettingsRepository.favoriteRemoveSyncPromptEnabled.setValue(it) },
     )
     Spacer(Modifier.height(10.dp))
     Text(
-        text = appString(Res.string.ui_completely_remove_favorite_preset_actions),
+        text = i18n("完全移除收藏預設動作"),
         fontSize = 16.sp,
         fontWeight = FontWeight.Medium,
         color = colors.textDark,
@@ -423,7 +381,7 @@ private fun FavoriteSettingsContent(snackbarHostState: SnackbarHostState) {
     )
     Spacer(Modifier.height(6.dp))
     SettingsChipRow(
-        options = listOf(true to appString(Res.string.ui_synchronous_removal), false to appString(Res.string.ui_only_delete_local)),
+        options = listOf(true to i18n("同步移除"), false to i18n("只刪本地")),
         selectedValue = removeSyncDefault,
         onSelect = { appSettingsRepository.favoriteRemoveSyncDefault.setValue(it) },
         modifier = Modifier.padding(horizontal = 4.dp),
@@ -431,7 +389,7 @@ private fun FavoriteSettingsContent(snackbarHostState: SnackbarHostState) {
 
     Spacer(Modifier.height(24.dp))
 
-    SectionLabel(appString(Res.string.ui_favorite_synchronization))
+    SectionLabel(i18n("收藏同步"))
     if (syncState != FavoriteSyncState.Idle) {
         FavoriteSyncStatusCard(
             state = syncState,
@@ -463,7 +421,7 @@ private fun FavoriteSettingsContent(snackbarHostState: SnackbarHostState) {
         )
     } else {
         Text(
-            text = appString(Res.string.ui_the_status_progress_latest_favorite_synchronization_displayed_here),
+            text = i18n("這裡會顯示最近一次收藏同步的狀態與進度。同步開始後，你也可以從這裡重新打開進度畫面。"),
             fontSize = 13.sp,
             color = colors.textDark.copy(alpha = 0.68f),
             modifier = Modifier.padding(horizontal = 4.dp),
@@ -565,7 +523,7 @@ private fun StorageContent(snackbarHostState: SnackbarHostState) {
     val coroutineScope = rememberCoroutineScope()
 
     val clearOnLaunch = appSettingsRepo.clearCacheOnAppLaunch.state()
-    var cacheSizeText by remember { mutableStateOf(appString(Res.string.ui_calculating)) }
+    var cacheSizeText by remember { mutableStateOf(i18n("正在計算中...")) }
     var cacheBreakdown by remember { mutableStateOf(CacheStorageBreakdown(rootPath = "", usages = emptyList())) }
 
     suspend fun refreshCacheUsage() {
@@ -589,7 +547,7 @@ private fun StorageContent(snackbarHostState: SnackbarHostState) {
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = appString(Res.string.ui_clear_cache_app_starts),
+                text = i18n("App 啟動時清除緩存"),
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Medium,
                 color = colors.textDark,
@@ -615,14 +573,14 @@ private fun StorageContent(snackbarHostState: SnackbarHostState) {
     }
 
     SettingsActionRow(
-        title = appString(Res.string.ui_clear_all_caches_now),
-        subtitle = appString(Res.string.settings_storage_subtitle_with_size, cacheSizeText),
+        title = i18n("立即清除所有緩存"),
+        subtitle = i18n("清除圖片、頁面與其他暫存資料，釋放目前已使用的儲存空間。\\n目前緩存大小：{}", cacheSizeText),
         onClick = {
             coroutineScope.launch {
                 diskCacheFactory.clearAllCache()
                 cacheSizeText = "0 kB"
                 cacheBreakdown = cacheBreakdown.copy(usages = emptyList())
-                snackbarHostState.showSnackbar(appString(Res.string.ui_all_cache_cleared))
+                snackbarHostState.showSnackbar(i18n("已清除所有緩存"))
             }
         },
     )
@@ -640,7 +598,7 @@ private fun StorageUsageOverview(breakdown: CacheStorageBreakdown) {
     val totalBytes = breakdown.usages.sumOf { it.bytes }.coerceAtLeast(1L)
 
     Text(
-        text = appString(Res.string.ui_storage_usage),
+        text = i18n("儲存空間使用情形"),
         fontSize = 16.sp,
         fontWeight = FontWeight.SemiBold,
         color = colors.brownDeep,
@@ -687,7 +645,7 @@ private fun StorageUsageOverview(breakdown: CacheStorageBreakdown) {
                     .background(usageColors[item.key] ?: colors.brownPrimary),
             )
             Text(
-                text = localizedAppMessage(item.label),
+                text = item.label,
                 color = colors.textDark,
                 fontSize = 13.sp,
                 modifier = Modifier
@@ -716,11 +674,22 @@ private fun SignSettingsContent() {
     val colors = YamiboTheme.colors
     val appSettingsRepository = LocalAppSettingsRepository.current
     val signMode = appSettingsRepository.signInMode.state()
+    val launchReminder = appSettingsRepository.signInLaunchReminderEnabled.state()
     val allowRepair = appSettingsRepository.signInAllowRepair.state()
 
-    SectionLabel(appString(Res.string.ui_check_in_mode))
+    SectionLabel(i18n("開屏簽到提醒"))
+    SettingsToggleRow(
+        title = i18n("開屏簽到提醒"),
+        subtitle = i18n("今天尚未簽到時，在 app 開屏後提醒你前往簽到。"),
+        checked = launchReminder,
+        onCheckedChange = { appSettingsRepository.signInLaunchReminderEnabled.setValue(it) },
+    )
+
+    Spacer(Modifier.height(24.dp))
+
+    SectionLabel(i18n("簽到模式"))
     Text(
-        text = appString(Res.string.ui_check_in_behavior),
+        text = i18n("簽到行為"),
         fontSize = 16.sp,
         fontWeight = FontWeight.Medium,
         color = colors.textDark,
@@ -736,12 +705,12 @@ private fun SignSettingsContent() {
 
     Spacer(Modifier.height(24.dp))
 
-    SectionLabel(appString(Res.string.ui_re_signing))
+    SectionLabel(i18n("補簽"))
     SettingsToggleRow(
-        title = appString(Res.string.ui_automatic_re_signing),
+        title = i18n("自動進行補簽"),
         subtitle = when (signMode) {
-            SignInMode.FULL_MANUAL -> appString(Res.string.ui_in_manual_mode_only_preference_saved_in_semi_automatic_mode)
-            SignInMode.SEMI_AUTOMATIC -> appString(Res.string.ui_after_completing_cloudflare_verification_program_fill_in_all_time)
+            SignInMode.FULL_MANUAL -> i18n("手動模式下只保存這個偏好；半自動模式才會真的自動補簽。")
+            SignInMode.SEMI_AUTOMATIC -> i18n("完成 Cloudflare 驗證後，程式會在簽到成功後一路補到不能再補。")
         },
         checked = allowRepair,
         onCheckedChange = { appSettingsRepository.signInAllowRepair.setValue(it) },
@@ -757,4 +726,3 @@ private fun settingsCurrentSyncRunId(state: FavoriteSyncState): String? {
         is FavoriteSyncState.Completed -> state.snapshot.runId
     }
 }
-

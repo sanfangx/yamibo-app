@@ -1,8 +1,6 @@
-﻿package me.thenano.yamibo.yamibo_app.util
+package me.thenano.yamibo.yamibo_app.util
 
-import me.thenano.yamibo.yamibo_app.i18n.appString
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
+import me.thenano.yamibo.yamibo_app.i18n.i18n
 
 import android.content.Intent
 import coil3.PlatformContext
@@ -15,7 +13,7 @@ actual fun shareText(context: PlatformContext, text: String, title: String?) {
             putExtra(Intent.EXTRA_SUBJECT, title)
         }
     }
-    val chooser = Intent.createChooser(intent, title ?: appString(Res.string.ui_share)).apply {
+    val chooser = Intent.createChooser(intent, title ?: i18n("分享")).apply {
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
     context.startActivity(chooser)

@@ -1,9 +1,8 @@
-﻿package me.thenano.yamibo.yamibo_app.forum
+package me.thenano.yamibo.yamibo_app.forum
 
-import me.thenano.yamibo.yamibo_app.i18n.appString
+import me.thenano.yamibo.yamibo_app.i18n.i18n
+
 import me.thenano.yamibo.yamibo_app.i18n.localizedMessage
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
 
 import YamiboIcons
 import androidx.compose.animation.core.*
@@ -24,7 +23,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.littlesurvival.YamiboForum
@@ -42,6 +40,7 @@ import me.thenano.yamibo.yamibo_app.IMainScreen
 import me.thenano.yamibo.yamibo_app.LocalAuthRepository
 import me.thenano.yamibo.yamibo_app.LocalForumRepository
 import me.thenano.yamibo.yamibo_app.MainTab
+import me.thenano.yamibo.yamibo_app.components.controls.YamiboSingleSelectDialog
 import me.thenano.yamibo.yamibo_app.forum.components.*
 import me.thenano.yamibo.yamibo_app.forum.search.ISearchScreen
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
@@ -133,12 +132,12 @@ fun ForumPageScreen(fid: ForumId, name: String) {
                 onPostThread = {
                     navigator.navigate(
                         IActionWebView(
-                            title = appString(Res.string.ui_post_2),
+                            title = i18n("發表帖子"),
                             initialUrl = YamiboRoute.PostThread(fid).build(),
                             successCondition = { url -> url.contains("mod=forumdisplay") && url.contains("fid=") },
                             onSuccess = {
                                 scope.launch {
-                                    snackbarHostState.showSnackbar(appString(Res.string.ui_post_successfully))
+                                    snackbarHostState.showSnackbar(i18n("發帖成功"))
                                 }
                             },
                         )
@@ -149,7 +148,7 @@ fun ForumPageScreen(fid: ForumId, name: String) {
                     if (formHash == null) {
                         scope.launch {
                             snackbarHostState.showSnackbar(
-                                message = appString(Res.string.ui_not_logged_in_log_in_first_adding_favorites),
+                                message = i18n("未登入，請先登入後再收藏"),
                                 duration = SnackbarDuration.Short
                             )
                         }
@@ -214,7 +213,7 @@ fun ForumPageScreen(fid: ForumId, name: String) {
                                     else -> {
                                         val msg = result.localizedMessage()
                                         snackbarHostState.showSnackbar(
-                                            message = appString(Res.string.forum_refresh_failed, msg),
+                                            message = i18n("刷新失敗：{}", msg),
                                             duration = SnackbarDuration.Short
                                         )
                                     }
@@ -250,7 +249,7 @@ fun ForumPageScreen(fid: ForumId, name: String) {
                                     is PinnedItem.Announcement -> {
                                         scope.launch {
                                             snackbarHostState.showSnackbar(
-                                                appString(Res.string.ui_jumping_announcement_page_not_supported_yet),
+                                                i18n("暫不支持跳轉到公告頁"),
                                                 duration = SnackbarDuration.Short
                                             )
                                         }
@@ -344,7 +343,7 @@ private fun ForumTopBar(
             IconButton(onClick = onSearch, modifier = Modifier.offset(y = 5.dp)) {
                 Icon(
                     imageVector = YamiboIcons.Search,
-                    contentDescription = appString(Res.string.read_history_search),
+                    contentDescription = i18n("搜尋"),
                     tint = Color.White,
                     modifier = Modifier.size(34.dp)
                 )
@@ -353,7 +352,7 @@ private fun ForumTopBar(
                 IconButton(onClick = { showMenu = true }) {
                     Icon(
                         imageVector = YamiboIcons.ThreeDots,
-                        contentDescription = appString(Res.string.ui_more),
+                        contentDescription = i18n("更多"),
                         tint = Color.White,
                         modifier = Modifier.size(24.dp)
                     )
@@ -364,7 +363,7 @@ private fun ForumTopBar(
                     modifier = Modifier.background(colors.creamSurface)
                 ) {
                     DropdownMenuItem(
-                        text = { Text(appString(Res.string.ui_post_2), color = colors.brownDeep) },
+                        text = { Text(i18n("發表帖子"), color = colors.brownDeep) },
                         leadingIcon = {
                             Icon(
                                 imageVector = YamiboIcons.EditOrSign,
@@ -378,7 +377,7 @@ private fun ForumTopBar(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text(appString(Res.string.ui_bookmark_edition), color = colors.brownDeep) },
+                        text = { Text(i18n("收藏本版"), color = colors.brownDeep) },
                         leadingIcon = {
                             Icon(
                                 imageVector = YamiboIcons.StarOutline,
@@ -392,7 +391,7 @@ private fun ForumTopBar(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text(appString(Res.string.ui_jump_homepage), color = colors.brownDeep) },
+                        text = { Text(i18n("跳轉到首頁"), color = colors.brownDeep) },
                         leadingIcon = {
                             Icon(
                                 imageVector = YamiboIcons.Home,
@@ -406,7 +405,7 @@ private fun ForumTopBar(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text(appString(Res.string.ui_jump_favorites), color = colors.brownDeep) },
+                        text = { Text(i18n("跳轉到收藏"), color = colors.brownDeep) },
                         leadingIcon = {
                             Icon(
                                 imageVector = YamiboIcons.Explore,
@@ -492,8 +491,8 @@ private fun ForumOrderDialog(
     onSelect: (OrderType?) -> Unit,
 ) {
     ForumOptionDialog(
-        title = appString(Res.string.ui_sort),
-        defaultLabel = appString(Res.string.common_all),
+        title = i18n("排序"),
+        defaultLabel = i18n("全部"),
         options = options,
         selected = selected,
         optionLabel = { it.name },
@@ -510,8 +509,8 @@ private fun ForumFilterTypeDialog(
     onSelect: (FilterType?) -> Unit,
 ) {
     ForumOptionDialog(
-        title = appString(Res.string.ui_classification),
-        defaultLabel = appString(Res.string.common_all),
+        title = i18n("分類"),
+        defaultLabel = i18n("全部"),
         options = options,
         selected = selected,
         optionLabel = { it.name },
@@ -530,63 +529,20 @@ private fun <T> ForumOptionDialog(
     onDismiss: () -> Unit,
     onSelect: (T?) -> Unit,
 ) {
-    val colors = YamiboTheme.colors
     val visibleOptions = options
         .distinctBy(optionLabel)
         .filterNot { optionLabel(it) == defaultLabel }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(title, color = colors.brownDeep, fontWeight = FontWeight.Bold)
-        },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                ForumOptionRow(
-                    label = defaultLabel,
-                    selected = selected == null,
-                    onClick = { onSelect(null) },
-                )
-                visibleOptions.forEach { option ->
-                    ForumOptionRow(
-                        label = optionLabel(option),
-                        selected = selected == option,
-                        onClick = { onSelect(option) },
-                    )
-                }
-            }
-        },
-        confirmButton = {},
-        dismissButton = {},
-        containerColor = colors.creamSurface,
+    YamiboSingleSelectDialog(
+        title = title,
+        options = listOf<T?>(null) + visibleOptions,
+        selected = selected,
+        onDismiss = onDismiss,
+        onSelect = onSelect,
+        label = { it?.let(optionLabel) ?: defaultLabel },
+        dismissOnSelect = true,
+        footer = null,
     )
-}
-
-@Composable
-private fun ForumOptionRow(label: String, selected: Boolean, onClick: () -> Unit) {
-    val colors = YamiboTheme.colors
-    Surface(
-        onClick = onClick,
-        shape = RoundedCornerShape(12.dp),
-        color = if (selected) colors.brownPrimary.copy(alpha = 0.12f) else Color.Transparent,
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = label,
-                color = colors.textDark,
-                fontSize = 14.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f),
-            )
-            if (selected) {
-                Text("✓", color = colors.brownDeep, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            }
-        }
-    }
 }
 
 /** Loading skeleton */
@@ -668,7 +624,7 @@ private fun ForumErrorContent(message: String, onRetry: () -> Unit) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = appString(Res.string.ui_loading_failed),
+                    text = i18n("載入失敗"),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = colors.brownDeep
@@ -688,7 +644,7 @@ private fun ForumErrorContent(message: String, onRetry: () -> Unit) {
                     contentColor = Color.White
                 ) {
                     Text(
-                        text = appString(Res.string.ui_try_again),
+                        text = i18n("重試"),
                         modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
                         fontWeight = FontWeight.Bold,
                         fontSize = 15.sp
@@ -698,6 +654,4 @@ private fun ForumErrorContent(message: String, onRetry: () -> Unit) {
         }
     }
 }
-
-
 

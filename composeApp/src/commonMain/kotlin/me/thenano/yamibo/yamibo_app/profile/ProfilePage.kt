@@ -1,10 +1,8 @@
-﻿package me.thenano.yamibo.yamibo_app.profile
+package me.thenano.yamibo.yamibo_app.profile
 
-import me.thenano.yamibo.yamibo_app.i18n.appString
-import me.thenano.yamibo.yamibo_app.i18n.localizedAppMessage
+import me.thenano.yamibo.yamibo_app.i18n.i18n
+
 import me.thenano.yamibo.yamibo_app.i18n.localizedMessage
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
 
 import YamiboIcons
 import androidx.compose.foundation.background
@@ -48,33 +46,33 @@ fun ProfilePage() {
 
     var userInfo by remember { mutableStateOf(authRepository.currentUser()) }
     var isLoading by remember { mutableStateOf(false) }
-    var signButtonTitle by remember { mutableStateOf(appString(Res.string.ui_daily_check_in)) }
+    var signButtonTitle by remember { mutableStateOf(i18n("每日簽到")) }
     var signRefreshKey by remember { mutableIntStateOf(0) }
     var isSigning by remember { mutableStateOf(false) }
 
     fun refreshSignStatus() {
         coroutineScope.launch {
             if (isSigning) {
-                signButtonTitle = appString(Res.string.ui_checking_in)
+                signButtonTitle = i18n("正在簽到...")
                 return@launch
             }
             signButtonTitle = when {
-                userInfo == null -> appString(Res.string.ui_daily_check_in)
-                signRepository.getCachedPageInfo()?.hasSignedToday == true -> appString(Res.string.ui_signed_in_today)
-                signRepository.getCachedPageInfo()?.hasSignedToday == false -> appString(Res.string.ui_daily_check_in)
-                signRepository.isSignedToday() -> appString(Res.string.ui_signed_in_today)
+                userInfo == null -> i18n("每日簽到")
+                signRepository.getCachedPageInfo()?.hasSignedToday == true -> i18n("今日已簽到")
+                signRepository.isSignedToday() -> i18n("今日已簽到")
+                signRepository.getCachedPageInfo()?.hasSignedToday == false -> i18n("每日簽到")
                 else -> {
                     when (val result = signRepository.fetchPageInfo()) {
                         is YamiboResult.Success -> {
-                            if (result.value.hasSignedToday) appString(Res.string.ui_signed_in_today) else appString(Res.string.ui_daily_check_in)
+                            if (result.value.hasSignedToday) i18n("今日已簽到") else i18n("每日簽到")
                         }
                         is YamiboResult.Failure -> {
                             when {
-                                signRepository.getCachedPageInfo()?.hasSignedToday == true -> appString(Res.string.ui_signed_in_today)
-                                else -> appString(Res.string.ui_daily_check_in)
+                                signRepository.getCachedPageInfo()?.hasSignedToday == true -> i18n("今日已簽到")
+                                else -> i18n("每日簽到")
                             }
                         }
-                        else -> appString(Res.string.ui_daily_check_in)
+                        else -> i18n("每日簽到")
                     }
                 }
             }
@@ -144,8 +142,9 @@ fun ProfilePage() {
                                     onResultObserved = {
                                         coroutineScope.launch {
                                             isSigning = true
-                                            signButtonTitle = appString(Res.string.ui_checking_in)
+                                            signButtonTitle = i18n("正在簽到...")
                                             authRepository.syncCookieFromWebView()
+                                            signRepository.markTodaySigned()
                                             when (signRepository.fetchPageInfo()) {
                                                 is YamiboResult.Success -> {
                                                     signRefreshKey += 1
@@ -164,7 +163,7 @@ fun ProfilePage() {
 
                         SignInMode.SEMI_AUTOMATIC -> {
                             isSigning = true
-                            signButtonTitle = appString(Res.string.ui_checking_in)
+                            signButtonTitle = i18n("正在簽到...")
                             val allowRepair = appSettingsRepository.signInAllowRepair.getValue()
                             navigator.navigate(
                                 ISignWebView(
@@ -176,7 +175,7 @@ fun ProfilePage() {
                                             when (val result = signRepository.runAutoSign(allowRepair)) {
                                                 is YamiboResult.Success -> {
                                                     signRefreshKey += 1
-                                                    snackbarMessage = localizedAppMessage(result.value.message)
+                                                    snackbarMessage = result.value.message
                                                 }
 
                                                 is YamiboResult.Failure -> {
@@ -188,7 +187,7 @@ fun ProfilePage() {
                                                 }
 
                                                 is YamiboResult.NoPermission -> {
-                                                    snackbarMessage = appString(Res.string.ui_automatic_check_in_unavailable_use_manual_mode_instead)
+                                                    snackbarMessage = i18n("目前無法自動簽到，請改用手動模式")
                                                 }
 
                                                 is YamiboResult.Maintenance -> {
@@ -210,7 +209,7 @@ fun ProfilePage() {
                                             isSigning = false
                                             refreshSignStatus()
                                             snackbarHostState.currentSnackbarData?.dismiss()
-                                            snackbarHostState.showSnackbar(appString(Res.string.ui_yamibo_under_maintenance_now_not_good_time_sign))
+                                            snackbarHostState.showSnackbar(i18n("百合會維護中...現在不是簽到的好時機呢"))
                                         }
                                     },
                                     onLoadFailed = { reason ->
@@ -218,7 +217,7 @@ fun ProfilePage() {
                                             isSigning = false
                                             refreshSignStatus()
                                             snackbarHostState.currentSnackbarData?.dismiss()
-                                            snackbarHostState.showSnackbar(appString(Res.string.sign_page_load_failed, reason))
+                                            snackbarHostState.showSnackbar(i18n("簽到頁載入失敗：{}", reason))
                                         }
                                     },
                                 )
@@ -238,13 +237,13 @@ fun ProfilePage() {
             )
 
             EntryCard(
-                title = appString(Res.string.settings_title),
+                title = i18n("設定"),
                 icon = YamiboIcons.Setting,
                 onClick = { navigator.navigate(ISettingsScreen()) }
             )
 
             EntryCard(
-                title = appString(Res.string.ui_reading_statistics),
+                title = i18n("閱讀統計"),
                 icon = YamiboIcons.Statistics,
                 onClick = { navigator.navigate(IProfileStatisticsScreen()) }
             )
@@ -288,7 +287,7 @@ private fun SignEntryCard(
             ) {
                 Icon(
                     imageVector = YamiboIcons.EditOrSign,
-                    contentDescription = appString(Res.string.ui_daily_check_in),
+                    contentDescription = i18n("每日簽到"),
                     tint = colors.brownPrimary,
                     modifier = Modifier.size(24.dp)
                 )
@@ -367,6 +366,3 @@ private fun EntryCard(
         }
     }
 }
-
-
-

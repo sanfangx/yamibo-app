@@ -1,8 +1,6 @@
-﻿package me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl
+package me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl
 
-import me.thenano.yamibo.yamibo_app.i18n.appString
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
+import me.thenano.yamibo.yamibo_app.i18n.i18n
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
@@ -50,7 +48,7 @@ fun CommentRenderer(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = appString(Res.string.ui_comment_remark_with_icon),
+                    text = i18n("💬 點評"),
                     color = colors.brownPrimary,
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.sp

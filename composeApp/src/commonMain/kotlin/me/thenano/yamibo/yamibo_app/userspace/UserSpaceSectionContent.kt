@@ -1,8 +1,6 @@
-﻿package me.thenano.yamibo.yamibo_app.userspace
+package me.thenano.yamibo.yamibo_app.userspace
 
-import me.thenano.yamibo.yamibo_app.i18n.appString
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
+import me.thenano.yamibo.yamibo_app.i18n.i18n
 
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,8 +14,9 @@ import io.github.littlesurvival.dto.model.BlogSummary
 import io.github.littlesurvival.dto.model.PageNav
 import io.github.littlesurvival.dto.model.ThreadSummary
 import io.github.littlesurvival.dto.model.User
-import me.thenano.yamibo.yamibo_app.components.YamiboEmptyContent
-import me.thenano.yamibo.yamibo_app.components.YamiboPageNavigation
+import io.github.littlesurvival.dto.page.ProfilePage
+import me.thenano.yamibo.yamibo_app.components.feedback.YamiboEmptyContent
+import me.thenano.yamibo.yamibo_app.components.navigation.YamiboPageNavigation
 import me.thenano.yamibo.yamibo_app.forum.components.ThreadCard
 import me.thenano.yamibo.yamibo_app.message.MessageCenterTab
 import me.thenano.yamibo.yamibo_app.userspace.blog.components.BlogCard
@@ -32,6 +31,7 @@ internal fun UserSpaceSectionContent(
     currentPage: Int,
     onNavigateSection: (UserSpaceSection, UserSpaceSubPage) -> Unit,
     onOpenMessageCenter: (MessageCenterTab) -> Unit,
+    onAddFriend: (ProfilePage) -> Unit,
     onPageChange: (Int) -> Unit,
     onThreadClick: (ThreadSummary) -> Unit,
     onUserClick: (User) -> Unit,
@@ -53,6 +53,7 @@ internal fun UserSpaceSectionContent(
                         isSelf = isSelf,
                         onNavigateSection = onNavigateSection,
                         onOpenMessageCenter = { onOpenMessageCenter(MessageCenterTab.PrivateMessages) },
+                        onAddFriend = onAddFriend,
                         onOpenWebView = onOpenWebView,
                     )
                 }
@@ -101,15 +102,15 @@ private fun UserSpaceEmptyListMessage(message: String) {
 
 private fun emptyMessage(tab: UserSpaceSubPage, isSelf: Boolean): String = when (tab) {
     UserSpaceSubPage.Profile -> ""
-    UserSpaceSubPage.Threads -> if (isSelf) appString(Res.string.ui_topic_not_found) else appString(Res.string.ui_his_topic_was_not_found)
-    UserSpaceSubPage.Replies -> if (isSelf) appString(Res.string.ui_no_reply_found) else appString(Res.string.ui_no_reply_found_from_ta)
-    UserSpaceSubPage.MyBlogs -> if (isSelf) appString(Res.string.ui_no_log_found) else appString(Res.string.ui_his_log_was_not_found)
-    UserSpaceSubPage.FriendBlogs -> appString(Res.string.ui_no_friend_s_log_found)
-    UserSpaceSubPage.ViewAllBlogs -> appString(Res.string.ui_no_log_found)
-    UserSpaceSubPage.Friends -> appString(Res.string.ui_no_friends_found)
-    UserSpaceSubPage.Online -> appString(Res.string.ui_no_online_members_found)
-    UserSpaceSubPage.Visitors -> appString(Res.string.ui_no_visitor_found)
-    UserSpaceSubPage.Traces -> appString(Res.string.ui_no_footprints_found)
+    UserSpaceSubPage.Threads -> if (isSelf) i18n("沒有找到主題") else i18n("沒有找到Ta的主題")
+    UserSpaceSubPage.Replies -> if (isSelf) i18n("沒有找到回復") else i18n("沒有找到Ta的回復")
+    UserSpaceSubPage.MyBlogs -> if (isSelf) i18n("沒有找到日志") else i18n("沒有找到Ta的日志")
+    UserSpaceSubPage.FriendBlogs -> i18n("沒有找到好友的日志")
+    UserSpaceSubPage.ViewAllBlogs -> i18n("沒有找到日志")
+    UserSpaceSubPage.Friends -> i18n("沒有找到好友")
+    UserSpaceSubPage.Online -> i18n("沒有找到在線成員")
+    UserSpaceSubPage.Visitors -> i18n("沒有找到訪客")
+    UserSpaceSubPage.Traces -> i18n("沒有找到足跡")
 }
 
 @Composable

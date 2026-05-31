@@ -1,52 +1,17 @@
-﻿package me.thenano.yamibo.yamibo_app.favorite
+package me.thenano.yamibo.yamibo_app.favorite
 
-import me.thenano.yamibo.yamibo_app.i18n.appString
-import me.thenano.yamibo.yamibo_app.i18n.localizedAppMessage
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
 
 import YamiboIcons
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.absoluteOffset
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Snackbar
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -63,17 +28,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.thenano.yamibo.yamibo_app.LocalFavoriteRepository
-import me.thenano.yamibo.yamibo_app.favorite.components.ReorderActionChip
-import me.thenano.yamibo.yamibo_app.favorite.components.calculateReorderTargetIndex
-import me.thenano.yamibo.yamibo_app.favorite.components.collectionColor
-import me.thenano.yamibo.yamibo_app.favorite.components.fastReorderDrag
-import me.thenano.yamibo.yamibo_app.favorite.components.rememberReorderGapOffset
-import me.thenano.yamibo.yamibo_app.favorite.components.reorderedList
+import me.thenano.yamibo.yamibo_app.favorite.components.*
+import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
-import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository as FavoriteRepositoryContract
 import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.FavoriteCollection
 import me.thenano.yamibo.yamibo_app.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository as FavoriteRepositoryContract
 
 private val EditorRowHeight = 78.dp
 private val EditorRowSpacing = 14.dp
@@ -121,7 +82,7 @@ internal fun FavoriteCategoryEditorScreen(categoryId: Long?) {
     suspend fun createCategoryIfNeeded(): Boolean {
         if (workingCategoryId != 0L) return true
         if (categoryName.isBlank()) {
-            snackbarHostState.showSnackbar(appString(Res.string.ui_please_enter_category_name_first))
+            snackbarHostState.showSnackbar(i18n("請先輸入類別名稱"))
             return false
         }
         return try {
@@ -134,7 +95,7 @@ internal fun FavoriteCategoryEditorScreen(categoryId: Long?) {
             reloadCollections()
             true
         } catch (error: IllegalArgumentException) {
-            snackbarHostState.showSnackbar(error.message?.let(::localizedAppMessage) ?: appString(Res.string.ui_failed_create_category))
+            snackbarHostState.showSnackbar(error.message?.takeIf { it.isNotBlank() } ?: i18n("建立類別失敗"))
             false
         }
     }
@@ -194,10 +155,10 @@ internal fun FavoriteCategoryEditorScreen(categoryId: Long?) {
             TopAppBar(
                 title = {
                     Text(
-                        text = if (categoryId == null) appString(Res.string.ui_add_category) else appString(Res.string.ui_edit_categories),
+                        text = if (categoryId == null) i18n("新增類別") else i18n("編輯類別"),
                         color = Color.White,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp,
+                        fontSize = 18.sp,
                     )
                 },
                 navigationIcon = {
@@ -215,7 +176,7 @@ internal fun FavoriteCategoryEditorScreen(categoryId: Long?) {
                                         return@launch
                                     }
                                     if (categoryName.isBlank()) {
-                                        snackbarHostState.showSnackbar(appString(Res.string.ui_please_enter_category_name))
+                                        snackbarHostState.showSnackbar(i18n("請輸入類別名稱"))
                                         return@launch
                                     }
                                     if (workingCategoryId == 0L) {
@@ -227,7 +188,7 @@ internal fun FavoriteCategoryEditorScreen(categoryId: Long?) {
                                     }
                                     navigator.pop()
                                 } catch (error: IllegalArgumentException) {
-                                    snackbarHostState.showSnackbar(error.message?.let(::localizedAppMessage) ?: appString(Res.string.ui_save_failed_2))
+                                    snackbarHostState.showSnackbar(error.message?.takeIf { it.isNotBlank() } ?: i18n("保存失敗"))
                                 }
                             }
                         },
@@ -235,7 +196,7 @@ internal fun FavoriteCategoryEditorScreen(categoryId: Long?) {
                         shape = RoundedCornerShape(12.dp),
                     ) {
                         Text(
-                            text = if (isDefaultCategory) appString(Res.string.ui_finish) else appString(Res.string.ui_save),
+                            text = if (isDefaultCategory) i18n("完成") else i18n("保存"),
                             color = colors.creamBackground,
                             modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
                             fontWeight = FontWeight.SemiBold,
@@ -256,7 +217,7 @@ internal fun FavoriteCategoryEditorScreen(categoryId: Long?) {
         ) {
             if (!isDefaultCategory) {
                 item {
-                    Text(appString(Res.string.ui_category_name), color = colors.textDark.copy(alpha = 0.6f), fontSize = 13.sp)
+                    Text(i18n("類別名稱"), color = colors.textDark.copy(alpha = 0.6f), fontSize = 13.sp)
                     Spacer(Modifier.size(8.dp))
                     OutlinedTextField(
                         value = categoryName,
@@ -272,7 +233,7 @@ internal fun FavoriteCategoryEditorScreen(categoryId: Long?) {
             item {
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(appString(Res.string.ui_gather), color = colors.textDark, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        Text(i18n("集合"), color = colors.textDark, fontWeight = FontWeight.Bold, fontSize = 18.sp)
                     }
                     Surface(
                         onClick = {
@@ -288,7 +249,7 @@ internal fun FavoriteCategoryEditorScreen(categoryId: Long?) {
                         border = BorderStroke(1.dp, colors.brownPrimary.copy(alpha = 0.2f)),
                     ) {
                         Text(
-                            appString(Res.string.ui_add_new_collection),
+                            i18n("新增集合"),
                             color = colors.brownDeep,
                             modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
                             fontWeight = FontWeight.SemiBold,
@@ -429,7 +390,7 @@ internal fun FavoriteCategoryEditorScreen(categoryId: Long?) {
                         showCollectionDialog = false
                         reloadCollections()
                     } catch (error: IllegalArgumentException) {
-                        snackbarHostState.showSnackbar(error.message?.let(::localizedAppMessage) ?: appString(Res.string.ui_save_failed_2))
+                        snackbarHostState.showSnackbar(error.message?.takeIf { it.isNotBlank() } ?: i18n("保存失敗"))
                     }
                 }
             },
@@ -479,11 +440,11 @@ private fun FavoriteCollectionEditorCard(
             Text("⋮⋮", color = colors.brownDeep.copy(alpha = 0.78f), fontSize = 18.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.size(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(localizedAppMessage(collection.name), color = colors.textDark, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                Text(collection.name, color = colors.textDark, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             }
-            ReorderActionChip(text = appString(Res.string.ui_edit), onClick = onEdit)
+            ReorderActionChip(text = i18n("編輯"), onClick = onEdit)
             Spacer(Modifier.size(8.dp))
-            ReorderActionChip(text = appString(Res.string.common_delete), onClick = onDelete, emphasized = true)
+            ReorderActionChip(text = i18n("刪除"), onClick = onDelete, emphasized = true)
         }
     }
 }
@@ -504,7 +465,7 @@ private fun CollectionDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
             FavoriteDialogButton(
-                text = appString(Res.string.ui_sure),
+                text = i18n("確定"),
                 background = colors.brownDeep,
                 contentColor = Color.White,
                 onClick = { if (name.isNotBlank()) onConfirm(name.trim(), colorKey) },
@@ -512,13 +473,13 @@ private fun CollectionDialog(
         },
         dismissButton = {
             FavoriteDialogButton(
-                text = appString(Res.string.ui_return),
+                text = i18n("返回"),
                 background = colors.brownPrimary.copy(alpha = 0.14f),
                 contentColor = colors.brownDeep,
                 onClick = onDismiss,
             )
         },
-        title = { Text(appString(Res.string.ui_gather), color = colors.brownDeep, fontWeight = FontWeight.Bold) },
+        title = { Text(i18n("集合"), color = colors.brownDeep, fontWeight = FontWeight.Bold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
@@ -528,9 +489,9 @@ private fun CollectionDialog(
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                     shape = RoundedCornerShape(14.dp),
-                    label = { Text(appString(Res.string.ui_name)) },
+                    label = { Text(i18n("名稱")) },
                 )
-                Text(appString(Res.string.ui_color), color = colors.textDark, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                Text(i18n("顏色"), color = colors.textDark, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     palette.forEach { paletteKey ->
                         Surface(
@@ -551,4 +512,3 @@ private fun CollectionDialog(
         containerColor = colors.creamSurface,
     )
 }
-

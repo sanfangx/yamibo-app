@@ -1,8 +1,7 @@
-﻿package me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl
+package me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl
 
-import yamibo_app.composeapp.generated.resources.*
-import yamibo_app.composeapp.generated.resources.Res
-import me.thenano.yamibo.yamibo_app.i18n.appString
+import me.thenano.yamibo.yamibo_app.i18n.i18n
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
@@ -42,13 +41,13 @@ fun RateRenderer(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = appString(Res.string.thread_rate_block_title, rateBlock.rateParticipatePeople),
+                    text = i18n("🌟 本帖評分 (共 {} 人)", rateBlock.rateParticipatePeople),
                     color = colors.brownPrimary,
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.sp
                 )
                 Text(
-                    text = appString(Res.string.thread_rate_total_score, rateBlock.rateTotalScore.toString()),
+                    text = i18n("總積分 +{}", rateBlock.rateTotalScore.toString()),
                     color = Color(0xFFD32F2F), // Standard red point color for total
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.sp

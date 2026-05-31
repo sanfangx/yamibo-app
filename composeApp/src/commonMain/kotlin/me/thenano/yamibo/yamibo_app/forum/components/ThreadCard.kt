@@ -21,8 +21,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.littlesurvival.dto.model.ThreadSummary
 import io.github.littlesurvival.dto.model.User
-import me.thenano.yamibo.yamibo_app.components.UserAvatar
-import me.thenano.yamibo.yamibo_app.components.YamiboStatBadge
+import me.thenano.yamibo.yamibo_app.components.user.UserAvatar
+import me.thenano.yamibo.yamibo_app.components.controls.YamiboStatBadge
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 
 /** Thread Card */

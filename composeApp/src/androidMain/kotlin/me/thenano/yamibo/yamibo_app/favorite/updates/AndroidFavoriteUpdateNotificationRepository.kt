@@ -1,9 +1,7 @@
-﻿package me.thenano.yamibo.yamibo_app.favorite.updates
+package me.thenano.yamibo.yamibo_app.favorite.updates
 
-import me.thenano.yamibo.yamibo_app.i18n.appString
-import me.thenano.yamibo.yamibo_app.i18n.localizedAppMessage
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
+import me.thenano.yamibo.yamibo_app.i18n.i18n
+
 
 import android.Manifest
 import android.app.Notification
@@ -36,14 +34,14 @@ internal class AndroidFavoriteUpdateNotificationRepository(
         val progress = if (total > 0) ((processed * 100f) / total).toInt().coerceIn(0, 100) else 0
         return NotificationCompat.Builder(appContext, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle(appString(Res.string.ui_favorite_updates))
-            .setContentText(snapshot.currentItem?.let(::localizedAppMessage) ?: appString(Res.string.ui_checking_for_favorites_updates))
+            .setContentTitle(i18n("收藏更新"))
+            .setContentText(snapshot.currentItem?.takeIf { it.isNotBlank() } ?: i18n("正在檢查收藏更新"))
             .setOnlyAlertOnce(true)
             .setOngoing(true)
             .setProgress(100, progress, total == 0)
             .setContentIntent(createOpenAppPendingIntent())
             .setPriority(NotificationCompat.PRIORITY_LOW)
-            .addAction(0, appString(Res.string.common_cancel), FavoriteUpdateCancelReceiver.createPendingIntent(appContext, snapshot.runId))
+            .addAction(0, i18n("取消"), FavoriteUpdateCancelReceiver.createPendingIntent(appContext, snapshot.runId))
             .build()
     }
 
@@ -53,8 +51,8 @@ internal class AndroidFavoriteUpdateNotificationRepository(
             NOTIFICATION_ID,
             NotificationCompat.Builder(appContext, CHANNEL_ID)
                 .setSmallIcon(R.mipmap.ic_launcher)
-                .setContentTitle(appString(Res.string.ui_favorite_update_completed))
-                .setContentText(if (snapshot.detectedCount > 0) appString(Res.string.favorite_update_notification_detected, snapshot.detectedCount) else appString(Res.string.ui_no_updates_detected))
+                .setContentTitle(i18n("收藏更新完成"))
+                .setContentText(if (snapshot.detectedCount > 0) i18n("偵測到 {} 個更新", snapshot.detectedCount) else i18n("沒有偵測到更新"))
                 .setAutoCancel(true)
                 .setOnlyAlertOnce(false)
                 .setContentIntent(createOpenAppPendingIntent())
@@ -70,7 +68,7 @@ internal class AndroidFavoriteUpdateNotificationRepository(
             NotificationCompat.Builder(appContext, CHANNEL_ID)
                 .setSmallIcon(R.mipmap.ic_launcher)
                 .setContentTitle(title)
-                .setContentText(localizedAppMessage(text))
+                .setContentText(text)
                 .setAutoCancel(true)
                 .setOnlyAlertOnce(false)
                 .setContentIntent(createOpenAppPendingIntent())
@@ -85,10 +83,10 @@ internal class AndroidFavoriteUpdateNotificationRepository(
         manager.createNotificationChannel(
             NotificationChannel(
                 CHANNEL_ID,
-                appString(Res.string.ui_favorite_updates),
+                i18n("收藏更新"),
                 NotificationManager.IMPORTANCE_LOW,
             ).apply {
-                description = appString(Res.string.ui_display_favorite_update_check_progress_results)
+                description = i18n("顯示收藏更新檢查進度與結果")
             },
         )
     }
@@ -110,5 +108,4 @@ internal class AndroidFavoriteUpdateNotificationRepository(
         const val NOTIFICATION_ID = 228120
     }
 }
-
 

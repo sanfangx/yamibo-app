@@ -1,8 +1,6 @@
-﻿package me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl
+package me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl
 
-import me.thenano.yamibo.yamibo_app.i18n.appString
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
+import me.thenano.yamibo.yamibo_app.i18n.i18n
 
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.ui.graphics.Color
@@ -171,7 +169,7 @@ object HtmlParser {
                                 clazz.contains("showcollapse_box") -> {
                                     commitText()
                                     val titleNode = node.selectFirst(".showcollapse_title")
-                                    val titleText = titleNode?.text()?.takeIf { it.isNotBlank() } ?: appString(Res.string.ui_click_expand_collapse)
+                                    val titleText = titleNode?.text()?.takeIf { it.isNotBlank() } ?: i18n("點擊展開 / 收起")
                                     titleNode?.remove()
                                     val innerBlocks = parseHtml(node.html())
                                     val aid = hashId("col", titleText, blockCounter++)

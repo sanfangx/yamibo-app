@@ -1,9 +1,7 @@
 ﻿package me.thenano.yamibo.yamibo_app.favorite.components
 
-import me.thenano.yamibo.yamibo_app.i18n.appString
-import me.thenano.yamibo.yamibo_app.i18n.localizedAppMessage
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
+import me.thenano.yamibo.yamibo_app.i18n.i18n
+
 
 import YamiboIcons
 import androidx.compose.foundation.BorderStroke
@@ -27,15 +25,15 @@ import androidx.compose.ui.unit.sp
 import me.thenano.yamibo.yamibo_app.favorite.FavoriteDialogButton
 import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.FavoriteCategory
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
-import me.thenano.yamibo.yamibo_app.components.YamiboActionChip
-import me.thenano.yamibo.yamibo_app.components.YamiboMainTabIconAction
-import me.thenano.yamibo.yamibo_app.components.YamiboMainTabTopBar
+import me.thenano.yamibo.yamibo_app.components.controls.YamiboActionChip
+import me.thenano.yamibo.yamibo_app.components.navigation.YamiboMainTabIconAction
+import me.thenano.yamibo.yamibo_app.components.navigation.YamiboMainTabTopBar
 
 @Composable
 fun HeaderRow(title: String, actions: List<Pair<String, () -> Unit>>) {
     val colors = YamiboTheme.colors
     Row(
-        Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 6.dp),
+        Modifier.fillMaxWidth().statusBarsPadding().padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(title, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = colors.brownDeep, modifier = Modifier.weight(1f))
@@ -59,7 +57,7 @@ fun FavoriteHeaderMenuRow(
     YamiboMainTabTopBar(
         title = title,
     ) {
-        YamiboMainTabIconAction(YamiboIcons.Search, appString(Res.string.ui_search_favorites), onSearch, iconSize = 28, iconOffsetY = 4)
+        YamiboMainTabIconAction(YamiboIcons.Search, i18n("搜尋收藏"), onSearch, iconSize = 28, iconOffsetY = 4)
         RowScopeMenuBox(
             showMenu = showMenu,
             onShowMenu = { showMenu = true },
@@ -82,14 +80,14 @@ private fun RowScopeMenuBox(
 ) {
     val colors = YamiboTheme.colors
     Box {
-        YamiboMainTabIconAction(YamiboIcons.ThreeDots, appString(Res.string.ui_favorites_menu), iconSize = 25, onClick = onShowMenu)
+        YamiboMainTabIconAction(YamiboIcons.ThreeDots, i18n("收藏選單"), iconSize = 25, onClick = onShowMenu)
         DropdownMenu(
             expanded = showMenu,
             onDismissRequest = onDismissMenu,
             modifier = Modifier.background(colors.creamSurface),
         ) {
             DropdownMenuItem(
-                text = { Text(appString(Res.string.ui_create_new_category), color = colors.brownDeep) },
+                text = { Text(i18n("建新類別"), color = colors.brownDeep) },
                 leadingIcon = {
                     Icon(
                         imageVector = YamiboIcons.Plus,
@@ -103,7 +101,7 @@ private fun RowScopeMenuBox(
                 },
             )
             DropdownMenuItem(
-                text = { Text(appString(Res.string.ui_management_category), color = colors.brownDeep) },
+                text = { Text(i18n("管理類別"), color = colors.brownDeep) },
                 leadingIcon = {
                     Icon(
                         imageVector = YamiboIcons.Setting,
@@ -117,7 +115,7 @@ private fun RowScopeMenuBox(
                 },
             )
             DropdownMenuItem(
-                text = { Text(appString(Res.string.ui_synchronous_yamibo_favorite), color = colors.brownDeep) },
+                text = { Text(i18n("同步百合會收藏"), color = colors.brownDeep) },
                 leadingIcon = {
                     Icon(
                         imageVector = YamiboIcons.Sync,
@@ -157,7 +155,7 @@ fun FavoriteSearchTopBar(
             onValueChange = onQueryChange,
             modifier = Modifier.weight(1f),
             placeholder = {
-                Text(appString(Res.string.ui_search_for_favorite_titles), color = colors.textDark.copy(alpha = 0.4f), fontSize = 15.sp)
+                Text(i18n("搜尋收藏標題..."), color = colors.textDark.copy(alpha = 0.4f), fontSize = 15.sp)
             },
             singleLine = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
@@ -177,7 +175,7 @@ fun FavoriteSearchTopBar(
         Spacer(Modifier.width(6.dp))
         Surface(onClick = onSearch, shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp), color = colors.brownDeep) {
             Text(
-                text = appString(Res.string.read_history_search),
+                text = i18n("搜尋"),
                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
                 color = Color.White,
                 fontSize = 14.sp,
@@ -201,7 +199,7 @@ fun FavoriteSyncCategoryDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                appString(Res.string.ui_which_category_sync),
+                i18n("同步到哪個類別"),
                 color = colors.brownDeep,
                 fontWeight = FontWeight.Bold,
             )
@@ -230,14 +228,14 @@ fun FavoriteSyncCategoryDialog(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                text = localizedAppMessage(category.name),
+                                text = category.name,
                                 modifier = Modifier.weight(1f),
                                 color = if (selected) colors.brownDeep else colors.textDark,
                                 fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
                             )
                             if (selected) {
                                 Text(
-                                    text = appString(Res.string.ui_selected),
+                                    text = i18n("已選擇"),
                                     color = colors.brownDeep,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.SemiBold,
@@ -250,7 +248,7 @@ fun FavoriteSyncCategoryDialog(
         },
         confirmButton = {
             FavoriteDialogButton(
-                text = appString(Res.string.ui_start_syncing),
+                text = i18n("開始同步"),
                 background = colors.brownDeep,
                 contentColor = Color.White,
                 onClick = { onConfirm(selectedCategoryId) },
@@ -258,7 +256,7 @@ fun FavoriteSyncCategoryDialog(
         },
         dismissButton = {
             FavoriteDialogButton(
-                text = appString(Res.string.common_cancel),
+                text = i18n("取消"),
                 background = colors.brownPrimary.copy(alpha = 0.1f),
                 contentColor = colors.brownDeep,
                 onClick = onDismiss,
@@ -274,4 +272,3 @@ fun FavoriteSyncCategoryDialog(
 fun ActionChip(text: String, onClick: () -> Unit) {
     YamiboActionChip(text = text, onClick = onClick)
 }
-

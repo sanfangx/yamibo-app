@@ -1,10 +1,5 @@
 ﻿package me.thenano.yamibo.yamibo_app.home
 
-import me.thenano.yamibo.yamibo_app.i18n.appString
-import me.thenano.yamibo.yamibo_app.i18n.localizedMessage
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.*
-
 import YamiboIcons
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
@@ -41,15 +36,18 @@ import io.github.littlesurvival.dto.page.ForumCategory
 import io.github.littlesurvival.dto.page.HomePage
 import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.LocalForumRepository
+import me.thenano.yamibo.yamibo_app.event.AppEventBus
+import me.thenano.yamibo.yamibo_app.event.events.LoginSuccessEvent
 import me.thenano.yamibo.yamibo_app.forum.IForumScreen
 import me.thenano.yamibo.yamibo_app.forum.search.ISearchScreen
+import me.thenano.yamibo.yamibo_app.i18n.i18n
+import me.thenano.yamibo.yamibo_app.i18n.localizedMessage
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import org.jetbrains.compose.resources.painterResource
+import yamibo_app.composeapp.generated.resources.Res
 import yamibo_app.composeapp.generated.resources.logo_homepage
-import me.thenano.yamibo.yamibo_app.event.AppEventBus
-import me.thenano.yamibo.yamibo_app.event.events.LoginSuccessEvent
 
 /** Sealed state for the home page */
 private sealed interface HomeState {
@@ -208,7 +206,7 @@ private fun HomeHeader(onSearch: () -> Unit) {
         IconButton(onClick = onSearch, modifier = Modifier.offset(y = 11.dp)) {
             Icon(
                 imageVector = YamiboIcons.Search,
-                contentDescription = appString(Res.string.read_history_search),
+                contentDescription = i18n("搜尋"),
                 tint = Color.White,
                 modifier = Modifier.size(34.dp)
             )
@@ -365,7 +363,7 @@ private fun ForumCard(forum: ForumSummary) {
                     color = colors.orangeAccent.copy(alpha = 0.18f)
                 ) {
                     Text(
-                        text = appString(Res.string.home_today_count, today),
+                        text = i18n("今日 {}", today),
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
@@ -472,7 +470,7 @@ private fun ErrorContent(message: String, onRetry: () -> Unit) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = appString(Res.string.ui_loading_failed),
+                    text = i18n("載入失敗"),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = colors.brownDeep
@@ -492,7 +490,7 @@ private fun ErrorContent(message: String, onRetry: () -> Unit) {
                     contentColor = Color.White
                 ) {
                     Text(
-                        text = appString(Res.string.ui_try_again),
+                        text = i18n("重試"),
                         modifier = Modifier.padding(horizontal = 32.dp, vertical = 12.dp),
                         fontWeight = FontWeight.Bold,
                         fontSize = 15.sp
@@ -502,6 +500,4 @@ private fun ErrorContent(message: String, onRetry: () -> Unit) {
         }
     }
 }
-
-
 
