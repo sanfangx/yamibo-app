@@ -95,7 +95,7 @@ internal fun FavoriteCategoryEditorScreen(categoryId: Long?) {
             reloadCollections()
             true
         } catch (error: IllegalArgumentException) {
-            snackbarHostState.showSnackbar(error.message?.takeIf { it.isNotBlank() } ?: i18n("建立類別失敗"))
+            snackbarHostState.showSnackbar(error.message?.let { i18n(it) }?.takeIf { it.isNotBlank() } ?: i18n("建立類別失敗"))
             false
         }
     }
@@ -188,7 +188,7 @@ internal fun FavoriteCategoryEditorScreen(categoryId: Long?) {
                                     }
                                     navigator.pop()
                                 } catch (error: IllegalArgumentException) {
-                                    snackbarHostState.showSnackbar(error.message?.takeIf { it.isNotBlank() } ?: i18n("保存失敗"))
+                                    snackbarHostState.showSnackbar(error.message?.let { i18n(it) }?.takeIf { it.isNotBlank() } ?: i18n("保存失敗"))
                                 }
                             }
                         },
@@ -390,7 +390,7 @@ internal fun FavoriteCategoryEditorScreen(categoryId: Long?) {
                         showCollectionDialog = false
                         reloadCollections()
                     } catch (error: IllegalArgumentException) {
-                        snackbarHostState.showSnackbar(error.message?.takeIf { it.isNotBlank() } ?: i18n("保存失敗"))
+                        snackbarHostState.showSnackbar(error.message?.let { i18n(it) }?.takeIf { it.isNotBlank() } ?: i18n("保存失敗"))
                     }
                 }
             },

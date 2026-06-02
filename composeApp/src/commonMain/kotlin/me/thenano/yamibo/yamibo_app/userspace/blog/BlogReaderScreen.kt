@@ -35,7 +35,6 @@ import me.thenano.yamibo.yamibo_app.components.navigation.YamiboTopBar
 import me.thenano.yamibo.yamibo_app.components.user.UserAvatar
 import me.thenano.yamibo.yamibo_app.components.user.UserIdentityRow
 import me.thenano.yamibo.yamibo_app.i18n.i18n
-import me.thenano.yamibo.yamibo_app.i18n.localizedMessage
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
@@ -85,7 +84,7 @@ fun BlogReaderScreen(
                 currentPage = result.value.pageNav?.currentPage ?: page
                 BlogReaderState.Success(result.value)
             }
-            else -> BlogReaderState.Error(result.localizedMessage())
+            else -> BlogReaderState.Error(i18n(result.message()))
         }
     }
 
@@ -178,7 +177,7 @@ fun BlogReaderScreen(
                                                     snackbarHostState.showSnackbar(result.value, duration = SnackbarDuration.Short)
                                                     loadPage(currentPage, preferCache = false)
                                                 }
-                                                else -> snackbarHostState.showSnackbar(result.localizedMessage(), duration = SnackbarDuration.Short)
+                                                else -> snackbarHostState.showSnackbar(i18n(result.message()), duration = SnackbarDuration.Short)
                                             }
                                             submitting = false
                                         }

@@ -25,7 +25,6 @@ import me.thenano.yamibo.yamibo_app.LocalAuthRepository
 import me.thenano.yamibo.yamibo_app.LocalNovelThreadCacheRepository
 import me.thenano.yamibo.yamibo_app.LocalThreadRepository
 import me.thenano.yamibo.yamibo_app.i18n.i18n
-import me.thenano.yamibo.yamibo_app.i18n.localizedMessage
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.repository.inapplinknavigation.InAppLinkContext
@@ -252,7 +251,7 @@ internal fun CommentReaderScreen(
             }
 
             else -> {
-                state = CommentState.Error(result.localizedMessage())
+                state = CommentState.Error(i18n(result.message()))
             }
         }
     }
@@ -307,7 +306,7 @@ internal fun CommentReaderScreen(
                                     state = CommentState.Success
                                 }
 
-                                else -> state = CommentState.Error(result.localizedMessage())
+                                else -> state = CommentState.Error(i18n(result.message()))
                             }
                         }
                     }
@@ -350,7 +349,7 @@ internal fun CommentReaderScreen(
                                         scope.launch {
                                             when (val res = threadRepository.ratePost(tid, post.pid, score, reason, formHash, noticeAuthor)) {
                                                 is YamiboResult.Success -> snackbarHostState.showSnackbar(i18n("評分成功，刷新後更新評分/點評狀態"))
-                                                else -> snackbarHostState.showSnackbar(i18n("評分失敗: {}", res.localizedMessage()))
+                                                else -> snackbarHostState.showSnackbar(i18n("評分失敗: {}", i18n(res.message())))
                                             }
                                         }
                                     },
@@ -363,7 +362,7 @@ internal fun CommentReaderScreen(
                                         scope.launch {
                                             when (val res = threadRepository.commentPost(tid, post.pid, message, formHash)) {
                                                 is YamiboResult.Success -> snackbarHostState.showSnackbar(i18n("點評成功，刷新後更新評分/點評狀態"))
-                                                else -> snackbarHostState.showSnackbar(i18n("點評失敗: {}", res.localizedMessage()))
+                                                else -> snackbarHostState.showSnackbar(i18n("點評失敗: {}", i18n(res.message())))
                                             }
                                         }
                                     },
@@ -415,7 +414,7 @@ internal fun CommentReaderScreen(
                                                             threadRepository.fetchThread(tid, null, nextPage)) {
                                                             is YamiboResult.Success -> result.value
                                                             else -> {
-                                                                snackbarHostState.showSnackbar(i18n("載入失敗: {}", result.localizedMessage()))
+                                                                snackbarHostState.showSnackbar(i18n("載入失敗: {}", i18n(result.message())))
                                                                 isLoadingMore = false
                                                                 return@launch
                                                             }
@@ -479,7 +478,7 @@ internal fun CommentReaderScreen(
                                 isCommentComplete = complete
                                 state = CommentState.Success
                             }
-                            else -> state = CommentState.Error(result.localizedMessage())
+                            else -> state = CommentState.Error(i18n(result.message()))
                         }
                     }
                 },

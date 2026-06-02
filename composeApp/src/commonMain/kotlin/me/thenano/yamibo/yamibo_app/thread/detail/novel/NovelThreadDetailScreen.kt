@@ -1,4 +1,4 @@
-﻿package me.thenano.yamibo.yamibo_app.thread.detail.novel
+package me.thenano.yamibo.yamibo_app.thread.detail.novel
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -22,7 +22,6 @@ import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.*
 import me.thenano.yamibo.yamibo_app.favorite.*
 import me.thenano.yamibo.yamibo_app.i18n.i18n
-import me.thenano.yamibo.yamibo_app.i18n.localizedMessage
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.DetailNoteRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
@@ -246,7 +245,7 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
                     pagePostsCache[page] = result.value.posts
                     ThreadState.Success(result.value)
                 }
-                else -> ThreadState.Error(result.localizedMessage())
+                else -> ThreadState.Error(i18n(result.message()))
             }
     }
 
@@ -320,7 +319,7 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
 
                                     else -> {
                                         snackbarHostState.showSnackbar(
-                                            message = i18n("重新整理帖子失敗：{}", result.localizedMessage()),
+                                            message = i18n("重新整理帖子失敗：{}", i18n(result.message())),
                                             duration = SnackbarDuration.Short,
                                         )
                                     }
@@ -358,7 +357,7 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
                                             pagePostsCache[page] = result.value.posts
                                         } else {
                                             snackbarHostState.showSnackbar(
-                                                message = i18n("載入第 {} 頁失敗: {}", page, result.localizedMessage()),
+                                                message = i18n("載入第 {} 頁失敗: {}", page, i18n(result.message())),
                                                 duration = SnackbarDuration.Short
                                             )
                                         }

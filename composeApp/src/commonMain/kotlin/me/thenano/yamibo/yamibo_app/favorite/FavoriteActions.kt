@@ -124,8 +124,8 @@ internal suspend fun completeFavoriteAddWithFeedback(
     onRefreshRequested()
     val message = when {
         syncResult == null -> i18n("已加入收藏")
-        syncResult.success -> i18n("已加入收藏，{}", (syncResult.message?.takeIf { it.isNotBlank() } ?: i18n("已同步到百合會。")))
-        else -> i18n("已加入收藏，但同步失敗：{}", (syncResult.message?.takeIf { it.isNotBlank() } ?: i18n("請稍後再試")))
+        syncResult.success -> i18n("已加入收藏，{}", (syncResult.message?.let { i18n(it) }?.takeIf { it.isNotBlank() } ?: i18n("已同步到百合會。")))
+        else -> i18n("已加入收藏，但同步失敗：{}", (syncResult.message?.let { i18n(it) }?.takeIf { it.isNotBlank() } ?: i18n("請稍後再試")))
     }
     snackbarHostState.showSnackbar(message)
 }
@@ -157,8 +157,8 @@ internal suspend fun completeSavedFavoriteSyncWithFeedback(
     onRefreshRequested()
     val message = when {
         syncResult == null -> i18n("已加入本地收藏")
-        syncResult.success -> i18n("已加入本地收藏，{}", (syncResult.message?.takeIf { it.isNotBlank() } ?: i18n("已同步到百合會。")))
-        else -> i18n("已加入本地收藏，但同步到百合會失敗：{}", (syncResult.message?.takeIf { it.isNotBlank() } ?: i18n("請稍後再試")))
+        syncResult.success -> i18n("已加入本地收藏，{}", (syncResult.message?.let { i18n(it) }?.takeIf { it.isNotBlank() } ?: i18n("已同步到百合會。")))
+        else -> i18n("已加入本地收藏，但同步到百合會失敗：{}", (syncResult.message?.let { i18n(it) }?.takeIf { it.isNotBlank() } ?: i18n("請稍後再試")))
     }
     snackbarHostState.showSnackbar(message)
 }
@@ -196,7 +196,7 @@ internal suspend fun completeFavoriteRemovalWithFeedback(
     snackbarHostState.currentSnackbarData?.dismiss()
     onRefreshRequested()
     snackbarHostState.showSnackbar(
-        if (result.success) successMessage else result.message?.takeIf { it.isNotBlank() } ?: failureMessage,
+        if (result.success) successMessage else result.message?.let { i18n(it) }?.takeIf { it.isNotBlank() } ?: failureMessage,
     )
 }
 

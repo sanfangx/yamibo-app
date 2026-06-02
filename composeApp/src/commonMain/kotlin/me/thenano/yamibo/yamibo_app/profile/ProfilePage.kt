@@ -2,7 +2,6 @@ package me.thenano.yamibo.yamibo_app.profile
 
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 
-import me.thenano.yamibo.yamibo_app.i18n.localizedMessage
 
 import YamiboIcons
 import androidx.compose.foundation.background
@@ -179,11 +178,11 @@ fun ProfilePage() {
                                                 }
 
                                                 is YamiboResult.Failure -> {
-                                                    snackbarMessage = result.localizedMessage()
+                                                    snackbarMessage = i18n(result.message())
                                                 }
 
                                                 is YamiboResult.NotLoggedIn -> {
-                                                    snackbarMessage = result.localizedMessage()
+                                                    snackbarMessage = i18n(result.message())
                                                 }
 
                                                 is YamiboResult.NoPermission -> {
@@ -191,7 +190,7 @@ fun ProfilePage() {
                                                 }
 
                                                 is YamiboResult.Maintenance -> {
-                                                    snackbarMessage = result.localizedMessage()
+                                                    snackbarMessage = i18n(result.message())
                                                 }
                                             }
                                             isSigning = false

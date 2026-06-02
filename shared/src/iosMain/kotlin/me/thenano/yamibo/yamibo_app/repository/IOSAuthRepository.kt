@@ -5,7 +5,7 @@ import io.github.littlesurvival.YamiboRoute
 import io.github.littlesurvival.core.YamiboResult
 import io.github.littlesurvival.dto.page.ProfilePage
 import kotlinx.coroutines.delay
-import me.thenano.yamibo.yamibo_app.i18n.AppMessage
+import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.store.auth.CookieStore
 import me.thenano.yamibo.yamibo_app.store.auth.UserStore
 import me.thenano.yamibo.yamibo_app.util.auth.parseCookieStringToMap
@@ -24,7 +24,7 @@ class IOSAuthRepository(
     }
 
     override suspend fun fetchStatus(): YamiboResult<Boolean> {
-        if (!isLoggedIn()) return YamiboResult.Failure(AppMessage.of("auth.no_login_data"))
+        if (!isLoggedIn()) return YamiboResult.Failure(i18n("查無登入資料，請重新登入"))
 
         yamiboClient.setCookie(cookieStore.load() ?: "")
         when (val profileResult = yamiboClient.fetchProfileInfo()) {
@@ -35,19 +35,19 @@ class IOSAuthRepository(
 
             is YamiboResult.NotLoggedIn -> {
                 logOut()
-                return YamiboResult.Failure(AppMessage.of("auth.expired"))
+                return YamiboResult.Failure(i18n("登入資訊過期，請重新登入"))
             }
 
             is YamiboResult.Maintenance -> {
-                return YamiboResult.Failure(AppMessage.of("auth.maintenance"))
+                return YamiboResult.Failure(i18n("伺服器正在維護中"))
             }
 
             is YamiboResult.Failure -> {
-                return YamiboResult.Failure(AppMessage.of("auth.profile_failed", profileResult.reason))
+                return YamiboResult.Failure(i18n("獲取用戶資料失敗: {}", profileResult.reason))
             }
 
             is YamiboResult.NoPermission -> {
-                return YamiboResult.Failure(AppMessage.of("auth.profile_failed", profileResult.reason))
+                return YamiboResult.Failure(i18n("獲取用戶資料失敗: {}", profileResult.reason))
             }
         }
     }

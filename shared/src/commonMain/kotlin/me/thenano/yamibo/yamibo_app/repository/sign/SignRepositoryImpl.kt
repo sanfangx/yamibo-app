@@ -1,4 +1,4 @@
-﻿package me.thenano.yamibo.yamibo_app.repository.sign
+package me.thenano.yamibo.yamibo_app.repository.sign
 
 import io.github.littlesurvival.YamiboClient
 import io.github.littlesurvival.YamiboRoute
@@ -10,7 +10,7 @@ import io.github.littlesurvival.dto.page.SignPage
 import io.github.littlesurvival.parse.SignPageParser
 import kotlinx.coroutines.runBlocking
 import me.thenano.yamibo.yamibo_app.Database
-import me.thenano.yamibo.yamibo_app.i18n.AppMessage
+import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.repository.AuthRepository
 import me.thenano.yamibo.yamibo_app.repository.SignRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.AppSettingsRepository
@@ -68,7 +68,7 @@ class SignRepositoryImpl(
 
         if (!pageInfo.hasSignedToday) {
             val signUrl = pageInfo.signActionUrl
-                ?: return YamiboResult.Failure(msg("sign.verified_no_button"))
+                ?: return YamiboResult.Failure(i18n("已通過驗證，但找不到簽到按鈕，請改用手動模式。"))
             val signAction = when (val action = executeAction(signUrl)) {
                 is YamiboResult.Success -> action.value
                 is YamiboResult.NotLoggedIn -> return action
@@ -90,7 +90,7 @@ class SignRepositoryImpl(
                 else -> optimisticSignedPageInfo(pageInfo)
             }
         } else {
-            lastMessage = msg("sign.already_signed")
+            lastMessage = i18n("今天已經打卡過了。")
         }
 
         if (allowRepair) {
@@ -121,7 +121,7 @@ class SignRepositoryImpl(
         }
 
         val message = when {
-            repairCount > 0 -> msg("sign.repair_completed", lastMessage, repairCount)
+            repairCount > 0 -> i18n("{} 已完成 {} 次補簽。", lastMessage, repairCount)
             else -> lastMessage
         }
         updateTodayRecord(pageInfo, message)
@@ -183,8 +183,6 @@ class SignRepositoryImpl(
         return info
     }
 
-    private fun msg(key: String, vararg args: Any?): String = AppMessage.of(key, *args)
-
     private suspend fun executeAction(url: String): YamiboResult<ParsedActionResult> {
         val absoluteUrl = buildAbsoluteUrl(url)
         val cookie = authRepository.cookieStore.load().orEmpty()
@@ -230,7 +228,7 @@ class SignRepositoryImpl(
             normalized.contains("just a moment") ||
             normalized.contains("verify you are human")
         ) {
-            msg("sign.cloudflare_required")
+            i18n("尚未通過簽到頁的 Cloudflare 驗證，請先在 WebView 完成驗證。")
         } else {
             reason
         }
@@ -281,7 +279,7 @@ class SignRepositoryImpl(
         }
         return ParsedActionResult(
             status = status,
-            message = message.ifBlank { msg("sign.action_completed") },
+            message = message.ifBlank { i18n("操作完成") },
         )
     }
 

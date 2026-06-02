@@ -1,4 +1,4 @@
-﻿package me.thenano.yamibo.yamibo_app.favorite
+package me.thenano.yamibo.yamibo_app.favorite
 
 
 import androidx.compose.foundation.background
@@ -420,7 +420,7 @@ fun FavoritePage() {
                                 navigator.navigate(IFavoriteSyncProgressScreen(result.runId))
                             }
                             is me.thenano.yamibo.yamibo_app.favorite.sync.FavoriteSyncRunner.LaunchResult.Rejected -> {
-                                showSnackbarMessage(result.reason)
+                                showSnackbarMessage(i18n(result.reason))
                             }
                         }
                     }
@@ -621,7 +621,7 @@ fun FavoritePage() {
                             navigator.navigate(IFavoriteSyncProgressScreen(result.runId))
                         }
                         is me.thenano.yamibo.yamibo_app.favorite.sync.FavoriteSyncRunner.LaunchResult.Rejected -> {
-                            showSnackbarMessage(result.reason)
+                            showSnackbarMessage(i18n(result.reason))
                         }
                     }
                 }
@@ -703,7 +703,7 @@ fun FavoritePage() {
                             collectionDraft = null
                         }
                     } catch (error: IllegalArgumentException) {
-                        showSnackbarMessage(error.message?.takeIf { it.isNotBlank() } ?: i18n("保存失敗"))
+                        showSnackbarMessage(error.message?.let { i18n(it) }?.takeIf { it.isNotBlank() } ?: i18n("保存失敗"))
                     }
                 }
             },

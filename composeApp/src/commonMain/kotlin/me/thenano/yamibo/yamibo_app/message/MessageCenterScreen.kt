@@ -1,4 +1,4 @@
-﻿package me.thenano.yamibo.yamibo_app.message
+package me.thenano.yamibo.yamibo_app.message
 
 import YamiboIcons
 import androidx.compose.animation.AnimatedContent
@@ -35,7 +35,6 @@ import me.thenano.yamibo.yamibo_app.components.user.UserAvatar
 import me.thenano.yamibo.yamibo_app.favorite.updates.FavoriteUpdateRunner
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.i18n.localizedLabel
-import me.thenano.yamibo.yamibo_app.i18n.localizedMessage
 import me.thenano.yamibo.yamibo_app.navigation.ComposableNavigator
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.FavoriteUpdateRepository
@@ -132,7 +131,7 @@ fun MessageCenterScreen(
                 }
                 MessageCenterState.Success(content)
             }
-            else -> MessageCenterState.Error(result.localizedMessage())
+            else -> MessageCenterState.Error(i18n(result.message()))
         }
     }
 
@@ -245,7 +244,7 @@ fun MessageCenterScreen(
                                             snackbarHostState.showSnackbar(i18n("繼續檢查收藏更新"), duration = SnackbarDuration.Short)
                                         }
                                         is FavoriteUpdateRunner.LaunchResult.Rejected -> {
-                                            snackbarHostState.showSnackbar(result.reason, duration = SnackbarDuration.Short)
+                                            snackbarHostState.showSnackbar(i18n(result.reason), duration = SnackbarDuration.Short)
                                         }
                                         null -> {
                                             snackbarHostState.showSnackbar(i18n("沒有可繼續的收藏更新任務"), duration = SnackbarDuration.Short)
@@ -307,7 +306,7 @@ fun MessageCenterScreen(
                             }
 
                             is FavoriteUpdateRunner.LaunchResult.Rejected -> {
-                                snackbarHostState.showSnackbar(result.reason, duration = SnackbarDuration.Short)
+                                snackbarHostState.showSnackbar(i18n(result.reason), duration = SnackbarDuration.Short)
                             }
                         }
                     }

@@ -3,7 +3,6 @@ package me.thenano.yamibo.yamibo_app.i18n
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
-import io.github.littlesurvival.core.YamiboResult
 import kotlinx.coroutines.runBlocking
 import me.thenano.yamibo.yamibo_app.repository.settings.AppLanguage
 import org.jetbrains.compose.resources.StringResource
@@ -60,5 +59,3 @@ fun appString(resource: StringResource, vararg formatArgs: Any): String {
     }
     return value
 }
-
-fun YamiboResult<*>.localizedMessage(): String = message()

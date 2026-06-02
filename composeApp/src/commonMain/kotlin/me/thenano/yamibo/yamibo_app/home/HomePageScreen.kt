@@ -1,4 +1,4 @@
-﻿package me.thenano.yamibo.yamibo_app.home
+package me.thenano.yamibo.yamibo_app.home
 
 import YamiboIcons
 import androidx.compose.animation.*
@@ -41,7 +41,6 @@ import me.thenano.yamibo.yamibo_app.event.events.LoginSuccessEvent
 import me.thenano.yamibo.yamibo_app.forum.IForumScreen
 import me.thenano.yamibo.yamibo_app.forum.search.ISearchScreen
 import me.thenano.yamibo.yamibo_app.i18n.i18n
-import me.thenano.yamibo.yamibo_app.i18n.localizedMessage
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
@@ -76,7 +75,7 @@ fun HomePageScreen(
         state =
             when (result) {
                 is YamiboResult.Success -> HomeState.Success(result.value)
-                else -> HomeState.Error(result.localizedMessage())
+                else -> HomeState.Error(i18n(result.message()))
             }
     }
 
@@ -137,7 +136,7 @@ fun HomePageScreen(
 
                                 else -> {
                                     snackbarHostState.showSnackbar(
-                                        message = result.localizedMessage(),
+                                        message = i18n(result.message()),
                                         duration = SnackbarDuration.Short
                                     )
                                 }

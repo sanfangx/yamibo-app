@@ -1,8 +1,7 @@
-﻿package me.thenano.yamibo.yamibo_app.profile.sign
+package me.thenano.yamibo.yamibo_app.profile.sign
 
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 
-import me.thenano.yamibo.yamibo_app.i18n.localizedMessage
 
 import YamiboIcons
 import androidx.compose.foundation.background
@@ -98,9 +97,9 @@ private fun SignInfoScreen(onInfoLoaded: () -> Unit) {
                     onInfoLoaded()
                 }
 
-                is YamiboResult.NotLoggedIn -> errorMessage = result.localizedMessage()
+                is YamiboResult.NotLoggedIn -> errorMessage = i18n(result.message())
                 is YamiboResult.NoPermission -> errorMessage = (result.reason)
-                is YamiboResult.Maintenance -> errorMessage = result.localizedMessage()
+                is YamiboResult.Maintenance -> errorMessage = i18n(result.message())
                 is YamiboResult.Failure -> errorMessage = (result.reason)
             }
             loading = false

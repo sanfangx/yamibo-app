@@ -69,7 +69,6 @@ import me.thenano.yamibo.yamibo_app.LocalThreadRepository
 import me.thenano.yamibo.yamibo_app.forum.components.PageNavigation
 import me.thenano.yamibo.yamibo_app.forum.components.ThreadCard
 import me.thenano.yamibo.yamibo_app.i18n.i18n
-import me.thenano.yamibo.yamibo_app.i18n.localizedMessage
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.INovelThreadDetailScreen
@@ -173,7 +172,7 @@ fun SearchScreen(fid: ForumId?) {
                         SearchState.Idle
                     }
 
-                    else -> SearchState.Error(result.localizedMessage())
+                    else -> SearchState.Error(i18n(result.message()))
                 }
                 return@launch
             }
@@ -199,7 +198,7 @@ fun SearchScreen(fid: ForumId?) {
                     }
                 }
 
-                else -> SearchState.Error(result.localizedMessage())
+                else -> SearchState.Error(i18n(result.message()))
             }
         }
     }

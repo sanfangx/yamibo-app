@@ -225,8 +225,8 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
         favoriteRefreshToken += 1
         val message = when {
             syncResult == null -> i18n("已加入收藏，預設存入未分類")
-            syncResult.success -> i18n("已加入收藏，{}", (syncResult.message?.takeIf { it.isNotBlank() } ?: i18n("已同步到百合會。")))
-            else -> i18n("已加入收藏，但同步失敗：{}", (syncResult.message?.takeIf { it.isNotBlank() } ?: i18n("請稍後再試")))
+            syncResult.success -> i18n("已加入收藏，{}", (syncResult.message?.let { i18n(it) }?.takeIf { it.isNotBlank() } ?: i18n("已同步到百合會。")))
+            else -> i18n("已加入收藏，但同步失敗：{}", (syncResult.message?.let { i18n(it) }?.takeIf { it.isNotBlank() } ?: i18n("請稍後再試")))
         }
         snackbarHostState.showSnackbar(message)
     }
@@ -250,8 +250,8 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
         favoriteRefreshToken += 1
         val message = when {
             syncResult == null -> i18n("已加入本地收藏，預設存入未分類")
-            syncResult.success -> i18n("已加入本地收藏，{}", (syncResult.message?.takeIf { it.isNotBlank() } ?: i18n("已同步到百合會。")))
-            else -> i18n("已加入本地收藏，但同步到百合會失敗：{}", (syncResult.message?.takeIf { it.isNotBlank() } ?: i18n("請稍後再試")))
+            syncResult.success -> i18n("已加入本地收藏，{}", (syncResult.message?.let { i18n(it) }?.takeIf { it.isNotBlank() } ?: i18n("已同步到百合會。")))
+            else -> i18n("已加入本地收藏，但同步到百合會失敗：{}", (syncResult.message?.let { i18n(it) }?.takeIf { it.isNotBlank() } ?: i18n("請稍後再試")))
         }
         snackbarHostState.showSnackbar(message)
     }
@@ -279,7 +279,7 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
         snackbarHostState.currentSnackbarData?.dismiss()
         favoriteRefreshToken += 1
         snackbarHostState.showSnackbar(
-            if (removeResult.success) pendingFavoriteRemovalSuccessMessage else removeResult.message?.takeIf { it.isNotBlank() } ?: i18n("移除收藏失敗"),
+            if (removeResult.success) pendingFavoriteRemovalSuccessMessage else removeResult.message?.let { i18n(it) }?.takeIf { it.isNotBlank() } ?: i18n("移除收藏失敗"),
         )
         pendingFavoriteRemovalTarget = null
         pendingFavoriteRemovalSelection = null

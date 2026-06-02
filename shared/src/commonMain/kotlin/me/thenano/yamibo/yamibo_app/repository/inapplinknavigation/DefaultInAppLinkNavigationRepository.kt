@@ -10,7 +10,7 @@ import io.github.littlesurvival.dto.value.PostId
 import io.github.littlesurvival.dto.value.TagId
 import io.github.littlesurvival.dto.value.ThreadId
 import io.github.littlesurvival.dto.value.UserId
-import me.thenano.yamibo.yamibo_app.i18n.AppMessage
+import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.repository.InAppLinkNavigationRepository
 import me.thenano.yamibo.yamibo_app.repository.NovelPrePostCommentsCacheRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
@@ -25,7 +25,7 @@ class DefaultInAppLinkNavigationRepository(
         context: InAppLinkContext,
         onProgress: (String) -> Unit,
     ): InAppLinkResolveResult {
-        onProgress(msg("inapp.progress.parse_link"))
+        onProgress(i18n("解析連結"))
         val normalized = normalizeUrl(url)
         if (!isYamiboUrl(normalized)) {
             return InAppLinkResolveResult.Resolved(InAppLinkTarget.WebOnlyTarget(normalized))
@@ -43,15 +43,13 @@ class DefaultInAppLinkNavigationRepository(
         }
     }
 
-    private fun msg(key: String, vararg args: Any?): String = AppMessage.of(key, *args)
-
     private suspend fun resolveFindPost(
         pathAndQuery: String,
         fullUrl: String,
         context: InAppLinkContext,
         onProgress: (String) -> Unit,
     ): InAppLinkResolveResult {
-        onProgress(msg("inapp.progress.findpost"))
+        onProgress(i18n("讀取 findpost 定位頁"))
         val tid = extractInt(pathAndQuery, "ptid", "tid")?.let(::ThreadId)
             ?: context.currentTid
             ?: return unsupported(fullUrl, "missing tid")
@@ -66,7 +64,7 @@ class DefaultInAppLinkNavigationRepository(
         val currentPage = fullPage.resolvedCurrentPage()
         val title = fullPage.thread.title.ifBlank { context.currentTitle ?: "Thread ${tid.value}" }
         val forumId = fullPage.thread.forum.fid
-        onProgress(msg("inapp.progress.forum_type"))
+        onProgress(i18n("判斷討論區類型"))
 
         if (!YamiboForum.isNovelForum(forumId)) {
             threadRepository.setCachedThread(tid, null, currentPage, fullPage)
@@ -82,12 +80,12 @@ class DefaultInAppLinkNavigationRepository(
         }
 
         novelCacheRepository.setCachedFullPage(tid, currentPage, fullPage)
-        onProgress(msg("inapp.progress.author"))
+        onProgress(i18n("取得小說作者資訊"))
         val authorId = context.currentAuthorId ?: findNovelAuthorId(tid, currentPage, fullPage)
         ?: return InAppLinkResolveResult.Failed(InAppLinkTarget.WebOnlyTarget(fullUrl), "missing author id")
         val targetPost = fullPage.posts.firstOrNull { it.pid == pid }
             ?: return InAppLinkResolveResult.Failed(
-                InAppLinkTarget.NovelDetailTarget(tid, title, authorId, msg("inapp.notice.precise_failed")),
+                InAppLinkTarget.NovelDetailTarget(tid, title, authorId, i18n("無法精準定位，已開啟小說頁")),
                 "target post not found",
             )
 
@@ -105,11 +103,11 @@ class DefaultInAppLinkNavigationRepository(
         pid: PostId,
         onProgress: (String) -> Unit,
     ): InAppLinkResolveResult {
-        onProgress(msg("inapp.progress.author_post"))
+        onProgress(i18n("尋找作者正文位置"))
         val firstReverse = when (val result = threadRepository.fetchThread(tid, authorId, page = 1, reverse = true)) {
             is YamiboResult.Success -> result.value
             else -> return InAppLinkResolveResult.Failed(
-                InAppLinkTarget.NovelDetailTarget(tid, title, authorId, msg("inapp.notice.precise_failed")),
+                InAppLinkTarget.NovelDetailTarget(tid, title, authorId, i18n("無法精準定位，已開啟小說頁")),
                 result.message(),
             )
         }
@@ -124,7 +122,7 @@ class DefaultInAppLinkNavigationRepository(
         while (left <= right && fetches < AUTHOR_PAGE_SEARCH_LIMIT) {
             val reversePage = (left + right) / 2
             fetches++
-            onProgress(msg("inapp.progress.search_author_page", reversePage, totalPages))
+            onProgress(i18n("搜尋作者頁 {} / {}", reversePage, totalPages))
             val page = when (val result = threadRepository.fetchThread(tid, authorId, page = reversePage, reverse = true)) {
                 is YamiboResult.Success -> result.value
                 else -> break
@@ -151,7 +149,7 @@ class DefaultInAppLinkNavigationRepository(
         }
 
         return InAppLinkResolveResult.Failed(
-            InAppLinkTarget.NovelDetailTarget(tid, title, authorId, msg("inapp.notice.precise_failed")),
+            InAppLinkTarget.NovelDetailTarget(tid, title, authorId, i18n("無法精準定位，已開啟小說頁")),
             "author post search limit exceeded",
         )
     }
@@ -175,7 +173,7 @@ class DefaultInAppLinkNavigationRepository(
         }.filter { it in 1..totalPages }.distinct()
 
         candidates.forEach { page ->
-            onProgress(msg("inapp.progress.confirm_author_page", page, totalPages))
+            onProgress(i18n("確認作者頁 {} / {}", page, totalPages))
             val threadPage = when (val result = threadRepository.fetchThread(tid, authorId, page = page, reverse = false)) {
                 is YamiboResult.Success -> result.value
                 else -> return@forEach
@@ -195,7 +193,7 @@ class DefaultInAppLinkNavigationRepository(
         }
 
         return InAppLinkResolveResult.Failed(
-            InAppLinkTarget.NovelDetailTarget(tid, title, authorId, msg("inapp.notice.precise_failed")),
+            InAppLinkTarget.NovelDetailTarget(tid, title, authorId, i18n("無法精準定位，已開啟小說頁")),
             "author forward page verification failed",
         )
     }
@@ -209,7 +207,7 @@ class DefaultInAppLinkNavigationRepository(
         currentFullPage: ThreadPage,
         onProgress: (String) -> Unit,
     ): InAppLinkResolveResult {
-        onProgress(msg("inapp.progress.comment_parent"))
+        onProgress(i18n("尋找評論所屬正文"))
         findNearestPreviousAuthorPost(currentFullPage, authorId, targetPid)?.let { oPost ->
             val comments = currentFullPage.postsAfter(oPost.pid, untilNextAuthorId = authorId)
             novelCacheRepository.setCachedComments(tid, oPost.pid, comments)
@@ -223,7 +221,7 @@ class DefaultInAppLinkNavigationRepository(
         var scanned = 0
         while (pageToScan >= 1 && scanned < COMMENT_BACK_SCAN_LIMIT) {
             scanned++
-            onProgress(msg("inapp.progress.scan_comment_page", pageToScan))
+            onProgress(i18n("向前掃描評論頁 {}", pageToScan))
             val page = novelCacheRepository.getCachedFullPage(tid, pageToScan)
                 ?: when (val result = threadRepository.fetchThread(tid, authorId = null, page = pageToScan)) {
                     is YamiboResult.Success -> result.value.also {
@@ -244,7 +242,7 @@ class DefaultInAppLinkNavigationRepository(
         }
 
         return InAppLinkResolveResult.Failed(
-            InAppLinkTarget.NovelDetailTarget(tid, title, authorId, msg("inapp.notice.precise_failed")),
+            InAppLinkTarget.NovelDetailTarget(tid, title, authorId, i18n("無法精準定位，已開啟小說頁")),
             "nearest author post not found",
         )
     }
@@ -271,7 +269,7 @@ class DefaultInAppLinkNavigationRepository(
             }
         }
 
-        onProgress(msg("inapp.progress.thread_home"))
+        onProgress(i18n("讀取帖子首頁"))
         val threadPage = when (val result = threadRepository.fetchThread(tid, page = page)) {
             is YamiboResult.Success -> result.value
             else -> return InAppLinkResolveResult.Failed(InAppLinkTarget.WebOnlyTarget(fullUrl), result.message())

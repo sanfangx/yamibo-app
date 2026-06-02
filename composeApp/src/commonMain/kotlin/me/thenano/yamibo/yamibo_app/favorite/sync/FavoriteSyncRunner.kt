@@ -1,4 +1,4 @@
-﻿package me.thenano.yamibo.yamibo_app.favorite.sync
+package me.thenano.yamibo.yamibo_app.favorite.sync
 
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -55,7 +55,7 @@ class FavoriteSyncRunner(
                 pendingActivationStartedAt.remove(runId)
                 repository.markRunInterrupted(runId, result.reason)
                 refreshStateFromRepository()
-                return LaunchResult.Rejected(result.reason, runId)
+                return LaunchResult.Rejected(i18n(result.reason), runId)
             }
         }
     }
@@ -75,7 +75,7 @@ class FavoriteSyncRunner(
                     pendingActivationStartedAt.remove(runId)
                     repository.markRunInterrupted(runId, result.reason)
                     refreshStateFromRepository()
-                    return LaunchResult.Rejected(result.reason, runId)
+                    return LaunchResult.Rejected(i18n(result.reason), runId)
                 }
             }
         }

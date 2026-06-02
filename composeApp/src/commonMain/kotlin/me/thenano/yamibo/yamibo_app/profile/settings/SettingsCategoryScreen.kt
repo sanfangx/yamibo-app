@@ -1,4 +1,4 @@
-﻿package me.thenano.yamibo.yamibo_app.profile.settings
+package me.thenano.yamibo.yamibo_app.profile.settings
 
 import YamiboIcons
 import androidx.compose.foundation.background
@@ -405,7 +405,7 @@ private fun FavoriteSettingsContent(snackbarHostState: SnackbarHostState) {
                             navigator.navigate(IFavoriteSyncProgressScreen(result.runId))
                         }
                         is me.thenano.yamibo.yamibo_app.favorite.sync.FavoriteSyncRunner.LaunchResult.Rejected -> {
-                            snackbarHostState.showSnackbar(result.reason)
+                            snackbarHostState.showSnackbar(i18n(result.reason))
                         }
                     }
                 }

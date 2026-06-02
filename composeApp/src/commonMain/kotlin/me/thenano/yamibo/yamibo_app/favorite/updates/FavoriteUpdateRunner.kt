@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.repository.FavoriteUpdateRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.FavoriteUpdateInterval
 import kotlin.time.Duration.Companion.milliseconds
@@ -51,7 +52,7 @@ class FavoriteUpdateRunner(
             is FavoriteUpdateScheduler.StartResult.Rejected -> {
                 repository.markRunInterrupted(runId, result.reason)
                 syncRunSnapshot(runId)
-                LaunchResult.Rejected(result.reason, runId)
+                LaunchResult.Rejected(i18n(result.reason), runId)
             }
         }
     }
@@ -64,7 +65,7 @@ class FavoriteUpdateRunner(
             is FavoriteUpdateScheduler.StartResult.Rejected -> {
                 repository.markRunInterrupted(runId, result.reason)
                 syncRunSnapshot(runId)
-                LaunchResult.Rejected(result.reason, runId)
+                LaunchResult.Rejected(i18n(result.reason), runId)
             }
         }
     }

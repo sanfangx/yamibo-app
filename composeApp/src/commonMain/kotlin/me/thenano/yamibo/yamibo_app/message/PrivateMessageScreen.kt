@@ -35,7 +35,6 @@ import me.thenano.yamibo.yamibo_app.components.navigation.YamiboTopBar
 import me.thenano.yamibo.yamibo_app.components.navigation.YamiboTopBarIconAction
 import me.thenano.yamibo.yamibo_app.components.user.UserAvatar
 import me.thenano.yamibo.yamibo_app.i18n.i18n
-import me.thenano.yamibo.yamibo_app.i18n.localizedMessage
 import me.thenano.yamibo.yamibo_app.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.HtmlRenderer
@@ -83,7 +82,7 @@ fun PrivateMessageScreen(
                 currentPage = result.value.pageNav?.currentPage ?: page ?: 1
                 PrivateMessageState.Success(result.value)
             }
-            else -> PrivateMessageState.Error(result.localizedMessage())
+            else -> PrivateMessageState.Error(i18n(result.message()))
         }
     }
 
@@ -138,7 +137,7 @@ fun PrivateMessageScreen(
                                 repository.clearMessagePages()
                                 loadPage(page = null, preferCache = false)
                             }
-                                else -> snackbarHostState.showSnackbar(result.localizedMessage(), duration = SnackbarDuration.Short)
+                                else -> snackbarHostState.showSnackbar(i18n(result.message()), duration = SnackbarDuration.Short)
                             }
                             sending = false
                         }

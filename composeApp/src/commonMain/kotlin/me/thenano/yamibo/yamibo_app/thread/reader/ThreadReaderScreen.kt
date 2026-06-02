@@ -1,8 +1,7 @@
-﻿package me.thenano.yamibo.yamibo_app.thread.reader
+package me.thenano.yamibo.yamibo_app.thread.reader
 
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 
-import me.thenano.yamibo.yamibo_app.i18n.localizedMessage
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -398,7 +397,7 @@ internal fun ThreadReaderScreen(
                     true
                 }
                 else -> {
-                    snackbarHostState.showSnackbar(i18n("投票失敗: {}", res.localizedMessage()))
+                    snackbarHostState.showSnackbar(i18n("投票失敗: {}", i18n(res.message())))
                     false
                 }
             }
@@ -413,7 +412,7 @@ internal fun ThreadReaderScreen(
             scope.launch {
                 when (val res = threadRepository.ratePost(tid, pid, score, reason, formHash, noticeAuthor)) {
                     is YamiboResult.Success -> snackbarHostState.showSnackbar(i18n("評分成功，刷新後更新評分/點評狀態"))
-                    else -> snackbarHostState.showSnackbar(i18n("評分失敗: {}", res.localizedMessage()))
+                    else -> snackbarHostState.showSnackbar(i18n("評分失敗: {}", i18n(res.message())))
                 }
             }
         }
@@ -427,7 +426,7 @@ internal fun ThreadReaderScreen(
             scope.launch {
                 when (val res = threadRepository.commentPost(tid, pid, message, formHash)) {
                     is YamiboResult.Success -> snackbarHostState.showSnackbar(i18n("點評成功，刷新後更新評分/點評狀態"))
-                    else -> snackbarHostState.showSnackbar(i18n("點評失敗: {}", res.localizedMessage()))
+                    else -> snackbarHostState.showSnackbar(i18n("點評失敗: {}", i18n(res.message())))
                 }
             }
         }
@@ -869,11 +868,11 @@ internal fun ThreadReaderScreen(
                     loadSucceeded = true
                 }
                 else -> {
-                    snackbarHostState.showSnackbar(i18n("刷新失敗: {}，嘗試讀取緩存", result.localizedMessage()))
+                    snackbarHostState.showSnackbar(i18n("刷新失敗: {}，嘗試讀取緩存", i18n(result.message())))
                     if (loadFromCache()) {
                         loadSucceeded = true
                     } else if (page == initialPage || page == 1) {
-                        state = ReaderState.Error(result.localizedMessage())
+                        state = ReaderState.Error(i18n(result.message()))
                     }
                 }
             }
@@ -890,10 +889,10 @@ internal fun ThreadReaderScreen(
                 }
                 else -> {
                     if (autoTriggered && page != initialPage && page != 1) {
-                        failedAutoLoadPages[page] = result.localizedMessage()
+                        failedAutoLoadPages[page] = i18n(result.message())
                     }
-                    if (page == initialPage || page == 1) state = ReaderState.Error(result.localizedMessage())
-                    else snackbarHostState.showSnackbar(i18n("載入失敗: {}", result.localizedMessage()))
+                    if (page == initialPage || page == 1) state = ReaderState.Error(i18n(result.message()))
+                    else snackbarHostState.showSnackbar(i18n("載入失敗: {}", i18n(result.message())))
                 }
             }
         }

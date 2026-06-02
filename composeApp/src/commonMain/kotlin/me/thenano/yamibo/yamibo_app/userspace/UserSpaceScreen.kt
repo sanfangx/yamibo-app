@@ -35,7 +35,6 @@ import me.thenano.yamibo.yamibo_app.components.navigation.YamiboTopBar
 import me.thenano.yamibo.yamibo_app.components.navigation.YamiboTopBarIconAction
 import me.thenano.yamibo.yamibo_app.components.user.UserAvatar
 import me.thenano.yamibo.yamibo_app.i18n.i18n
-import me.thenano.yamibo.yamibo_app.i18n.localizedMessage
 import me.thenano.yamibo.yamibo_app.message.IMessageCenterScreen
 import me.thenano.yamibo.yamibo_app.message.IPrivateMessageScreen
 import me.thenano.yamibo.yamibo_app.navigation.ComposableNavigator
@@ -139,7 +138,7 @@ fun UserSpaceScreen(
                 currentPage = result.value.pageNumber() ?: page
                 UserSpaceState.Success(result.value)
             }
-            else -> UserSpaceState.Error(result.localizedMessage())
+            else -> UserSpaceState.Error(i18n(result.message()))
         }
     }
 
@@ -264,7 +263,7 @@ fun UserSpaceScreen(
                                     scope.launch {
                                         when (val result = repository.fetchAddFriendPopoutScreen(targetProfile.uid)) {
                                             is YamiboResult.Success -> addFriendPopout = result.value
-                                            else -> addFriendError = result.localizedMessage()
+                                            else -> addFriendError = i18n(result.message())
                                         }
                                         isAddFriendLoading = false
                                     }
@@ -347,7 +346,7 @@ fun UserSpaceScreen(
                             )
                         }
                         else -> snackbarHostState.showSnackbar(
-                            i18n("加為好友失敗：{}", result.localizedMessage()),
+                            i18n("加為好友失敗：{}", i18n(result.message())),
                             duration = SnackbarDuration.Short,
                         )
                     }

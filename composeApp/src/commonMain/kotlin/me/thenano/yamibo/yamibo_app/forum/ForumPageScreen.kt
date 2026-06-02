@@ -2,7 +2,6 @@ package me.thenano.yamibo.yamibo_app.forum
 
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 
-import me.thenano.yamibo.yamibo_app.i18n.localizedMessage
 
 import YamiboIcons
 import androidx.compose.animation.core.*
@@ -98,7 +97,7 @@ fun ForumPageScreen(fid: ForumId, name: String) {
                     ForumState.Success(result.value)
                 }
 
-                else -> ForumState.Error(result.localizedMessage())
+                else -> ForumState.Error(i18n(result.message()))
             }
     }
 
@@ -157,7 +156,7 @@ fun ForumPageScreen(fid: ForumId, name: String) {
                     scope.launch {
                         val result = forumRepository.addFavorite(fid, formHash)
                         snackbarHostState.showSnackbar(
-                            message = result.localizedMessage(),
+                            message = i18n(result.message()),
                             duration = SnackbarDuration.Short
                         )
                     }
@@ -211,7 +210,7 @@ fun ForumPageScreen(fid: ForumId, name: String) {
                                     }
 
                                     else -> {
-                                        val msg = result.localizedMessage()
+                                        val msg = i18n(result.message())
                                         snackbarHostState.showSnackbar(
                                             message = i18n("刷新失敗：{}", msg),
                                             duration = SnackbarDuration.Short

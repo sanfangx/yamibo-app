@@ -6,7 +6,7 @@ import io.github.littlesurvival.dto.value.TagId
 import io.github.littlesurvival.dto.value.ThreadId
 import io.github.littlesurvival.dto.value.UserId
 import me.thenano.yamibo.yamibo_app.Database
-import me.thenano.yamibo.yamibo_app.i18n.AppMessage
+import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.db.DatabaseFactory
 import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
 import me.thenano.yamibo.yamiboapp.MangaTagReadingHistory
@@ -290,7 +290,7 @@ class IOSReadHistoryRepository(dbFactory: DatabaseFactory) : ReadHistoryReposito
             add(
                 ReadHistoryRepository.HistoryFilterCount(
                     filter = ReadHistoryRepository.HistoryFilter.All,
-                    label = AppMessage.of("common.all"),
+                    label = i18n("全部"),
                     count = getCombinedHistoryCount(),
                 )
             )

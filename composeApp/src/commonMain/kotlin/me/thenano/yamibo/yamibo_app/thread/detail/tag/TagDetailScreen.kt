@@ -1,4 +1,4 @@
-﻿package me.thenano.yamibo.yamibo_app.thread.detail.tag
+package me.thenano.yamibo.yamibo_app.thread.detail.tag
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -22,7 +22,6 @@ import kotlinx.coroutines.withContext
 import me.thenano.yamibo.yamibo_app.*
 import me.thenano.yamibo.yamibo_app.favorite.*
 import me.thenano.yamibo.yamibo_app.i18n.i18n
-import me.thenano.yamibo.yamibo_app.i18n.localizedMessage
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.DetailNoteRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
@@ -143,7 +142,7 @@ internal fun TagDetailScreen(
                     TagDetailState.Success(correctedTagPage)
                 }
 
-                else -> TagDetailState.Error(result.localizedMessage())
+                else -> TagDetailState.Error(i18n(result.message()))
             }
     }
 
@@ -357,7 +356,7 @@ internal fun TagDetailScreen(
 
                                     else -> {
                                         snackbarHostState.showSnackbar(
-                                            message = i18n("重新整理標籤頁失敗：{}", result.localizedMessage()),
+                                            message = i18n("重新整理標籤頁失敗：{}", i18n(result.message())),
                                             duration = SnackbarDuration.Short,
                                         )
                                     }
