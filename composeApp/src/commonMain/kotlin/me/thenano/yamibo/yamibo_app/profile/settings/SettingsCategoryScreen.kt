@@ -182,6 +182,14 @@ private fun NovelReaderContent() {
     NovelSystemBarsBackgroundSetting()
     Spacer(Modifier.height(24.dp))
 
+    SectionLabel(i18n("浮動跳轉按鈕"))
+    NovelScrollButtonDisplayModeSetting()
+    Spacer(Modifier.height(16.dp))
+    NovelScrollButtonThresholdSetting()
+    Spacer(Modifier.height(16.dp))
+    NovelScrollButtonJumpTargetSetting()
+    Spacer(Modifier.height(24.dp))
+
     SectionLabel(i18n("簡繁轉換"))
     NovelChineseConversionSetting()
 }
@@ -677,10 +685,10 @@ private fun SignSettingsContent() {
     val launchReminder = appSettingsRepository.signInLaunchReminderEnabled.state()
     val allowRepair = appSettingsRepository.signInAllowRepair.state()
 
-    SectionLabel(i18n("開屏簽到提醒"))
+    SectionLabel(i18n("啟動時簽到提醒"))
     SettingsToggleRow(
-        title = i18n("開屏簽到提醒"),
-        subtitle = i18n("今天尚未簽到時，在 app 開屏後提醒你前往簽到。"),
+        title = i18n("啟動時簽到提醒"),
+        subtitle = i18n("今天尚未簽到時，在 app 啟動後提醒你前往簽到。"),
         checked = launchReminder,
         onCheckedChange = { appSettingsRepository.signInLaunchReminderEnabled.setValue(it) },
     )

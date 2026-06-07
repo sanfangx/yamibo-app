@@ -5,16 +5,17 @@ import me.thenano.yamibo.yamibo_app.i18n.i18n
 import androidx.compose.animation.*
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.OutlinedButton
@@ -27,6 +28,8 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -49,6 +52,9 @@ import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.util.state
 import me.thenano.yamibo.yamibo_app.util.time.currentLocalDateKey
 import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
+import org.jetbrains.compose.resources.painterResource
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.logo_homepage
 
 @Composable
 fun HomeScreenContent(
@@ -86,6 +92,7 @@ fun App() {
     val stack = navigator.stack
     val poppingIdx by navigator.poppingIndex
     val duration = 250
+    var completedPushTopId by remember { mutableStateOf(stack.lastOrNull()?.id) }
     var showSignReminder by remember { mutableStateOf(false) }
     var launchUpdateRelease by remember { mutableStateOf<AppUpdateRelease?>(null) }
     val coroutineScope = rememberCoroutineScope()
@@ -109,10 +116,21 @@ fun App() {
             color = YamiboTheme.colors.creamBackground
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
+                val topIndex = stack.lastIndex
+                val topId = stack.lastOrNull()?.id
+                val renderPreviousForPush =
+                    navigator.lastAction == NavAction.Push &&
+                        topIndex > 0 &&
+                        completedPushTopId != topId
                 stack.forEachIndexed { index, navigatable ->
                     val isPopping = index == poppingIdx
                     val isTop = index == stack.lastIndex
                     val isNewPush = navigator.lastAction == NavAction.Push && isTop && !isPopping
+                    val shouldDraw =
+                        isTop ||
+                            isPopping ||
+                            (poppingIdx >= 0 && index == poppingIdx - 1) ||
+                            (renderPreviousForPush && index == topIndex - 1)
 
                     key(navigatable.id) {
                         // New push screens start invisible (false→true), others start visible
@@ -140,6 +158,8 @@ fun App() {
                                 ) + fadeOut(animationSpec = tween(duration)),
                                 modifier = Modifier
                                     .fillMaxSize()
+                                    .drawOnlyWhen(shouldDraw)
+                                    .blockPointerPassthrough(isTop || isPopping)
                                     .zIndex(index.toFloat())
                             ) {
                                 navigatable.Content()
@@ -150,6 +170,11 @@ fun App() {
                         if (isPopping && visibleState.isIdle && !visibleState.currentState) {
                             LaunchedEffect(Unit) {
                                 navigator.completePop()
+                            }
+                        }
+                        if (isNewPush && visibleState.isIdle && visibleState.currentState && completedPushTopId != navigatable.id) {
+                            LaunchedEffect(navigatable.id) {
+                                completedPushTopId = navigatable.id
                             }
                         }
                     }
@@ -198,6 +223,24 @@ fun App() {
     }
 }
 
+private fun Modifier.blockPointerPassthrough(enabled: Boolean): Modifier =
+    if (!enabled) {
+        this
+    } else {
+        pointerInput(Unit) {
+            awaitPointerEventScope {
+                while (true) {
+                    awaitPointerEvent()
+                }
+            }
+        }
+    }
+
+private fun Modifier.drawOnlyWhen(shouldDraw: Boolean): Modifier =
+    drawWithContent {
+        if (shouldDraw) drawContent()
+    }
+
 @Composable
 private fun LaunchUpdateAvailableDialog(
     release: AppUpdateRelease?,
@@ -206,43 +249,72 @@ private fun LaunchUpdateAvailableDialog(
     onOpenReleasePage: (AppUpdateRelease) -> Unit,
 ) {
     if (release == null) return
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(i18n("發現新版本 {}", release.versionName)) },
-        text = {
-            Text(
-                text = buildString {
-                    append(i18n("新版已可下載。你可以立即下載更新，或稍後到設定中的 App 更新頁處理。"))
-                    if (release.releaseNotes.isNotBlank()) {
-                        append("\n\n")
-                        append(release.releaseNotes)
-                    }
-                },
-            )
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(i18n("取消"))
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = {
-                if (release.asset == null) {
-                    onOpenReleasePage(release)
-                } else {
-                    onDownload(release)
-                }
-            }) {
+    val colors = YamiboTheme.colors
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(8.dp),
+            colors = CardDefaults.cardColors(containerColor = colors.creamSurface),
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(colors.creamSurface)
+                    .padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
                 Text(
-                    if (release.asset == null) {
-                        i18n("發布頁")
-                    } else {
-                        i18n("下載更新")
-                    }
+                    text = i18n("發現新版本"),
+                    color = colors.brownDeep,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
                 )
+                Image(
+                    painter = painterResource(Res.drawable.logo_homepage),
+                    contentDescription = null,
+                    modifier = Modifier.size(112.dp),
+                )
+                Text(
+                    text = release.releaseNotes.ifBlank {
+                        i18n("新版已可下載。你可以立即下載更新，或前往發布頁手動更新。")
+                    },
+                    color = colors.textDark.copy(alpha = 0.78f),
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Button(
+                    onClick = {
+                        if (release.asset == null) {
+                            onOpenReleasePage(release)
+                        } else {
+                            onDownload(release)
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colors.brownDeep,
+                        contentColor = colors.creamBackground,
+                    ),
+                    shape = RoundedCornerShape(8.dp),
+                ) {
+                    Text(
+                        text = i18n("立即更新"),
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+                TextButton(onClick = { onOpenReleasePage(release) }) {
+                    Text(
+                        text = i18n("手動更新"),
+                        color = colors.textDark.copy(alpha = 0.48f),
+                        fontSize = 12.sp,
+                    )
+                }
             }
-        },
-    )
+        }
+    }
 }
 
 @Composable

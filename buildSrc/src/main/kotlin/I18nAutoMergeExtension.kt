@@ -13,7 +13,7 @@ abstract class I18nAutoMergeExtension(project: Project) {
         .convention(project.rootProject.layout.projectDirectory.file("i18n/glossary.csv"))
     val baseTranslations: RegularFileProperty = project.objects.fileProperty()
         .convention(project.rootProject.layout.projectDirectory.file("i18n/base.csv"))
-    val existingComposeResourcesDir: DirectoryProperty = project.objects.directoryProperty()
+    val composeAssetResourcesDir: DirectoryProperty = project.objects.directoryProperty()
         .convention(project.rootProject.layout.projectDirectory.dir("composeApp/src/commonMain/composeResources"))
     val outputComposeResources: DirectoryProperty = project.objects.directoryProperty()
         .convention(project.layout.buildDirectory.dir("generated/i18n/composeResources"))

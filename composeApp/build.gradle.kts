@@ -10,6 +10,9 @@ plugins {
     id("local.i18n-auto-merge")
 }
 
+val yamiboAppVersionCode = 1
+val yamiboAppVersionName = "0.0.1"
+
 kotlin {
     androidTarget { compilerOptions { jvmTarget.set(JvmTarget.JVM_11) } }
 
@@ -23,9 +26,11 @@ kotlin {
     sourceSets {
         val generatedRestorableRegistryDir = layout.buildDirectory.dir("generated/restorableScreenRegistry/commonMain/kotlin")
         val generatedI18nKotlinDir = layout.buildDirectory.dir("generated/i18n/kotlin")
+        val generatedAppVersionKotlinDir = layout.buildDirectory.dir("generated/appVersion/commonMain/kotlin")
         commonMain {
             kotlin.srcDir(generatedRestorableRegistryDir)
             kotlin.srcDir(generatedI18nKotlinDir)
+            kotlin.srcDir(generatedAppVersionKotlinDir)
         }
 
         androidMain.dependencies {
@@ -63,7 +68,7 @@ i18nAutoMerge {
     scanDirs.set(listOf("composeApp/src", "shared/src"))
     glossary.set(rootProject.layout.projectDirectory.file("i18n/glossary.csv"))
     baseTranslations.set(rootProject.layout.projectDirectory.file("i18n/base.csv"))
-    existingComposeResourcesDir.set(rootProject.layout.projectDirectory.dir("composeApp/src/commonMain/composeResources"))
+    composeAssetResourcesDir.set(rootProject.layout.projectDirectory.dir("composeApp/src/commonMain/composeResources"))
     outputComposeResources.set(layout.buildDirectory.dir("generated/i18n/composeResources"))
     outputKotlin.set(layout.buildDirectory.dir("generated/i18n/kotlin"))
     reportDir.set(layout.buildDirectory.dir("reports/i18n"))
@@ -77,15 +82,23 @@ i18nAutoMerge {
 }
 
 val generateRestorableScreenRegistry by tasks.registering(GenerateRestorableScreenRegistryTask::class) {
+    description = ""
     val sourceDir = layout.projectDirectory.dir("src/commonMain/kotlin")
     this.sourceDir.set(sourceDir)
     outputFile.set(layout.buildDirectory.file("generated/restorableScreenRegistry/commonMain/kotlin/me/thenano/yamibo/yamibo_app/navigation/GeneratedRestorableScreenRegistry.kt"))
+}
+
+val generateAppVersion by tasks.registering(GenerateAppVersionTask::class) {
+    description = "Generates AppVersion.kt from update/manifest.json."
+    manifestFile.set(rootProject.layout.projectDirectory.file("update/manifest.json"))
+    outputFile.set(layout.buildDirectory.file("generated/appVersion/commonMain/kotlin/me/thenano/yamibo/yamibo_app/AppVersion.kt"))
 }
 
 tasks.matching { task ->
     task.name.startsWith("compile") && task.name.contains("Kotlin")
 }.configureEach {
     dependsOn(generateRestorableScreenRegistry)
+    dependsOn(generateAppVersion)
 }
 
 android {
@@ -96,8 +109,8 @@ android {
         applicationId = "me.thenano.yamibo.yamibo_app"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = yamiboAppVersionCode
+        versionName = yamiboAppVersionName
     }
     packaging { resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" } }
     buildTypes { getByName("release") { isMinifyEnabled = false } }
@@ -108,9 +121,41 @@ android {
 }
 
 dependencies { debugImplementation(compose.uiTooling) }
+
+val syncStableManifest by tasks.registering(SyncStableManifestTask::class) {
+    group = "release"
+    description = "Copies update/manifest.json to update/stable.json. manifest.json is the only manually edited update manifest."
+    manifestFile.set(rootProject.layout.projectDirectory.file("update/manifest.json"))
+    stableFile.set(rootProject.layout.projectDirectory.file("update/stable.json"))
+}
+
+val validateUpdateManifest by tasks.registering(ValidateUpdateManifestTask::class) {
+    group = "verification"
+    description = "Fails the build when app version, update manifests, or changelog are inconsistent."
+    dependsOn(syncStableManifest)
+    manifestFile.set(rootProject.layout.projectDirectory.file("update/manifest.json"))
+    stableFile.set(rootProject.layout.projectDirectory.file("update/stable.json"))
+    changelogsDir.set(rootProject.layout.projectDirectory.dir("update/changelogs"))
+    appVersionCode.set(yamiboAppVersionCode.toLong())
+    appVersionName.set(yamiboAppVersionName)
+}
+
+val validatePublishedUpdateManifest by tasks.registering(ValidatePublishedUpdateManifestTask::class) {
+    group = "verification"
+    description = "Validates a generated published update manifest with isReady=true."
+    publishedUpdateDirPath.set(providers.gradleProperty("publishedUpdateDir")
+        .orElse(layout.buildDirectory.dir("published-update/update").map { it.asFile.absolutePath })
+    )
+}
+
+tasks.named("check") {
+    dependsOn(validateUpdateManifest)
+}
+
 val scriptPath = rootProject.rootDir.absolutePath + "/unlock_build.ps1"
 
 val autoUnlockTask = tasks.register<Exec>("autoUnlockResources") {
+    description = ""
     commandLine("powershell.exe", "-ExecutionPolicy", "Bypass", "-NoProfile", "-File", scriptPath)
     isIgnoreExitValue = true
 }
@@ -120,4 +165,3 @@ tasks.whenTaskAdded {
         dependsOn(autoUnlockTask)
     }
 }
-

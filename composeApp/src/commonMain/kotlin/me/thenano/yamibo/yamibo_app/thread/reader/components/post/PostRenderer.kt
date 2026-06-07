@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -144,13 +145,15 @@ fun PostRenderer(
             if (showHeader) {
                 // Title
                 if (post.floor == 1 && !convertedThreadTitle.isNullOrEmpty()) {
-                    Text(
-                        text = convertedThreadTitle,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = YamiboTheme.colors.textDark,
-                        modifier = Modifier.padding(bottom = 12.dp)
-                    )
+                    SelectionContainer {
+                        Text(
+                            text = convertedThreadTitle,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = YamiboTheme.colors.textDark,
+                            modifier = Modifier.padding(bottom = 12.dp)
+                        )
+                    }
                     if (totalViews != null || totalReplies != null) {
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),

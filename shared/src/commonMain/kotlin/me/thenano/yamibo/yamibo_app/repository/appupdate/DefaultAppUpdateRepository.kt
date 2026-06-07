@@ -36,15 +36,15 @@ class DefaultAppUpdateRepository(
     override val sources: List<AppUpdateSource> = listOf(
         AppUpdateSource(
             name = "GitHub",
-            manifestUrl = "https://raw.githubusercontent.com/LittleSurvival/yamibo-app/main/update/stable.json",
+            manifestUrl = "https://raw.githubusercontent.com/LittleSurvival/yamibo-app/update-release/update/stable.json",
         ),
         AppUpdateSource(
             name = "Gitee",
-            manifestUrl = "https://gitee.com/LittleSurvival/yamibo-app/raw/main/update/stable.json",
+            manifestUrl = "https://gitee.com/LittleSurvival/ymb-apk-release/raw/main/update/stable.json",
         ),
         AppUpdateSource(
             name = "GitCode",
-            manifestUrl = "https://gitcode.com/LittleSurvival/yamibo-app/raw/main/update/stable.json",
+            manifestUrl = "https://gitcode.com/LittleSurvival/ymb-apk-release/raw/main/update/stable.json",
         ),
     )
 
@@ -55,6 +55,8 @@ class DefaultAppUpdateRepository(
             .coerceIn(0, sources.lastIndex.coerceAtLeast(0))
         val orderedSources = sources.drop(startIndex) + sources.take(startIndex)
         val errors = mutableListOf<String>()
+        var preparing: AppUpdateCheckResult.Preparing? = null
+        var sawManifest = false
 
         for (source in orderedSources) {
             val result = runCatching {
@@ -63,10 +65,10 @@ class DefaultAppUpdateRepository(
                     error("HTTP ${response.status.value}")
                 }
                 val manifest = json.decodeFromString<AppUpdateManifestDto>(response.bodyAsText())
-                manifest.toRelease(source, platform)
+                manifest
             }
-            val release = result.getOrNull()
-            if (release == null) {
+            val manifest = result.getOrNull()
+            if (manifest == null) {
                 if (result.exceptionOrNull() is CancellationException) throw result.exceptionOrNull() as CancellationException
                 val message = result.exceptionOrNull()?.message
                     ?.lineSequence()
@@ -75,7 +77,20 @@ class DefaultAppUpdateRepository(
                 errors += "${source.name}: $message"
                 continue
             }
+            sawManifest = true
 
+            if (!manifest.isReady) {
+                if (manifest.versionCode > platform.currentVersionCode && preparing == null) {
+                    preparing = AppUpdateCheckResult.Preparing(
+                        versionName = manifest.versionName,
+                        versionCode = manifest.versionCode,
+                        sourceName = source.name,
+                    )
+                }
+                continue
+            }
+
+            val release = manifest.toRelease(source, platform)
             appSettingsRepository.appUpdatePreferredSourceIndex.setValue(sources.indexOf(source).coerceAtLeast(0))
 
             return when {
@@ -87,6 +102,10 @@ class DefaultAppUpdateRepository(
             }
         }
 
+        preparing?.let { return it }
+        if (sawManifest) {
+            return AppUpdateCheckResult.UpToDate(platform.currentVersionName)
+        }
         return AppUpdateCheckResult.Failed(errors.joinToString(separator = "\n").ifBlank { "No update source available" })
     }
 
@@ -123,6 +142,7 @@ private data class AppUpdateManifestDto(
     val channel: String = "stable",
     val versionName: String,
     val versionCode: Long,
+    val isReady: Boolean = false,
     val minVersionCode: Long? = null,
     val releaseNotes: String? = null,
     val releaseUrl: String? = null,

@@ -25,6 +25,9 @@ import me.thenano.yamibo.yamibo_app.profile.settings.components.ThemeSelectorCon
 import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelChineseConversionSetting
 import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelFontSizeSetting
 import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelLineSpacingSetting
+import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelScrollButtonDisplayModeSetting
+import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelScrollButtonJumpTargetSetting
+import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelScrollButtonThresholdSetting
 import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelSystemBarsBackgroundSetting
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.util.state
@@ -45,51 +48,67 @@ fun NovelReaderSettingsPanel(
         exit = slideOutVertically(targetOffsetY = { it }),
         modifier = modifier
     ) {
-        Surface(
-            color = colors.creamSurface,
-            shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null
-                ) {}
-        ) {
-            Column(
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+            val panelMaxHeight = maxHeight * 0.6f
+
+            Surface(
+                color = colors.creamSurface,
+                shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .navigationBarsPadding()
-                    .padding(horizontal = 20.dp, vertical = 20.dp)
-                    .verticalScroll(rememberScrollState())
+                    .heightIn(max = panelMaxHeight)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) {}
             ) {
-                // Typography Section
-                SectionTitle(i18n("文字排版"), color = colors.textDark)
-                
-                Spacer(Modifier.height(8.dp))
-                NovelFontSizeSetting()
-                
-                Spacer(Modifier.height(16.dp))
-                NovelLineSpacingSetting()
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .padding(horizontal = 20.dp, vertical = 20.dp)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    // Typography Section
+                    SectionTitle(i18n("文字排版"), color = colors.textDark)
 
-                Spacer(Modifier.height(16.dp))
-                NovelSystemBarsBackgroundSetting()
+                    Spacer(Modifier.height(8.dp))
+                    NovelFontSizeSetting()
 
-                Spacer(Modifier.height(24.dp))
+                    Spacer(Modifier.height(16.dp))
+                    NovelLineSpacingSetting()
 
-                SectionTitle(i18n("簡繁轉換"), color = colors.textDark)
-                NovelChineseConversionSetting()
+                    Spacer(Modifier.height(16.dp))
+                    NovelSystemBarsBackgroundSetting()
 
-                Spacer(Modifier.height(24.dp))
+                    Spacer(Modifier.height(24.dp))
 
-                // Theme Section
-                ThemeSelectorContent(
-                    currentMode = themeMode,
-                    currentScheme = themeScheme,
-                    onModeChange = { appSettingsRepo.themeMode.setValue(it) },
-                    onSchemeChange = { appSettingsRepo.themeScheme.setValue(it) }
-                )
-                
-                Spacer(Modifier.height(16.dp))
+                    SectionTitle(i18n("浮動跳轉按鈕"), color = colors.textDark)
+                    NovelScrollButtonDisplayModeSetting()
+
+                    Spacer(Modifier.height(16.dp))
+                    NovelScrollButtonThresholdSetting()
+
+                    Spacer(Modifier.height(16.dp))
+                    NovelScrollButtonJumpTargetSetting()
+
+                    Spacer(Modifier.height(24.dp))
+
+                    SectionTitle(i18n("簡繁轉換"), color = colors.textDark)
+                    NovelChineseConversionSetting()
+
+                    Spacer(Modifier.height(24.dp))
+
+                    // Theme Section
+                    ThemeSelectorContent(
+                        currentMode = themeMode,
+                        currentScheme = themeScheme,
+                        onModeChange = { appSettingsRepo.themeMode.setValue(it) },
+                        onSchemeChange = { appSettingsRepo.themeScheme.setValue(it) }
+                    )
+
+                    Spacer(Modifier.height(16.dp))
+                }
             }
         }
     }

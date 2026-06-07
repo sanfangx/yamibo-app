@@ -20,7 +20,7 @@ abstract class GenerateRestorableScreenRegistryTask : DefaultTask() {
         val annotationPattern = Regex(
             """@RestorableScreenEntry(?:\([^)]*\))?\s+(?:data\s+)?(?:class|object)\s+([A-Za-z_][A-Za-z0-9_]*)""",
         )
-        val packagePattern = Regex("""(?m)^\uFEFF?package\s+([A-Za-z_][A-Za-z0-9_\.]*)""")
+        val packagePattern = Regex("""(?m)^\uFEFF?package\s+([A-Za-z_][A-Za-z0-9_.]*)""")
         val sourceRoot = sourceDir.get().asFile
         val entries = sourceRoot
             .walkTopDown()

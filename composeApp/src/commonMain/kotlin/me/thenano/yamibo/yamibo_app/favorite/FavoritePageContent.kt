@@ -32,6 +32,7 @@ import me.thenano.yamibo.yamibo_app.favorite.sync.FavoriteSyncStatusCard
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.i18n.localizedLabel
 import me.thenano.yamibo.yamibo_app.repository.FavoriteSyncRepository.FavoriteSyncState
+import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository
 import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.FavoriteCollectionWithItems
 import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.FavoriteItem
 import me.thenano.yamibo.yamibo_app.repository.settings.FavoriteGridMode
@@ -252,8 +253,20 @@ internal fun FavoritePageContent(
             Box(Modifier.fillMaxSize().graphicsLayer { translationX = contentOffsetX.value; alpha = contentAlpha.value }) {
                 Box(Modifier.fillMaxSize()) {
                     if (gridEntries.isEmpty()) {
+                        val selectedCategory = ready.categories.firstOrNull { it.id == ready.selectedCategoryId }
+                        val showDefaultSyncHint = mode != FavoritePageMode.Search &&
+                            selectedCategory?.name == LocalFavoriteRepository.DEFAULT_CATEGORY_NAME
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text(i18n("目前還沒有收藏"), color = colors.textDark.copy(alpha = 0.52f), fontSize = 16.sp)
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text(i18n("目前還沒有收藏"), color = colors.textDark.copy(alpha = 0.52f), fontSize = 16.sp)
+                                if (showDefaultSyncHint) {
+                                    Text(
+                                        text = i18n("若收藏尚未同步，可使用右上角 ⋮ > 同步百合會收藏 同步"),
+                                        color = colors.textDark.copy(alpha = 0.42f),
+                                        fontSize = 13.sp,
+                                    )
+                                }
+                            }
                         }
                     } else {
                         FavoriteGridLayout(
@@ -395,4 +408,3 @@ internal fun FavoriteGridLayout(
         }
     }
 }
-

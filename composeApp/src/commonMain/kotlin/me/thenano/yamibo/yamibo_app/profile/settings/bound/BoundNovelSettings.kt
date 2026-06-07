@@ -30,6 +30,8 @@ import me.thenano.yamibo.yamibo_app.components.text.rememberConvertedText
 import me.thenano.yamibo.yamibo_app.profile.settings.components.SettingsChipRow
 import me.thenano.yamibo.yamibo_app.profile.settings.components.SettingsSlider
 import me.thenano.yamibo.yamibo_app.repository.settings.ReaderChineseConversionOption
+import me.thenano.yamibo.yamibo_app.repository.settings.ReaderScrollButtonDisplayMode
+import me.thenano.yamibo.yamibo_app.repository.settings.ReaderScrollButtonJumpTarget
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.util.state
 
@@ -167,5 +169,57 @@ fun NovelChineseConversionSetting() {
         onSelect = { novelSettingsRepo.chineseConversion.setValue(it) },
         modifier = Modifier.padding(horizontal = 4.dp),
     )
+}
+
+@Composable
+fun NovelScrollButtonDisplayModeSetting() {
+    val novelSettingsRepo = LocalNovelReaderSettingsRepository.current
+    val displayMode = novelSettingsRepo.scrollButtonDisplayMode.state()
+
+    SettingsChipRow(
+        options = ReaderScrollButtonDisplayMode.entries.map { it to it.localizedLabel() },
+        selectedValue = displayMode,
+        onSelect = { novelSettingsRepo.scrollButtonDisplayMode.setValue(it) },
+        modifier = Modifier.padding(horizontal = 4.dp),
+    )
+}
+
+@Composable
+fun NovelScrollButtonThresholdSetting() {
+    val novelSettingsRepo = LocalNovelReaderSettingsRepository.current
+    val threshold = novelSettingsRepo.scrollButtonDirectionThreshold.state()
+
+    SettingsSlider(
+        label = i18n("方向切換距離"),
+        value = threshold.toFloat(),
+        valueRange = 100f..2000f,
+        steps = 37,
+        valueDisplay = { "${it.toInt()} px" },
+        onValueChange = { novelSettingsRepo.scrollButtonDirectionThreshold.setValue(it.toInt()) },
+    )
+}
+
+@Composable
+fun NovelScrollButtonJumpTargetSetting() {
+    val novelSettingsRepo = LocalNovelReaderSettingsRepository.current
+    val jumpTarget = novelSettingsRepo.scrollButtonJumpTarget.state()
+
+    SettingsChipRow(
+        options = ReaderScrollButtonJumpTarget.entries.map { it to it.localizedLabel() },
+        selectedValue = jumpTarget,
+        onSelect = { novelSettingsRepo.scrollButtonJumpTarget.setValue(it) },
+        modifier = Modifier.padding(horizontal = 4.dp),
+    )
+}
+
+private fun ReaderScrollButtonDisplayMode.localizedLabel(): String = when (this) {
+    ReaderScrollButtonDisplayMode.ALWAYS -> i18n("總是顯示")
+    ReaderScrollButtonDisplayMode.WHEN_USER_SLIDE -> i18n("滑動時顯示")
+    ReaderScrollButtonDisplayMode.NEVER -> i18n("不顯示")
+}
+
+private fun ReaderScrollButtonJumpTarget.localizedLabel(): String = when (this) {
+    ReaderScrollButtonJumpTarget.PAGE_EDGE -> i18n("該頁頂/底部")
+    ReaderScrollButtonJumpTarget.POST_EDGE -> i18n("該樓頂/底部")
 }
 

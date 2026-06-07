@@ -14,7 +14,7 @@ class I18nAutoMergePlugin : Plugin<Project> {
             scanDirs.set(extension.scanDirs)
             glossary.set(extension.glossary)
             baseTranslations.set(extension.baseTranslations)
-            existingComposeResourcesDir.set(extension.existingComposeResourcesDir)
+            composeAssetResourcesDir.set(extension.composeAssetResourcesDir)
             outputComposeResources.set(extension.outputComposeResources)
             outputKotlin.set(extension.outputKotlin)
             reportDir.set(extension.reportDir)

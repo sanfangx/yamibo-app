@@ -16,7 +16,6 @@ import org.gradle.api.tasks.TaskAction
 import java.io.File
 import java.security.MessageDigest
 import java.util.Properties
-import javax.xml.parsers.DocumentBuilderFactory
 
 abstract class GenerateI18nResourcesTask : DefaultTask() {
     @get:InputFile
@@ -40,7 +39,7 @@ abstract class GenerateI18nResourcesTask : DefaultTask() {
     @get:InputDirectory
     @get:PathSensitive(PathSensitivity.RELATIVE)
     @get:Optional
-    abstract val existingComposeResourcesDir: DirectoryProperty
+    abstract val composeAssetResourcesDir: DirectoryProperty
 
     @get:OutputDirectory
     abstract val outputComposeResources: DirectoryProperty
@@ -82,19 +81,18 @@ abstract class GenerateI18nResourcesTask : DefaultTask() {
             .distinctBy { it.source }
             .sortedBy { it.source }
         val glossaryRows = readGlossary(settings.glossaryFiles)
-        val existingTranslations = readExistingTranslations(settings.existingComposeResourcesDir)
 
         val entries = calls.map { call ->
             val key = keyFor(call.source)
             val placeholders = placeholdersIn(call.source)
             val translations = languages.associateWith { language ->
-                resolveTranslation(call.source, language, glossaryRows, existingTranslations)
+                resolveTranslation(call.source, language, glossaryRows)
             }
             I18nEntry(call, key, placeholders, translations)
         }
 
         validate(entries, settings.defaultLanguage, settings.failOnPlaceholderMismatch, settings.failOnMissingTranslation)
-        writeResources(entries, settings.outputComposeResources, settings.existingComposeResourcesDir)
+        writeResources(entries, settings.outputComposeResources, settings.composeAssetResourcesDir)
         writeRuntime(entries, settings.outputKotlin, apiName, settings.runtimePackage, settings.resImportPackage)
         writeReports(entries, settings.reportDir)
     }
@@ -121,7 +119,7 @@ abstract class GenerateI18nResourcesTask : DefaultTask() {
                 fileProp("glossary", glossary.orNull?.asFile),
                 fileProp("baseTranslations", baseTranslations.orNull?.asFile),
             ),
-            existingComposeResourcesDir = existingComposeResourcesDir.get().asFile,
+            composeAssetResourcesDir = composeAssetResourcesDir.orNull?.asFile,
             outputComposeResources = prop("outputComposeResources")
                 ?.let { root.resolve(it).normalize() }
                 ?: outputComposeResources.get().asFile,
@@ -178,33 +176,11 @@ abstract class GenerateI18nResourcesTask : DefaultTask() {
             }
         }
 
-    private fun readExistingTranslations(resourcesDir: File): Map<String, Map<String, String>> {
-        if (!resourcesDir.isDirectory) return emptyMap()
-        val byKey = mutableMapOf<String, MutableMap<String, String>>()
-        resourcesDir.listFiles()?.filter { it.isDirectory && it.name.startsWith("values") }?.forEach { dir ->
-            val language = languageFromValuesDir(dir.name)
-            dir.resolve("strings.xml").takeIf { it.isFile }?.let { xml ->
-                parseStringsXml(xml).forEach { (key, value) ->
-                    byKey.getOrPut(key) { mutableMapOf() }[language] = value
-                }
-            }
-        }
-        val bySource = mutableMapOf<String, Map<String, String>>()
-        byKey.values.forEach { translations ->
-            translations.values.forEach { sourceCandidate ->
-                bySource.putIfAbsent(sourceCandidate, translations)
-            }
-        }
-        return bySource
-    }
-
     private fun resolveTranslation(
         source: String,
         language: String,
         glossaryRows: List<GlossaryRow>,
-        existingTranslations: Map<String, Map<String, String>>,
     ): String {
-        existingTranslations[source]?.get(language)?.takeIf { it.isNotBlank() }?.let { return it }
         glossaryRows.firstOrNull { it.matches(source) }?.values?.get(language)?.takeIf { it.isNotBlank() }?.let { return it }
 
         var converted = source
@@ -243,11 +219,9 @@ abstract class GenerateI18nResourcesTask : DefaultTask() {
         if (errors.isNotEmpty()) throw GradleException(errors.joinToString(separator = "\n"))
     }
 
-    private fun writeResources(entries: List<I18nEntry>, outputDir: File, existingResourcesDir: File) {
+    private fun writeResources(entries: List<I18nEntry>, outputDir: File, assetResourcesDir: File?) {
         if (outputDir.exists()) outputDir.deleteRecursively()
-        if (existingResourcesDir.isDirectory) {
-            existingResourcesDir.copyRecursively(outputDir, overwrite = true)
-        }
+        copyComposeAssets(assetResourcesDir, outputDir)
         languages.forEach { language ->
             val dirName = when (language) {
                 "en" -> "values-en"
@@ -269,6 +243,20 @@ abstract class GenerateI18nResourcesTask : DefaultTask() {
         defaultDir.mkdirs()
         outputDir.resolve("values-zh-rTW/strings_i18n_auto.xml")
             .copyTo(defaultDir.resolve("strings_i18n_auto.xml"), overwrite = true)
+    }
+
+    private fun copyComposeAssets(sourceDir: File?, outputDir: File) {
+        if (sourceDir?.isDirectory != true) return
+        sourceDir.walkTopDown()
+            .filter { it.isFile }
+            .filterNot { file ->
+                file.name == "strings.xml" && file.parentFile?.name?.startsWith("values") == true
+            }
+            .forEach { source ->
+                val target = outputDir.resolve(source.relativeTo(sourceDir).invariantSeparatorsPath)
+                target.parentFile.mkdirs()
+                source.copyTo(target, overwrite = true)
+            }
     }
 
     private fun writeRuntime(entries: List<I18nEntry>, outputDir: File, apiName: String, packageName: String, resPackage: String) {
@@ -402,20 +390,6 @@ abstract class GenerateI18nResourcesTask : DefaultTask() {
         }
     }
 
-    private fun parseStringsXml(file: File): Map<String, String> {
-        val factory = DocumentBuilderFactory.newInstance()
-        factory.isIgnoringComments = true
-        val document = factory.newDocumentBuilder().parse(file)
-        val nodes = document.getElementsByTagName("string")
-        return buildMap {
-            for (index in 0 until nodes.length) {
-                val node = nodes.item(index)
-                val name = node.attributes?.getNamedItem("name")?.nodeValue ?: continue
-                put(name, node.textContent.orEmpty())
-            }
-        }
-    }
-
     private fun parseCsv(text: String): List<List<String>> {
         val rows = mutableListOf<List<String>>()
         val row = mutableListOf<String>()
@@ -450,13 +424,6 @@ abstract class GenerateI18nResourcesTask : DefaultTask() {
         return rows
     }
 
-    private fun languageFromValuesDir(name: String): String = when (name) {
-        "values", "values-zh-rTW" -> "zh-tw"
-        "values-zh-rCN" -> "zh-cn"
-        "values-en" -> "en"
-        else -> normalizeLanguage(name.removePrefix("values-"))
-    }
-
     private fun normalizeLanguage(value: String): String = value.replace('_', '-').lowercase()
 
     private fun looksNonTranslatable(value: String): Boolean =
@@ -489,7 +456,7 @@ abstract class GenerateI18nResourcesTask : DefaultTask() {
     private data class Settings(
         val scanDirs: List<File>,
         val glossaryFiles: List<File>,
-        val existingComposeResourcesDir: File,
+        val composeAssetResourcesDir: File?,
         val outputComposeResources: File,
         val outputKotlin: File,
         val reportDir: File,

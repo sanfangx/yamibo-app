@@ -1,0 +1,182 @@
+name: Sync Update Folder To Mirrors
+
+on:
+  workflow_dispatch:
+    inputs:
+      use_latest_release_asset:
+        description: "Generate isReady=true published manifests from the release matching update/manifest.json versionCode."
+        required: false
+        default: "false"
+        type: boolean
+
+permissions:
+  contents: write
+
+env:
+  MIRROR_OWNER: LittleSurvival
+  MIRROR_REPO: ymb-apk-release
+
+jobs:
+  sync-update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Sync and validate stable manifest
+        run: ./gradlew syncStableManifest validateUpdateManifest --console=plain
+
+      - name: Commit generated stable manifest to GitHub
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add update
+          git commit -m "Sync update manifest" || exit 0
+          git push
+
+      - name: Prepare update folder for public feeds
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          USE_LATEST_RELEASE_ASSET: ${{ inputs.use_latest_release_asset }}
+        run: |
+          set -euo pipefail
+          published_dir="$RUNNER_TEMP/published-update/update"
+          rm -rf "$published_dir"
+          mkdir -p "$published_dir"
+
+          if [ "$USE_LATEST_RELEASE_ASSET" != "true" ]; then
+            cp update/manifest.json "$published_dir/manifest.json"
+            cp update/stable.json "$published_dir/stable.json"
+            exit 0
+          fi
+
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          manifest = json.loads(Path("update/manifest.json").read_text(encoding="utf-8"))
+          version_code = str(manifest["versionCode"])
+          version_name = str(manifest["versionName"])
+          channel = str(manifest.get("channel", "stable"))
+          apk_name = f"yamibo-{channel}-v{version_name}.apk"
+
+          with open(Path(os.environ["RUNNER_TEMP"]) / "sync_meta.env", "w", encoding="utf-8") as env:
+              env.write(f"SYNC_VERSION_CODE={version_code}\n")
+              env.write(f"SYNC_VERSION_NAME={version_name}\n")
+              env.write(f"SYNC_CHANNEL={channel}\n")
+              env.write(f"SYNC_APK_NAME={apk_name}\n")
+          PY
+
+          source "$RUNNER_TEMP/sync_meta.env"
+          mkdir -p "$RUNNER_TEMP/latest-release"
+          gh release view "$SYNC_VERSION_CODE" >/dev/null
+          gh release download "$SYNC_VERSION_CODE" -p "$SYNC_APK_NAME" -D "$RUNNER_TEMP/latest-release" --clobber
+          apk="$RUNNER_TEMP/latest-release/$SYNC_APK_NAME"
+          sha256="$(sha256sum "$apk" | awk '{print $1}')"
+          size="$(stat -c%s "$apk")"
+          release_url="https://github.com/${{ github.repository }}/releases/tag/$SYNC_VERSION_CODE"
+          asset_url="https://github.com/${{ github.repository }}/releases/download/$SYNC_VERSION_CODE/$SYNC_APK_NAME"
+
+          RELEASE_URL="$release_url" GITHUB_ASSET_URL="$asset_url" APK_SHA256="$sha256" APK_SIZE="$size" python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          manifest = json.loads(Path("update/manifest.json").read_text(encoding="utf-8"))
+          manifest["isReady"] = True
+          manifest["releaseUrl"] = os.environ["RELEASE_URL"]
+          manifest["assets"] = [
+              {
+                  "platform": "android",
+                  "type": "universal-apk",
+                  "url": os.environ["GITHUB_ASSET_URL"],
+                  "sha256": os.environ["APK_SHA256"],
+                  "size": int(os.environ["APK_SIZE"]),
+              }
+          ]
+          published_dir = Path(os.environ["RUNNER_TEMP"]) / "published-update" / "update"
+          text = json.dumps(manifest, ensure_ascii=False, indent=2) + "\n"
+          (published_dir / "manifest.json").write_text(text, encoding="utf-8")
+          (published_dir / "stable.json").write_text(text, encoding="utf-8")
+          PY
+
+      - name: Validate ready public update folder
+        if: ${{ inputs.use_latest_release_asset }}
+        run: ./gradlew validatePublishedUpdateManifest -PpublishedUpdateDir="$RUNNER_TEMP/published-update/update" --console=plain
+
+      - name: Push update folder to GitHub update-release branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          dir="$RUNNER_TEMP/github-update-release"
+          rm -rf "$dir"
+          mkdir -p "$dir"
+          cp -R "$RUNNER_TEMP/published-update/update" "$dir/update"
+
+          git -C "$dir" init
+          git -C "$dir" config user.name "github-actions[bot]"
+          git -C "$dir" config user.email "github-actions[bot]@users.noreply.github.com"
+          git -C "$dir" remote add origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
+          git -C "$dir" add update
+          git -C "$dir" commit -m "Sync update folder"
+          git -C "$dir" branch -M update-release
+          git -C "$dir" push --force origin update-release
+
+      - name: Start SSH agent for mirrors
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: |
+            ${{ secrets.GITEE_SSH_PRIVATE_KEY }}
+            ${{ secrets.GITCODE_SSH_PRIVATE_KEY }}
+
+      - name: Trust mirror SSH hosts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          ssh-keyscan gitee.com >> ~/.ssh/known_hosts
+          ssh-keyscan gitcode.com >> ~/.ssh/known_hosts
+
+      - name: Push update folder to mirror repositories
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          push_mirror() {
+            local name="$1"
+            local remote="$2"
+            local dir="$RUNNER_TEMP/mirror-$name"
+
+            rm -rf "$dir"
+            mkdir -p "$dir"
+            cp -R "$RUNNER_TEMP/published-update/update" "$dir/update"
+
+            git -C "$dir" init
+            git -C "$dir" config user.name "github-actions[bot]"
+            git -C "$dir" config user.email "github-actions[bot]@users.noreply.github.com"
+            git -C "$dir" remote add origin "$remote"
+            git -C "$dir" add update
+            git -C "$dir" commit -m "Sync update folder"
+            git -C "$dir" branch -M main
+            git -C "$dir" push --force origin main
+          }
+
+          push_mirror "gitee" "git@gitee.com:${MIRROR_OWNER}/${MIRROR_REPO}.git"
+          push_mirror "gitcode" "git@gitcode.com:${MIRROR_OWNER}/${MIRROR_REPO}.git"

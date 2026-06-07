@@ -5,6 +5,7 @@ import me.thenano.yamibo.yamibo_app.i18n.i18n
 import YamiboIcons
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -128,13 +129,6 @@ internal fun AppUpdateScreen() {
                     }
                 }
             }
-
-            Text(
-                text = i18n("更新資訊來自 manifest；牆內使用者可優先使用 Gitee/GitCode 鏡像源。"),
-                color = colors.textDark.copy(alpha = 0.58f),
-                fontSize = 12.sp,
-                lineHeight = 17.sp,
-            )
         }
     }
 
@@ -173,6 +167,7 @@ private fun AppUpdateStatusCard(
                     result == null -> i18n("尚未檢查更新")
                     result is AppUpdateCheckResult.UpdateAvailable -> i18n("發現新版本 {}", result.release.versionName)
                     result is AppUpdateCheckResult.Ignored -> i18n("已忽略版本 {}", result.release.versionName)
+                    result is AppUpdateCheckResult.Preparing -> i18n("新版本 {} 正在準備中", result.versionName)
                     result is AppUpdateCheckResult.UpToDate -> i18n("目前已是最新版本：{}", result.currentVersionName)
                     result is AppUpdateCheckResult.Failed -> i18n("檢查更新失敗")
                     else -> i18n("尚未檢查更新")
@@ -186,6 +181,14 @@ private fun AppUpdateStatusCard(
             }
             if (result is AppUpdateCheckResult.Failed) {
                 Text(result.message, color = colors.textDark.copy(alpha = 0.68f), fontSize = 13.sp)
+            }
+            if (result is AppUpdateCheckResult.Preparing) {
+                Text(
+                    text = i18n("更新檔案尚未發布完成，請稍後再試。來源：{}", result.sourceName),
+                    color = colors.textDark.copy(alpha = 0.68f),
+                    fontSize = 13.sp,
+                    lineHeight = 18.sp,
+                )
             }
             release?.let {
                 Text(
@@ -255,7 +258,11 @@ private fun AppUpdateLaunchThresholdCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick,
+            ),
         shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(containerColor = colors.creamSurface),
     ) {
@@ -271,7 +278,7 @@ private fun AppUpdateLaunchThresholdCard(
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Text(
-                    text = i18n("開屏檢查更新間隔"),
+                    text = i18n("啟動檢查更新間隔"),
                     color = colors.textDark,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -283,15 +290,26 @@ private fun AppUpdateLaunchThresholdCard(
                     lineHeight = 17.sp,
                 )
             }
-            AssistChip(
-                onClick = onClick,
-                label = { Text(appUpdateLaunchThresholdLabel(selected)) },
-                colors = AssistChipDefaults.assistChipColors(
-                    containerColor = colors.brownLight.copy(alpha = 0.18f),
-                    labelColor = colors.brownDeep,
-                ),
-                border = null,
-            )
+            Box(
+                modifier = Modifier
+                    .background(
+                        color = colors.brownLight.copy(alpha = 0.18f),
+                        shape = RoundedCornerShape(8.dp),
+                    )
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onClick,
+                    )
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = appUpdateLaunchThresholdLabel(selected),
+                    color = colors.brownDeep,
+                    fontSize = 14.sp,
+                )
+            }
         }
     }
 }
@@ -303,7 +321,7 @@ private fun AppUpdateLaunchThresholdDialog(
     onDismiss: () -> Unit,
 ) {
     YamiboSingleSelectDialog(
-        title = i18n("開屏檢查更新間隔"),
+        title = i18n("啟動檢查更新間隔"),
         options = AppUpdateLaunchCheckThreshold.entries,
         selected = selected,
         onDismiss = onDismiss,

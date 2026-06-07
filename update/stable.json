@@ -1,0 +1,8 @@
+{
+  "channel": "dev",
+  "versionName": "0.0.1",
+  "versionCode": 1,
+  "isReady": false,
+  "releaseNotes": "初始化 dev 更新通道。",
+  "assets": []
+}

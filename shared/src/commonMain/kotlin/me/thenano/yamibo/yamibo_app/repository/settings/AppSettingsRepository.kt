@@ -226,10 +226,9 @@ class AppSettingsRepository(store: SettingsStore) : SettingsRegistry(store, pref
         default = "",
     )
 
+    @Suppress("unused")
     companion object {
-        @Suppress("unused")
         val themeModeOptions = AppThemeMode.entries.map { it to it.label }
-        @Suppress("unused")
         val themeSchemeOptions = AppThemeScheme.entries.map { it to it.label }
         val favoriteGridModeOptions = FavoriteGridMode.entries.map { it to it.label }
         val favoriteSortModeOptions = FavoriteSortMode.entries.map { it to it.label }

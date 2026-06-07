@@ -578,7 +578,6 @@ fun ImagesReaderScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
-            .windowInsetsPadding(WindowInsets.systemBars)
     ) {
         // Zoomable Content Box
         Box(
@@ -929,6 +928,7 @@ fun ImagesReaderScreen(
                                     contentDescription = i18n("第{}頁", page + 1),
                                     contentScale = ContentScale.Fit,
                                     modifier = Modifier.fillMaxSize(),
+                                    fillContainer = true,
                                     enableContextMenu = false,
                                     isDarkTheme = true,
                                     enableCrossfade = false
@@ -1065,10 +1065,18 @@ fun ImagesReaderScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .background(YamiboTheme.colors.brownDeep.copy(alpha = 0.18f))
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null
                     ) { showSettings = false }
+            )
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .windowInsetsTopHeight(WindowInsets.statusBars)
+                    .background(YamiboTheme.colors.brownDeep)
             )
         }
 
@@ -1100,4 +1108,3 @@ fun ImagesReaderScreen(
         )
     }
 }
-

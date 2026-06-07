@@ -37,6 +37,28 @@ object YamiboIcons {
     val Book: ImageVector by lazy { buildBook() }
     val Copy: ImageVector by lazy { buildCopy() }
     val Save: ImageVector by lazy { buildSave() }
+    val InfoCircle: ImageVector by lazy { buildInfoCircle() }
+    val ChevronUp: ImageVector by lazy { buildChevronUp() }
+
+    private fun buildChevronUp(): ImageVector =
+        ImageVector.Builder(
+            name = "ChevronUp",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 24f,
+            viewportHeight = 24f,
+        ).apply {
+            path(
+                stroke = SolidColor(Color.Black),
+                strokeLineWidth = 2.2f,
+                strokeLineCap = StrokeCap.Round,
+                strokeLineJoin = StrokeJoin.Round,
+            ) {
+                moveTo(6f, 15f)
+                lineTo(12f, 9f)
+                lineTo(18f, 15f)
+            }
+        }.build()
 
     private fun buildLanguage(): ImageVector =
         ImageVector.Builder(
@@ -1475,6 +1497,47 @@ object YamiboIcons {
                 verticalLineTo(21.0f)
                 moveTo(15.0f, 7.0f)
                 horizontalLineTo(9.0f)
+            }
+        }.build()
+
+    private fun buildInfoCircle(): ImageVector =
+        ImageVector.Builder(
+            name = "InfoCircle",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 24f,
+            viewportHeight = 24f
+        ).apply {
+            path(
+                fill = null,
+                stroke = SolidColor(Color.Black),
+                strokeLineWidth = 2f,
+                strokeLineCap = StrokeCap.Round,
+                strokeLineJoin = StrokeJoin.Round
+            ) {
+                moveTo(12.0f, 21.0f)
+                curveTo(16.971f, 21.0f, 21.0f, 16.971f, 21.0f, 12.0f)
+                curveTo(21.0f, 7.029f, 16.971f, 3.0f, 12.0f, 3.0f)
+                curveTo(7.029f, 3.0f, 3.0f, 7.029f, 3.0f, 12.0f)
+                curveTo(3.0f, 16.971f, 7.029f, 21.0f, 12.0f, 21.0f)
+                close()
+            }
+            path(
+                fill = null,
+                stroke = SolidColor(Color.Black),
+                strokeLineWidth = 2f,
+                strokeLineCap = StrokeCap.Round
+            ) {
+                moveTo(12.0f, 11.0f)
+                verticalLineTo(16.0f)
+            }
+            path(fill = SolidColor(Color.Black)) {
+                moveTo(13.15f, 8.5f)
+                curveTo(13.15f, 9.135f, 12.635f, 9.65f, 12.0f, 9.65f)
+                curveTo(11.365f, 9.65f, 10.85f, 9.135f, 10.85f, 8.5f)
+                curveTo(10.85f, 7.865f, 11.365f, 7.35f, 12.0f, 7.35f)
+                curveTo(12.635f, 7.35f, 13.15f, 7.865f, 13.15f, 8.5f)
+                close()
             }
         }.build()
 

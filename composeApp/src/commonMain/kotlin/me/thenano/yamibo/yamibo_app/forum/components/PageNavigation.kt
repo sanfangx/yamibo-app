@@ -200,6 +200,10 @@ private fun PagePickerDialog(
                         cursorColor = colors.brownDeep,
                         focusedBorderColor = colors.brownDeep,
                         unfocusedBorderColor = colors.brownPrimary.copy(alpha = 0.35f),
+                        focusedLabelColor = colors.brownDeep,
+                        unfocusedLabelColor = colors.brownPrimary.copy(alpha = 0.7f),
+                        focusedContainerColor = colors.creamSurface,
+                        unfocusedContainerColor = colors.creamSurface,
                     ),
                     shape = RoundedCornerShape(12.dp),
                 )
@@ -252,4 +256,3 @@ private fun PageNumberButton(
         )
     }
 }
-

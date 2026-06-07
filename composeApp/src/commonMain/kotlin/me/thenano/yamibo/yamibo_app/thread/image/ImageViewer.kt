@@ -49,6 +49,7 @@ fun ImageViewer(
     modifier: Modifier = Modifier,
     contentDescription: String? = null,
     contentScale: ContentScale = ContentScale.FillWidth,
+    fillContainer: Boolean = false,
     enableContextMenu: Boolean = true,
     isDarkTheme: Boolean = false,
     enableCrossfade: Boolean = true,
@@ -142,7 +143,7 @@ fun ImageViewer(
         }
 
         Box(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = if (fillContainer) Modifier.fillMaxSize() else Modifier.fillMaxWidth(),
             contentAlignment = Alignment.Center
         ) {
             if (blockedErrorMessage != null) {
@@ -212,9 +213,8 @@ fun ImageViewer(
                         Image(
                             painter = painter,
                             contentDescription = contentDescription ?: "Yamibo Image",
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 1.dp)
+                            modifier = (if (fillContainer) Modifier.fillMaxSize() else Modifier.fillMaxWidth())
+                                .padding(vertical = if (fillContainer) 0.dp else 1.dp)
                                 .onSizeChanged { size ->
                                     if (size.height > 0) {
                                         onRenderedHeightChanged?.invoke(size.height)

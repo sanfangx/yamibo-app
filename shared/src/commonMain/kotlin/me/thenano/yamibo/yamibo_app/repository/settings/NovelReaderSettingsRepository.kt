@@ -9,6 +9,17 @@ enum class ReaderChineseConversionOption(val label: String) {
     TRADITIONAL("traditional"),
 }
 
+enum class ReaderScrollButtonDisplayMode(val label: String) {
+    ALWAYS("always"),
+    WHEN_USER_SLIDE("when_user_slide"),
+    NEVER("never"),
+}
+
+enum class ReaderScrollButtonJumpTarget(val label: String) {
+    PAGE_EDGE("page_edge"),
+    POST_EDGE("post_edge"),
+}
+
 class NovelReaderSettingsRepository(store: SettingsStore) : SettingsRegistry(store, prefix = "novelreadersettings") {
 
     val fontSize by intSetting(
@@ -48,6 +59,27 @@ class NovelReaderSettingsRepository(store: SettingsStore) : SettingsRegistry(sto
         name = "chinese_conversion",
         description = "novel_reader_chinese_conversion",
         default = ReaderChineseConversionOption.DEFAULT,
+    )
+
+    val scrollButtonDisplayMode by enumSetting(
+        name = "scroll_button_display_mode",
+        description = "novel_reader_scroll_button_display_mode",
+        default = ReaderScrollButtonDisplayMode.WHEN_USER_SLIDE,
+    )
+
+    val scrollButtonDirectionThreshold by intSetting(
+        name = "scroll_button_direction_threshold",
+        description = "novel_reader_scroll_button_direction_threshold",
+        default = 500,
+        min = 100,
+        max = 2000,
+        interval = 50,
+    )
+
+    val scrollButtonJumpTarget by enumSetting(
+        name = "scroll_button_jump_target",
+        description = "novel_reader_scroll_button_jump_target",
+        default = ReaderScrollButtonJumpTarget.PAGE_EDGE,
     )
 
     companion object {

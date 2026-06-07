@@ -10,6 +10,7 @@ import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.store.auth.CookieStore
 import me.thenano.yamibo.yamibo_app.store.auth.UserStore
 import me.thenano.yamibo.yamibo_app.util.auth.parseCookieStringToMap
+import kotlin.time.Duration.Companion.milliseconds
 
 class AndroidAuthRepository(
     override val cookieStore: CookieStore,
@@ -57,7 +58,7 @@ class AndroidAuthRepository(
                 onSuccess()
                 return
             }
-            delay(loginDetectInterval)
+            delay(loginDetectInterval.milliseconds)
             elapsed += loginDetectInterval
         }
 

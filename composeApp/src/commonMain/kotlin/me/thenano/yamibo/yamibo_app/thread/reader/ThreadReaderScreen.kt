@@ -57,6 +57,7 @@ import me.thenano.yamibo.yamibo_app.thread.reader.components.CommentBanner
 import me.thenano.yamibo.yamibo_app.thread.reader.components.ReaderCatalogPanel
 import me.thenano.yamibo.yamibo_app.thread.reader.components.ReaderOverlayMenu
 import me.thenano.yamibo.yamibo_app.thread.reader.components.novel.NovelReaderSettingsPanel
+import me.thenano.yamibo.yamibo_app.thread.reader.components.overlay.ReaderScrollJumpButton
 import me.thenano.yamibo.yamibo_app.thread.reader.components.post.PostRenderer
 import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.HtmlBlock
 import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.HtmlParser
@@ -69,6 +70,8 @@ import me.thenano.yamibo.yamibo_app.util.state
 import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
 import me.thenano.yamibo.yamibo_app.util.time.epochMillisOrNull
 import me.thenano.yamibo.yamibo_app.webview.action.IActionWebView
+import me.thenano.yamibo.yamibo_app.repository.settings.ReaderScrollButtonDisplayMode
+import me.thenano.yamibo.yamibo_app.repository.settings.ReaderScrollButtonJumpTarget
 import kotlin.math.abs
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -173,6 +176,9 @@ internal fun ThreadReaderScreen(
     val listState = rememberLazyListState()
     val isNovelThread = threadType == ReadHistoryRepository.ThreadEntryType.Novel
     val keepSystemBarsBackground = novelSettingsRepository.keepSystemBarsBackground.state()
+    val scrollButtonDisplayMode = novelSettingsRepository.scrollButtonDisplayMode.state()
+    val scrollButtonDirectionThreshold = novelSettingsRepository.scrollButtonDirectionThreshold.state()
+    val scrollButtonJumpTarget = novelSettingsRepository.scrollButtonJumpTarget.state()
 
     var state by remember { mutableStateOf<ReaderState>(ReaderState.Loading) }
     var posts by remember { mutableStateOf<List<Post>>(emptyList()) }
@@ -198,6 +204,9 @@ internal fun ThreadReaderScreen(
 
     var showMenu by remember { mutableStateOf(false) }
     var showSettingsPanel by remember { mutableStateOf(false) }
+    var scrollJumpButtonPointsDown by remember { mutableStateOf(false) }
+    var showScrollJumpButtonAfterSlide by remember { mutableStateOf(false) }
+    var scrollJumpButtonVisibilityToken by remember { mutableIntStateOf(0) }
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
 
     val authRepo = LocalAuthRepository.current
@@ -787,6 +796,81 @@ internal fun ThreadReaderScreen(
         )
     }
 
+    fun visibleAnchorEntryIndex(): Int? {
+        if (readerEntries.isEmpty()) return null
+        val layoutInfo = listState.layoutInfo
+        val visibleItems = layoutInfo.visibleItemsInfo
+        if (visibleItems.isEmpty()) return null
+
+        val viewportCenter = (layoutInfo.viewportStartOffset + layoutInfo.viewportEndOffset) / 2
+        return visibleItems
+            .mapNotNull { item ->
+                readerEntries.getOrNull(item.index)
+                    ?.takeIf { it.isScrollAnchor }
+                    ?.let { item.index to item }
+            }
+            .minByOrNull { (_, item) ->
+                when {
+                    viewportCenter < item.offset -> item.offset - viewportCenter
+                    viewportCenter > item.offset + item.size -> viewportCenter - (item.offset + item.size)
+                    else -> 0
+                }
+            }
+            ?.first
+    }
+
+    fun anchorIndexForPost(postId: Long, last: Boolean): Int? {
+        var foundIndex: Int? = null
+        readerEntries.forEachIndexed { index, entry ->
+            if (entry.isScrollAnchor && entry.post.pid.value.toLong() == postId) {
+                if (!last) return index
+                foundIndex = index
+            }
+        }
+        return foundIndex
+    }
+
+    fun pageEdgeAnchorIndex(currentEntry: ReaderListEntry, pointsDown: Boolean): Int? {
+        val currentPage = pageByPid[currentEntry.post.pid.value.toLong()] ?: return null
+        val postBounds = pageIndexBounds[currentPage] ?: return null
+        val targetPost = posts.getOrNull(if (pointsDown) postBounds.last else postBounds.first) ?: return null
+        return anchorIndexForPost(targetPost.pid.value.toLong(), last = pointsDown)
+    }
+
+    fun postEdgeAnchorIndex(currentIndex: Int, currentEntry: ReaderListEntry, pointsDown: Boolean): Int? {
+        val currentPostId = currentEntry.post.pid.value.toLong()
+        val currentFirst = anchorIndexForPost(currentPostId, last = false) ?: currentIndex
+        val currentLast = anchorIndexForPost(currentPostId, last = true) ?: currentIndex
+
+        return if (pointsDown) {
+            if (currentIndex < currentLast) {
+                currentLast
+            } else {
+                posts.getOrNull(currentEntry.postIndex + 1)
+                    ?.let { anchorIndexForPost(it.pid.value.toLong(), last = false) }
+                    ?: currentLast
+            }
+        } else {
+            val currentOffset = listState.firstVisibleItemScrollOffset
+            if (currentIndex > currentFirst || currentOffset > 24) {
+                currentFirst
+            } else {
+                posts.getOrNull(currentEntry.postIndex - 1)
+                    ?.let { anchorIndexForPost(it.pid.value.toLong(), last = false) }
+                    ?: currentFirst
+            }
+        }
+    }
+
+    fun scrollJumpTargetIndex(): Int? {
+        val currentIndex = visibleAnchorEntryIndex() ?: return null
+        val currentEntry = readerEntries.getOrNull(currentIndex) ?: return null
+        return when (scrollButtonJumpTarget) {
+            ReaderScrollButtonJumpTarget.PAGE_EDGE -> pageEdgeAnchorIndex(currentEntry, scrollJumpButtonPointsDown)
+            ReaderScrollButtonJumpTarget.POST_EDGE -> postEdgeAnchorIndex(currentIndex, currentEntry, scrollJumpButtonPointsDown)
+        }
+    }
+
     fun saveCurrentHistoryBlocking() {
         val history = buildHistory() ?: return
         runBlocking {
@@ -1044,6 +1128,47 @@ internal fun ThreadReaderScreen(
                 try {
                     readHistoryRepo.savePosition(history)
                 } catch (_: Exception) {
+                }
+            }
+    }
+
+    LaunchedEffect(listState, state, scrollButtonDisplayMode, scrollButtonDirectionThreshold) {
+        if (state != ReaderState.Success || scrollButtonDisplayMode == ReaderScrollButtonDisplayMode.NEVER) {
+            showScrollJumpButtonAfterSlide = false
+            return@LaunchedEffect
+        }
+
+        var anchorY: Long? = null
+        snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }
+            .distinctUntilChanged()
+            .collect { (index, offset) ->
+                val currentY = index.toLong() * 1000L + offset.toLong()
+                val lastY = anchorY
+                if (lastY == null) {
+                    anchorY = currentY
+                    return@collect
+                }
+
+                val threshold = scrollButtonDirectionThreshold.coerceAtLeast(1).toLong()
+                val delta = currentY - lastY
+                if (delta > threshold) {
+                    scrollJumpButtonPointsDown = true
+                    anchorY = lastY + ((delta - threshold) / 2L) + 1L
+                } else if (delta < -threshold || delta <= 0L) {
+                    scrollJumpButtonPointsDown = false
+                    anchorY = currentY
+                }
+
+                if (scrollButtonDisplayMode == ReaderScrollButtonDisplayMode.WHEN_USER_SLIDE) {
+                    showScrollJumpButtonAfterSlide = true
+                    scrollJumpButtonVisibilityToken += 1
+                    val token = scrollJumpButtonVisibilityToken
+                    launch {
+                        delay(1800.milliseconds)
+                        if (scrollJumpButtonVisibilityToken == token) {
+                            showScrollJumpButtonAfterSlide = false
+                        }
+                    }
                 }
             }
     }
@@ -1530,9 +1655,37 @@ internal fun ThreadReaderScreen(
                     )
                 }
 
-                // Manga reader button visibility
-                val isFirstPage = currentPage == 1
-                val showMangaReader = isMangaForum && isFirstPage
+                val showScrollJumpButton =
+                    !showSettingsPanel &&
+                        state == ReaderState.Success &&
+                        readerEntries.isNotEmpty() &&
+                        scrollButtonDisplayMode != ReaderScrollButtonDisplayMode.NEVER &&
+                        (
+                            scrollButtonDisplayMode == ReaderScrollButtonDisplayMode.ALWAYS ||
+                                showScrollJumpButtonAfterSlide
+                            )
+                val scrollJumpBottomPadding = if (keepSystemBarsBackground) {
+                    WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 96.dp
+                } else {
+                    96.dp
+                }
+                ReaderScrollJumpButton(
+                    visible = showScrollJumpButton,
+                    pointsDown = scrollJumpButtonPointsDown,
+                    onClick = {
+                        scope.launch {
+                            val targetIndex = scrollJumpTargetIndex()
+                            if (targetIndex != null) {
+                                listState.animateScrollToItem(targetIndex)
+                            } else {
+                                snackbarHostState.showSnackbar(i18n("目前無法定位跳轉位置"))
+                            }
+                        }
+                    },
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(end = 12.dp, bottom = scrollJumpBottomPadding),
+                )
 
                 // Overlay menu
                 ReaderOverlayMenu(
@@ -1580,26 +1733,6 @@ internal fun ThreadReaderScreen(
                     onSettings = {
                         showSettingsPanel = true
                         showMenu = false
-                    },
-                    showMangaReader = showMangaReader,
-                    onMangaReader = {
-                        val firstPost = posts.firstOrNull()
-                        if (firstPost != null) {
-                            val firstPostImages = firstPost.images.map { img ->
-                                if (img.url.startsWith("http")) img.url else "${YamiboRoute.Domain.build()}${img.url}"
-                            }
-                            navigator.navigate(
-                                IImageReaderScreen(
-                                    tid = tid,
-                                    postId = firstPost.pid,
-                                    fid = threadInfo?.forum?.fid,
-                                    authorId = authorId,
-                                    threadTitle = title,
-                                    imageList = firstPostImages,
-                                    loadHistory = true,
-                                )
-                            )
-                        }
                     },
                     modifier = Modifier.align(Alignment.BottomCenter)
                 )
@@ -1867,4 +2000,3 @@ private fun CatalogActionRow(text: String, onClick: () -> Unit) {
         )
     }
 }
-

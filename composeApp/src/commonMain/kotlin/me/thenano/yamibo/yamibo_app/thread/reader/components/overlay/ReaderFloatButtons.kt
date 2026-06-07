@@ -19,14 +19,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 
-/** Floating circle buttons (Refresh, Settings, and optionally Manga Reader) */
+/** Floating circle buttons for refresh and settings. */
 @Composable
 fun ReaderFloatButtons(
     visible: Boolean,
     onRefresh: () -> Unit,
     onSettings: () -> Unit,
-    showMangaReader: Boolean = false,
-    onMangaReader: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val colors = YamiboTheme.colors
@@ -65,16 +63,5 @@ fun ReaderFloatButtons(
             }
         }
 
-        // Manga Reader: always visible when showMangaReader is true (independent of overlay)
-        if (showMangaReader) {
-            IconButton(
-                onClick = onMangaReader,
-                modifier = Modifier
-                    .size(56.dp)
-                    .background(colors.brownPrimary.copy(alpha = 0.2f), CircleShape)
-            ) {
-                Icon(imageVector = YamiboIcons.Book, contentDescription = i18n("漫畫閱讀模式"), tint = colors.brownPrimary, modifier = Modifier.size(24.dp))
-            }
-        }
     }
 }

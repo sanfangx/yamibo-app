@@ -26,6 +26,7 @@ sealed interface AppUpdateCheckResult {
     data class UpdateAvailable(val release: AppUpdateRelease) : AppUpdateCheckResult
     data class UpToDate(val currentVersionName: String) : AppUpdateCheckResult
     data class Ignored(val release: AppUpdateRelease) : AppUpdateCheckResult
+    data class Preparing(val versionName: String, val versionCode: Long, val sourceName: String) : AppUpdateCheckResult
     data class Failed(val message: String) : AppUpdateCheckResult
 }
 

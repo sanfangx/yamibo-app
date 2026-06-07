@@ -20,12 +20,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.littlesurvival.core.YamiboResult
 import kotlinx.coroutines.launch
+import me.thenano.yamibo.yamibo_app.AppVersion
 import me.thenano.yamibo.yamibo_app.LocalAppSettingsRepository
 import me.thenano.yamibo.yamibo_app.LocalAuthRepository
 import me.thenano.yamibo.yamibo_app.LocalSignRepository
 import me.thenano.yamibo.yamibo_app.event.AppEventBus
 import me.thenano.yamibo.yamibo_app.event.events.LoginSuccessEvent
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
+import me.thenano.yamibo.yamibo_app.profile.about.IAboutScreen
 import me.thenano.yamibo.yamibo_app.profile.settings.ISettingsScreen
 import me.thenano.yamibo.yamibo_app.profile.sign.ISignInfoScreen
 import me.thenano.yamibo.yamibo_app.profile.sign.ISignWebView
@@ -245,6 +247,12 @@ fun ProfilePage() {
                 title = i18n("閱讀統計"),
                 icon = YamiboIcons.Statistics,
                 onClick = { navigator.navigate(IProfileStatisticsScreen()) }
+            )
+
+            EntryCard(
+                title = i18n("關於 ({})", AppVersion.displayName),
+                icon = YamiboIcons.InfoCircle,
+                onClick = { navigator.navigate(IAboutScreen()) }
             )
 
             Spacer(Modifier.height(24.dp))
