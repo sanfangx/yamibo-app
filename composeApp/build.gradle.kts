@@ -10,7 +10,7 @@ plugins {
     id("local.i18n-auto-merge")
 }
 
-val yamiboAppVersionCode = 1
+val yamiboAppVersionCode = 2
 val yamiboAppVersionName = "0.0.1"
 
 kotlin {

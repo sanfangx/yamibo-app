@@ -18,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
@@ -26,6 +27,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.SubcomposeAsyncImage
+import io.github.littlesurvival.YamiboLevels
 import io.github.littlesurvival.YamiboRoute
 import io.github.littlesurvival.core.YamiboResult
 import io.github.littlesurvival.dto.page.ProfilePage
@@ -179,6 +181,17 @@ private fun UserInfoContent(
     onLogout: suspend () -> Unit,
 ) {
     val navigator = LocalNavigator.current
+    val colors = YamiboTheme.colors
+    val currentLevel = YamiboLevels.getLevel(user.totalPoints)
+    val nextLevel = YamiboLevels.nextLevel(user.totalPoints)
+    val targetPoint = nextLevel?.lowestPoint
+    val progress = when {
+        targetPoint == null -> 1f
+        targetPoint <= 0 -> 0f
+        else -> (user.totalPoints.toFloat() / targetPoint.toFloat()).coerceIn(0f, 1f)
+    }
+    val pointsToNext = YamiboLevels.pointToNextLevel(user.totalPoints)
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -188,10 +201,8 @@ private fun UserInfoContent(
             ) {
                 navigator.navigate(IUserSpaceScreen(user.uid, user.username))
             }
-            .padding(20.dp)
+            .padding(18.dp)
     ) {
-        /* top actions */
-        /* top actions */
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.End,
@@ -212,11 +223,16 @@ private fun UserInfoContent(
             )
         }
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(10.dp))
 
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            /* avatar placeholder */
-            AvatarPlaceholder(avatarUrl = user.avatarUrl ?: "")
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            AvatarPlaceholder(
+                avatarUrl = user.avatarUrl ?: "",
+                modifier = Modifier.size(72.dp)
+            )
 
             Spacer(Modifier.width(16.dp))
 
@@ -233,19 +249,101 @@ private fun UserInfoContent(
 
                 Text(
                     text = "UID: ${user.uid.value}",
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodySmall,
                     color = YamiboTheme.colors.brownPrimary
                 )
 
                 Spacer(Modifier.height(8.dp))
 
-                Row {
-                    InfoChip(user.userGroup)
-                    Spacer(Modifier.width(8.dp))
-                    InfoChip(i18n("總積分 {}", user.totalPoints.toString()))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    InfoChip(
+                        label = user.userGroup.ifBlank { currentLevel.levelName },
+                        modifier = Modifier.weight(0.85f, fill = false)
+                    )
+                    InfoChip(
+                        label = i18n(
+                            "總積分 {} ({} + {} ÷ 3)",
+                            user.totalPoints.toString(),
+                            user.points.toString(),
+                            user.partner.toString(),
+                        ),
+                        modifier = Modifier.weight(1.45f, fill = false)
+                    )
                 }
             }
         }
+
+        Spacer(Modifier.height(22.dp))
+
+        LevelProgressBar(
+            progress = progress,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(Modifier.height(10.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = targetPoint?.let {
+                    i18n("{} / {} 積分", user.totalPoints.toString(), it.toString())
+                } ?: i18n("{} 積分", user.totalPoints.toString()),
+                color = colors.textDark,
+                fontSize = 10.sp,
+            )
+            pointsToNext?.let { remaining ->
+                Spacer(Modifier.width(12.dp))
+                Text(
+                    text = i18n(
+                        "距離{}還有 {} 積分",
+                        nextLevel?.levelName ?: i18n("下一等級"),
+                        remaining.toString()
+                    ),
+                    color = colors.textDark.copy(alpha = 0.78f),
+                    fontSize = 10.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun LevelProgressBar(
+    progress: Float,
+    modifier: Modifier = Modifier,
+) {
+    val colors = YamiboTheme.colors
+    val shape = RoundedCornerShape(50)
+    Box(
+        modifier = modifier
+            .height(10.dp)
+            .clip(shape)
+            .background(colors.brownPrimary.copy(alpha = 0.08f)),
+        contentAlignment = Alignment.CenterStart
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxHeight()
+                .fillMaxWidth(progress)
+                .padding(2.dp)
+                .clip(shape)
+                .background(
+                    Brush.horizontalGradient(
+                        listOf(
+                            colors.orangeAccent.copy(alpha = 0.46f),
+                            colors.orangeAccent.copy(alpha = 0.78f)
+                        )
+                    )
+                )
+        )
     }
 }
 
@@ -253,11 +351,12 @@ private fun UserInfoContent(
 @Composable
 private fun AvatarPlaceholder(
     avatarUrl: String,
+    modifier: Modifier = Modifier,
 ) {
     SubcomposeAsyncImage(
         model = rememberImageRequest(url = avatarUrl),
         contentDescription = null,
-        modifier = Modifier.size(72.dp).clip(CircleShape),
+        modifier = modifier.clip(CircleShape),
         contentScale = ContentScale.Crop,
         loading = {
             Box(
@@ -277,18 +376,24 @@ private fun AvatarPlaceholder(
 }
 
 @Composable
-private fun InfoChip(label: String) {
+private fun InfoChip(
+    label: String,
+    modifier: Modifier = Modifier,
+) {
     Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = YamiboTheme.colors.orangeAccent.copy(alpha = 0.15f),
-        border = BorderStroke(1.dp, YamiboTheme.colors.orangeAccent.copy(alpha = 0.3f))
+        modifier = modifier,
+        shape = RoundedCornerShape(16.dp),
+        color = YamiboTheme.colors.orangeAccent.copy(alpha = 0.1f),
+        border = BorderStroke(1.dp, YamiboTheme.colors.orangeAccent.copy(alpha = 0.34f))
     ) {
         Text(
             text = label,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-            style = MaterialTheme.typography.labelMedium,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+            fontSize = 12.sp,
             color = YamiboTheme.colors.brownDeep,
-            fontWeight = FontWeight.Medium
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
     }
 }
@@ -371,4 +476,3 @@ private fun AnimatedYamiboChip(
         )
     }
 }
-
