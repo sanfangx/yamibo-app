@@ -5,6 +5,7 @@ import me.thenano.yamibo.yamibo_app.core.cache.DiskCacheFactory
 import me.thenano.yamibo.yamibo_app.repository.AuthRepository
 import me.thenano.yamibo.yamibo_app.repository.AppUpdateRepository
 import me.thenano.yamibo.yamibo_app.repository.BlogRepository
+import me.thenano.yamibo.yamibo_app.repository.BackupRepository
 import me.thenano.yamibo.yamibo_app.repository.ChineseConversionRepository
 import me.thenano.yamibo.yamibo_app.repository.DetailNoteRepository
 import me.thenano.yamibo.yamibo_app.repository.FavoriteRepository
@@ -27,6 +28,7 @@ import me.thenano.yamibo.yamibo_app.repository.settings.MangaReaderSettingsRepos
 import me.thenano.yamibo.yamibo_app.repository.settings.NovelReaderSettingsRepository
 import me.thenano.yamibo.yamibo_app.favorite.sync.FavoriteSyncRunner
 import me.thenano.yamibo.yamibo_app.favorite.updates.FavoriteUpdateRunner
+import me.thenano.yamibo.yamibo_app.profile.settings.backup.BackupScheduler
 
 val LocalAuthRepository =
     compositionLocalOf<AuthRepository> { error("LocalAuthRepository not provided") }
@@ -48,6 +50,12 @@ val LocalUserSpaceRepository =
 
 val LocalBlogRepository =
     compositionLocalOf<BlogRepository> { error("LocalBlogRepository not provided") }
+
+val LocalBackupRepository =
+    compositionLocalOf<BackupRepository> { error("LocalBackupRepository not provided") }
+
+val LocalBackupScheduler =
+    compositionLocalOf<BackupScheduler> { error("LocalBackupScheduler not provided") }
 
 val LocalChineseConversionRepository =
     compositionLocalOf<ChineseConversionRepository> { error("LocalChineseConversionRepository not provided") }

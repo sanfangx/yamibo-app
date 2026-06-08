@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.profile.settings.access.IBackgroundAccessSetupScreen
+import me.thenano.yamibo.yamibo_app.profile.settings.backup.IBackupSettingsScreen
 import me.thenano.yamibo.yamibo_app.profile.settings.components.SettingsItem
 import me.thenano.yamibo.yamibo_app.profile.settings.update.IAppUpdateScreen
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
@@ -119,6 +120,14 @@ internal fun SettingsScreen() {
                 title = i18n("儲存空間"),
                 subtitle = i18n("緩存空間與啟動時清理設定"),
                 onClick = { navigator.navigate(ISettingsCategoryScreen("storage")) },
+            )
+            SettingsDivider()
+
+            SettingsItem(
+                icon = YamiboIcons.Backup,
+                title = i18n("設定與收藏備份"),
+                subtitle = i18n("建立、載入與管理本地備份檔案"),
+                onClick = { navigator.navigate(IBackupSettingsScreen()) },
             )
             SettingsDivider()
 

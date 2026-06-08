@@ -32,7 +32,9 @@ import me.thenano.yamibo.yamibo_app.favorite.updates.FavoriteUpdateRunner
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.navigation.rememberRestorableNavigator
 import me.thenano.yamibo.yamibo_app.profile.settings.access.AndroidBackgroundAccessRepository
+import me.thenano.yamibo.yamibo_app.profile.settings.backup.AndroidBackupScheduler
 import me.thenano.yamibo.yamibo_app.repository.*
+import me.thenano.yamibo.yamibo_app.repository.backup.BackupRepositoryImpl
 import me.thenano.yamibo.yamibo_app.repository.chineseconversion.createChineseConversionRepository
 import me.thenano.yamibo.yamibo_app.repository.favorite.FavoriteSyncRepositoryImpl
 import me.thenano.yamibo.yamibo_app.repository.favorite.FavoriteUpdateRepositoryImpl
@@ -147,6 +149,20 @@ class MainActivity : ComponentActivity() {
             val favoriteUpdateScheduler = remember { AndroidFavoriteUpdateScheduler(context) }
             @SuppressLint("RememberReturnType")
             val favoriteUpdateRunner = remember { FavoriteUpdateRunner(favoriteUpdateRepository, favoriteUpdateScheduler) }
+            val backupStorageProvider = remember { AndroidBackupStorageProvider(context, appSettingsRepository) }
+            val backupRepository = remember {
+                BackupRepositoryImpl(
+                    db = favoriteSyncDatabase,
+                    settingsStore = settingsStore,
+                    settingsRegistries = listOf(appSettingsRepository, novelReaderSettingsRepository, mangaReaderSettingsRepository),
+                    storageProvider = backupStorageProvider,
+                    appVersionCode = AppVersion.VersionCode.toInt(),
+                )
+            }
+            val backupScheduler = remember { AndroidBackupScheduler(context) }
+            LaunchedEffect(backupRepository) {
+                diskCacheFactory.backupStorageUsageProvider = { backupRepository.getBackupStorageBytes() }
+            }
             val backgroundAccessRepository = remember { AndroidBackgroundAccessRepository(context) }
             val novelCacheRepository = remember { AndroidNovelThreadCacheRepository(diskCacheFactory) }
             val inAppLinkNavigationRepository = remember {
@@ -179,6 +195,8 @@ class MainActivity : ComponentActivity() {
                 LocalInAppLinkNavigationRepository provides inAppLinkNavigationRepository,
                 LocalUserSpaceRepository provides userSpaceRepository,
                 LocalBlogRepository provides blogRepository,
+                LocalBackupRepository provides backupRepository,
+                LocalBackupScheduler provides backupScheduler,
                 LocalChineseConversionRepository provides chineseConversionRepository,
                 LocalDetailNoteRepository provides detailNoteRepository,
                 LocalBookMarkRepository provides bookMarkRepository,
@@ -202,6 +220,7 @@ class MainActivity : ComponentActivity() {
                 /** Color system bars to match active theme */
                 val scheme = LocalThemeRepository.current.getColorScheme()
                 val favoriteUpdateInterval = appSettingsRepository.favoriteUpdateInterval.state()
+                val backupInterval = appSettingsRepository.backupInterval.state()
                 SideEffect {
                     @Suppress("DEPRECATION")
                     window.statusBarColor = scheme.brownDeep.toInt()
@@ -220,6 +239,9 @@ class MainActivity : ComponentActivity() {
                 }
                 LaunchedEffect(favoriteUpdateInterval) {
                     favoriteUpdateRunner.schedulePeriodicUpdate(favoriteUpdateInterval)
+                }
+                LaunchedEffect(backupInterval) {
+                    backupScheduler.schedule(backupInterval)
                 }
                 LaunchedEffect(Unit) {
                     if (

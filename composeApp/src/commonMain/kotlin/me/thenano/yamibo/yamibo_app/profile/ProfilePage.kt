@@ -29,6 +29,7 @@ import me.thenano.yamibo.yamibo_app.event.events.LoginSuccessEvent
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.profile.about.IAboutScreen
 import me.thenano.yamibo.yamibo_app.profile.settings.ISettingsScreen
+import me.thenano.yamibo.yamibo_app.profile.settings.backup.IBackupSettingsScreen
 import me.thenano.yamibo.yamibo_app.profile.sign.ISignInfoScreen
 import me.thenano.yamibo.yamibo_app.profile.sign.ISignWebView
 import me.thenano.yamibo.yamibo_app.repository.settings.SignInMode
@@ -247,6 +248,12 @@ fun ProfilePage() {
                 title = i18n("閱讀統計"),
                 icon = YamiboIcons.Statistics,
                 onClick = { navigator.navigate(IProfileStatisticsScreen()) }
+            )
+
+            EntryCard(
+                title = i18n("設定與收藏備份"),
+                icon = YamiboIcons.Backup,
+                onClick = { navigator.navigate(IBackupSettingsScreen()) }
             )
 
             EntryCard(

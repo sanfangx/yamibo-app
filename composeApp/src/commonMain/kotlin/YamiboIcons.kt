@@ -10,6 +10,7 @@ import androidx.compose.ui.unit.dp
 
 object YamiboIcons {
     val Language: ImageVector by lazy { buildLanguage() }
+    val Backup: ImageVector by lazy { buildBackup() }
     val Statistics: ImageVector by lazy { buildStatistics() }
     val Bookmark: ImageVector by lazy { buildBookmark() }
     val Storage: ImageVector by lazy { buildStorage() }
@@ -39,6 +40,81 @@ object YamiboIcons {
     val Save: ImageVector by lazy { buildSave() }
     val InfoCircle: ImageVector by lazy { buildInfoCircle() }
     val ChevronUp: ImageVector by lazy { buildChevronUp() }
+
+    private fun buildBackup(): ImageVector =
+        ImageVector.Builder(
+            name = "Backup",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 64f,
+            viewportHeight = 64f,
+        ).apply {
+            path(fill = SolidColor(Color.Black)) {
+                moveTo(15f, 2f)
+                horizontalLineTo(49f)
+                curveTo(50.1f, 2f, 51f, 2.9f, 51f, 4f)
+                verticalLineTo(56f)
+                curveTo(51f, 57.1f, 50.1f, 58f, 49f, 58f)
+                horizontalLineTo(47f)
+                verticalLineTo(62f)
+                horizontalLineTo(43f)
+                verticalLineTo(58f)
+                horizontalLineTo(21f)
+                verticalLineTo(62f)
+                horizontalLineTo(17f)
+                verticalLineTo(58f)
+                horizontalLineTo(15f)
+                curveTo(13.9f, 58f, 13f, 57.1f, 13f, 56f)
+                verticalLineTo(4f)
+                curveTo(13f, 2.9f, 13.9f, 2f, 15f, 2f)
+                close()
+                moveTo(17f, 6f)
+                verticalLineTo(54f)
+                horizontalLineTo(47f)
+                verticalLineTo(6f)
+                close()
+                moveTo(24f, 10f)
+                horizontalLineTo(40f)
+                curveTo(41.1f, 10f, 42f, 10.9f, 42f, 12f)
+                verticalLineTo(20f)
+                curveTo(42f, 21.1f, 41.1f, 22f, 40f, 22f)
+                horizontalLineTo(24f)
+                curveTo(22.9f, 22f, 22f, 21.1f, 22f, 20f)
+                verticalLineTo(12f)
+                curveTo(22f, 10.9f, 22.9f, 10f, 24f, 10f)
+                close()
+                moveTo(26f, 14f)
+                verticalLineTo(18f)
+                horizontalLineTo(38f)
+                verticalLineTo(14f)
+                close()
+                moveTo(32f, 28f)
+                curveTo(38.1f, 28f, 43f, 32.9f, 43f, 39f)
+                curveTo(43f, 45.1f, 38.1f, 50f, 32f, 50f)
+                curveTo(25.9f, 50f, 21f, 45.1f, 21f, 39f)
+                curveTo(21f, 32.9f, 25.9f, 28f, 32f, 28f)
+                close()
+                moveTo(32f, 32f)
+                curveTo(28.1f, 32f, 25f, 35.1f, 25f, 39f)
+                curveTo(25f, 42.9f, 28.1f, 46f, 32f, 46f)
+                curveTo(35.9f, 46f, 39f, 42.9f, 39f, 39f)
+                curveTo(39f, 35.1f, 35.9f, 32f, 32f, 32f)
+                close()
+                moveTo(29.2f, 35.1f)
+                lineTo(32f, 37.9f)
+                lineTo(34.8f, 35.1f)
+                lineTo(37.6f, 37.9f)
+                lineTo(34.8f, 40.7f)
+                lineTo(37.6f, 43.5f)
+                lineTo(34.8f, 46.3f)
+                lineTo(32f, 43.5f)
+                lineTo(29.2f, 46.3f)
+                lineTo(26.4f, 43.5f)
+                lineTo(29.2f, 40.7f)
+                lineTo(26.4f, 37.9f)
+                close()
+            }
+        }.build()
 
     private fun buildChevronUp(): ImageVector =
         ImageVector.Builder(

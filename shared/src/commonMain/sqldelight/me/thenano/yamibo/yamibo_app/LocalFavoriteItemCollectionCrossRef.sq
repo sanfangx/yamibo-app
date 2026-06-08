@@ -26,3 +26,9 @@ WHERE itemId = ?;
 deleteByCollectionId:
 DELETE FROM LocalFavoriteItemCollectionCrossRef
 WHERE collectionId = ?;
+
+getAll:
+SELECT * FROM LocalFavoriteItemCollectionCrossRef;
+
+deleteAll:
+DELETE FROM LocalFavoriteItemCollectionCrossRef;

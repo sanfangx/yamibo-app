@@ -14,7 +14,9 @@ import me.thenano.yamibo.yamibo_app.favorite.updates.IOSFavoriteUpdateScheduler
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.navigation.rememberRestorableNavigator
 import me.thenano.yamibo.yamibo_app.profile.settings.access.IOSBackgroundAccessRepository
+import me.thenano.yamibo.yamibo_app.profile.settings.backup.IOSBackupScheduler
 import me.thenano.yamibo.yamibo_app.repository.*
+import me.thenano.yamibo.yamibo_app.repository.backup.BackupRepositoryImpl
 import me.thenano.yamibo.yamibo_app.repository.chineseconversion.createChineseConversionRepository
 import me.thenano.yamibo.yamibo_app.repository.favorite.FavoriteSyncRepositoryImpl
 import me.thenano.yamibo.yamibo_app.repository.favorite.FavoriteUpdateRepositoryImpl
@@ -89,6 +91,20 @@ fun MainViewController() = ComposeUIViewController {
     val favoriteSyncRunner = remember { FavoriteSyncRunner(favoriteSyncRepository, backgroundTaskRepository) }
     val favoriteUpdateScheduler = remember { IOSFavoriteUpdateScheduler(favoriteUpdateRepository) }
     val favoriteUpdateRunner = remember { FavoriteUpdateRunner(favoriteUpdateRepository, favoriteUpdateScheduler) }
+    val backupStorageProvider = remember { IOSBackupStorageProvider(appSettingsRepository) }
+    val backupRepository = remember {
+        BackupRepositoryImpl(
+            db = favoriteSyncDatabase,
+            settingsStore = settingsStore,
+            settingsRegistries = listOf(appSettingsRepository, novelReaderSettingsRepository, mangaReaderSettingsRepository),
+            storageProvider = backupStorageProvider,
+            appVersionCode = AppVersion.VersionCode.toInt(),
+        )
+    }
+    val backupScheduler = remember { IOSBackupScheduler() }
+    androidx.compose.runtime.LaunchedEffect(backupRepository) {
+        diskCacheFactory.backupStorageUsageProvider = { backupRepository.getBackupStorageBytes() }
+    }
     val backgroundAccessRepository = remember { IOSBackgroundAccessRepository() }
     val novelCacheRepository = remember { IOSNovelThreadCacheRepository(diskCacheFactory) }
     val inAppLinkNavigationRepository = remember {
@@ -121,6 +137,8 @@ fun MainViewController() = ComposeUIViewController {
         LocalInAppLinkNavigationRepository provides inAppLinkNavigationRepository,
         LocalUserSpaceRepository provides userSpaceRepository,
         LocalBlogRepository provides blogRepository,
+        LocalBackupRepository provides backupRepository,
+        LocalBackupScheduler provides backupScheduler,
         LocalChineseConversionRepository provides chineseConversionRepository,
         LocalDetailNoteRepository provides detailNoteRepository,
         LocalBookMarkRepository provides bookMarkRepository,

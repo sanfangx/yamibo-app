@@ -18,6 +18,10 @@ SELECT * FROM ReadingHistory
 ORDER BY lastVisitTime DESC
 LIMIT ? OFFSET ?;
 
+getAll:
+SELECT * FROM ReadingHistory
+ORDER BY lastVisitTime DESC;
+
 countAll:
 SELECT COUNT(*) FROM ReadingHistory;
 

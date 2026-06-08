@@ -6,6 +6,10 @@ VALUES (
     :updatedAt
 );
 
+upsert:
+INSERT OR REPLACE INTO ReadingTimeStat(dateKey, durationMillis, updatedAt)
+VALUES (?, ?, ?);
+
 getRange:
 SELECT * FROM ReadingTimeStat
 WHERE dateKey >= ? AND dateKey <= ?
@@ -15,3 +19,10 @@ getTotalDuration:
 SELECT COALESCE(SUM(durationMillis), 0) AS totalDuration
 FROM ReadingTimeStat
 WHERE dateKey >= ? AND dateKey <= ?;
+
+getAll:
+SELECT * FROM ReadingTimeStat
+ORDER BY dateKey ASC;
+
+deleteAll:
+DELETE FROM ReadingTimeStat;

@@ -9,7 +9,7 @@ abstract class SettingItem<T>(
     val name: String,
     val description: String,
     val default: T,
-    protected val key: String,
+    val storageKey: String,
     protected val store: SettingsStore
 ) {
     protected val flow: MutableStateFlow<T> by lazy { MutableStateFlow(loadFromStore()) }

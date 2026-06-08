@@ -8,6 +8,10 @@ INSERT OR REPLACE INTO ImageReadingHistory(
 getByPostId:
 SELECT * FROM ImageReadingHistory WHERE postId = ?;
 
+getAll:
+SELECT * FROM ImageReadingHistory
+ORDER BY lastVisitTime DESC;
+
 deleteByPostId:
 DELETE FROM ImageReadingHistory WHERE postId = ?;
 

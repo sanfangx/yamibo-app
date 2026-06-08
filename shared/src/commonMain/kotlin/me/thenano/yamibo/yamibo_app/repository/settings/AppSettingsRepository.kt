@@ -83,6 +83,15 @@ enum class AppUpdateLaunchCheckThreshold(val label: String, val hours: Long?) {
     DAYS_7("7d", 168L),
 }
 
+enum class BackupInterval(val label: String, val hours: Long?) {
+    HOURS_6("6h", 6L),
+    HOURS_12("12h", 12L),
+    DAYS_1("1d", 24L),
+    DAYS_3("3d", 72L),
+    WEEK_1("1week", 168L),
+    NEVER("never", null),
+}
+
 enum class SignInMode(val label: String) {
     SEMI_AUTOMATIC("semi_automatic"),
     FULL_MANUAL("full_manual"),
@@ -201,6 +210,28 @@ class AppSettingsRepository(store: SettingsStore) : SettingsRegistry(store, pref
         default = AppUpdateLaunchCheckThreshold.HOURS_6,
     )
 
+    val backupInterval by enumSetting(
+        name = "backup_interval",
+        default = BackupInterval.NEVER,
+    )
+
+    val backupMaxAutoFiles by intSetting(
+        name = "backup_max_auto_files",
+        default = 3,
+        min = 1,
+        max = 10,
+    )
+
+    val backupFolderUri by stringSetting(
+        name = "backup_folder_uri",
+        default = "",
+    )
+
+    val backupLastAutoBackupAt by stringSetting(
+        name = "backup_last_auto_backup_at",
+        default = "",
+    )
+
     val signInMode by enumSetting(
         name = "sign_in_mode",
         default = SignInMode.SEMI_AUTOMATIC,
@@ -239,6 +270,7 @@ class AppSettingsRepository(store: SettingsStore) : SettingsRegistry(store, pref
         val favoriteSortModeOptions = FavoriteSortMode.entries.map { it to it.label }
         val favoriteUpdateIntervalOptions = FavoriteUpdateInterval.entries.map { it to it.label }
         val appUpdateLaunchCheckThresholdOptions = AppUpdateLaunchCheckThreshold.entries.map { it to it.label }
+        val backupIntervalOptions = BackupInterval.entries.map { it to it.label }
         val signInModeOptions = SignInMode.entries.map { it to it.label }
         val languageOptions = AppLanguage.entries.map { it to it.label }
     }

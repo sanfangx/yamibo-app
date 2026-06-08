@@ -48,3 +48,6 @@ WHERE id = ?;
 
 deleteById:
 DELETE FROM LocalFavoriteCollection WHERE id = ?;
+
+deleteAll:
+DELETE FROM LocalFavoriteCollection;

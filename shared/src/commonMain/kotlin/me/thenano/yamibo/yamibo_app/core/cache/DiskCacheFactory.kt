@@ -34,6 +34,7 @@ class DiskCacheFactory(
     val database = Database(dbFactory.createDriver())
     val fileSystem = FileSystem.SYSTEM
     val rootCacheDir = cacheDirPath.toPath() / "yamibo_cache"
+    var backupStorageUsageProvider: (suspend () -> Long)? = null
 
     /**
      * Create a new DiskCache instance for a specific type <T>
@@ -78,6 +79,8 @@ class DiskCacheFactory(
             "other" to CacheStorageUsage("other", i18n("其他"), 0L),
         )
 
+        grouped["backup"] = CacheStorageUsage("backup", i18n("設定與收藏備份"), 0L)
+
         fun addUsage(key: String, bytes: Long) {
             if (bytes <= 0L) return
             val current = grouped[key] ?: grouped.getValue("other")
@@ -104,6 +107,8 @@ class DiskCacheFactory(
                 .filter { it.name !in knownTopLevel }
                 .forEach { addUsage("other", calculateSize(it) ?: 0L) }
         }
+
+        backupStorageUsageProvider?.invoke()?.let { addUsage("backup", it) }
 
         CacheStorageBreakdown(
             rootPath = cacheDirPath,

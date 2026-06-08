@@ -1,12 +1,17 @@
 package me.thenano.yamibo.yamibo_app.components.controls
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -32,18 +37,21 @@ fun YamiboActionChip(
     selected: Boolean = false,
 ) {
     val colors = YamiboTheme.colors
-    Surface(
-        onClick = onClick,
-        shape = RoundedCornerShape(10.dp),
-        color = if (selected) colors.brownDeep else colors.brownPrimary.copy(alpha = 0.12f),
-        border = BorderStroke(1.dp, colors.brownPrimary.copy(alpha = 0.12f)),
-    ) {
-        Text(
-            text,
-            color = if (selected) Color.White else colors.brownDeep,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
-        )
-    }
+    val shape = RoundedCornerShape(10.dp)
+    Text(
+        text,
+        color = if (selected) Color.White else colors.brownDeep,
+        fontSize = 12.sp,
+        fontWeight = FontWeight.SemiBold,
+        modifier = Modifier
+            .clip(shape)
+            .background(if (selected) colors.brownDeep else colors.brownPrimary.copy(alpha = 0.12f))
+            .border(BorderStroke(1.dp, colors.brownPrimary.copy(alpha = 0.12f)), shape)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick,
+            )
+            .padding(horizontal = 10.dp, vertical = 7.dp),
+    )
 }

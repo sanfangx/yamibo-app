@@ -26,3 +26,9 @@ WHERE itemId = ?;
 deleteByCategoryId:
 DELETE FROM LocalFavoriteItemCategoryCrossRef
 WHERE categoryId = ?;
+
+getAll:
+SELECT * FROM LocalFavoriteItemCategoryCrossRef;
+
+deleteAll:
+DELETE FROM LocalFavoriteItemCategoryCrossRef;

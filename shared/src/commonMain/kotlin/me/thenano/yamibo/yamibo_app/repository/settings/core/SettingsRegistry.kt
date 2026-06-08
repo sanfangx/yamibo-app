@@ -12,12 +12,24 @@ abstract class SettingsRegistry(
     @PublishedApi internal val store: SettingsStore,
     @PublishedApi internal val prefix: String,
 ) {
+    private val exportableSettings = mutableListOf<SettingItem<*>>()
+
+    val exportableSettingItems: List<SettingItem<*>>
+        get() = exportableSettings.toList()
+
+    private fun register(setting: SettingItem<*>) {
+        if (exportableSettings.none { it.storageKey == setting.storageKey }) {
+            exportableSettings += setting
+        }
+    }
+
     /** Helper class for delegation */
     class SettingDelegateProvider<T, out S : SettingItem<T>>(
         private val factory: (String) -> S
     ) {
         operator fun provideDelegate(thisRef: Any?, property: KProperty<*>): ReadOnlyProperty<Any?, S> {
             val setting = factory(property.name.lowercase())
+            (thisRef as? SettingsRegistry)?.register(setting)
             return ReadOnlyProperty { _, _ -> setting }
         }
     }

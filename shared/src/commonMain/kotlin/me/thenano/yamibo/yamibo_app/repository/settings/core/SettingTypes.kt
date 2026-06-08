@@ -14,10 +14,10 @@ class IntSetting(
     val interval: Int = 1
 ) : SettingItem<Int>(name, description, default, key, store) {
     
-    override fun loadFromStore(): Int = store.getInt(key, default)
+    override fun loadFromStore(): Int = store.getInt(storageKey, default)
     
     override fun saveToStore(newValue: Int) {
-        store.putInt(key, newValue)
+        store.putInt(storageKey, newValue)
     }
 
     override fun validate(value: Int): Boolean = value in min..max
@@ -45,10 +45,10 @@ class FloatSetting(
     val interval: Float = 0f
 ) : SettingItem<Float>(name, description, default, key, store) {
 
-    override fun loadFromStore(): Float = store.getFloat(key, default)
+    override fun loadFromStore(): Float = store.getFloat(storageKey, default)
     
     override fun saveToStore(newValue: Float) {
-        store.putFloat(key, newValue)
+        store.putFloat(storageKey, newValue)
     }
 
     override fun validate(value: Float): Boolean = value in min..max
@@ -74,10 +74,10 @@ class BoolSetting(
     store: SettingsStore
 ) : SettingItem<Boolean>(name, description, default, key, store) {
 
-    override fun loadFromStore(): Boolean = store.getBoolean(key, default)
+    override fun loadFromStore(): Boolean = store.getBoolean(storageKey, default)
     
     override fun saveToStore(newValue: Boolean) {
-        store.putBoolean(key, newValue)
+        store.putBoolean(storageKey, newValue)
     }
 
     @Suppress("unused")
@@ -95,10 +95,10 @@ class StringSetting(
     val allowedValues: List<String> = emptyList() // If empty, any string is allowed
 ) : SettingItem<String>(name, description, default, key, store) {
 
-    override fun loadFromStore(): String = store.getString(key, default)
+    override fun loadFromStore(): String = store.getString(storageKey, default)
     
     override fun saveToStore(newValue: String) {
-        store.putString(key, newValue)
+        store.putString(storageKey, newValue)
     }
 
     override fun validate(value: String): Boolean {
@@ -120,11 +120,11 @@ class EnumSetting<T : Enum<T>>(
 ) : SettingItem<T>(name, description, default, key, store) {
 
     override fun loadFromStore(): T {
-        val stringValue = store.getString(key, default.name)
+        val stringValue = store.getString(storageKey, default.name)
         return values.firstOrNull { it.name == stringValue } ?: default
     }
     
     override fun saveToStore(newValue: T) {
-        store.putString(key, newValue.name)
+        store.putString(storageKey, newValue.name)
     }
 }

@@ -47,3 +47,6 @@ WHERE id = ?;
 
 deleteById:
 DELETE FROM LocalFavoriteCategory WHERE id = ?;
+
+deleteAll:
+DELETE FROM LocalFavoriteCategory;

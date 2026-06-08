@@ -27,3 +27,6 @@ WHERE targetType = ? AND parentId = ? AND targetId = ?
 deleteByParent:
 DELETE FROM LocalBookMark
 WHERE targetType = ? AND parentId = ?;
+
+deleteAll:
+DELETE FROM LocalBookMark;

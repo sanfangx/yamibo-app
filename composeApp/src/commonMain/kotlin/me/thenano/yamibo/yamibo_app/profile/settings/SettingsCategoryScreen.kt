@@ -615,6 +615,7 @@ private fun StorageUsageOverview(breakdown: CacheStorageBreakdown) {
         "images" to Color(0xFF5C8DD6),
         "pages" to Color(0xFFB66D32),
         "userspace" to Color(0xFF7D63B8),
+        "backup" to Color(0xFF4A9A76),
         "other" to Color(0xFF8A7D70),
     )
     val totalBytes = breakdown.usages.sumOf { it.bytes }.coerceAtLeast(1L)

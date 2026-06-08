@@ -152,16 +152,35 @@ tasks.named("check") {
     dependsOn(validateUpdateManifest)
 }
 
-val scriptPath = rootProject.rootDir.absolutePath + "/unlock_build.ps1"
+val enableAutoUnlockResources = false
+val isWindowsHost = System.getProperty("os.name").contains("windows", ignoreCase = true)
+val unlockScriptFile = rootProject.layout.projectDirectory.file("unlock_build.ps1").asFile
 
 val autoUnlockTask = tasks.register<Exec>("autoUnlockResources") {
-    //Currently unused now, it delayed task a lot.
-//    description = ""
-//    commandLine("powershell.exe", "-ExecutionPolicy", "Bypass", "-NoProfile", "-File", scriptPath)
-//    isIgnoreExitValue = true
+    group = "build setup"
+    description = "Optionally unlocks Windows build artifacts before Android resource tasks."
+    enabled = enableAutoUnlockResources
+    isIgnoreExitValue = true
+
+    if (isWindowsHost && unlockScriptFile.exists()) {
+        commandLine(
+            "powershell.exe",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-NoProfile",
+            "-File",
+            unlockScriptFile.absolutePath,
+            "-TargetDir",
+            rootProject.rootDir.absolutePath,
+        )
+    } else if (isWindowsHost) {
+        commandLine("cmd", "/c", "echo autoUnlockResources script is missing; skipping")
+    } else {
+        commandLine("sh", "-c", "echo autoUnlockResources is Windows-only; skipping")
+    }
 }
 
-tasks.whenTaskAdded {
+tasks.configureEach {
     if (name == "processDebugResources" || name == "processReleaseResources" || name == "mergeDebugResources") {
         dependsOn(autoUnlockTask)
     }

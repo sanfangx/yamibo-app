@@ -50,3 +50,6 @@ ORDER BY LocalFavoriteItem.lastFavoriteStatusUpdateAt DESC, LocalFavoriteItem.id
 
 deleteById:
 DELETE FROM LocalFavoriteItem WHERE id = ?;
+
+deleteAll:
+DELETE FROM LocalFavoriteItem;
