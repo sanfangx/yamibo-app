@@ -265,10 +265,8 @@ private fun UserInfoContent(
                     )
                     InfoChip(
                         label = i18n(
-                            "總積分 {} ({} + {} ÷ 3)",
+                            "總積分 {}",
                             user.totalPoints.toString(),
-                            user.points.toString(),
-                            user.partner.toString(),
                         ),
                         modifier = Modifier.weight(1.45f, fill = false)
                     )
