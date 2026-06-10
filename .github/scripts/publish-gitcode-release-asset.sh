@@ -83,9 +83,28 @@ if [ -z "$upload_url" ]; then
   exit 1
 fi
 
-upload_result="$(curl -fsS -X POST -H "PRIVATE-TOKEN: ${GITCODE_TOKEN}" \
-  -F "file=@${APK}" \
-  "$upload_url")"
+attempt_upload() {
+  local name="$1"
+  shift
+  local response_file="$RUNNER_TEMP/gitcode-upload-${name}.json"
+  local status
+  status="$(curl -sS -o "$response_file" -w "%{http_code}" "$@" || true)"
+  upload_result="$(cat "$response_file")"
+  if [ "$status" -ge 200 ] && [ "$status" -lt 300 ]; then
+    echo "GitCode upload succeeded with ${name}." >&2
+    return 0
+  fi
+  echo "GitCode upload attempt ${name} failed with HTTP ${status}: ${upload_result}" >&2
+  return 1
+}
+
+if ! attempt_upload "post-multipart-anonymous" -X POST -F "file=@${APK}" "$upload_url" && \
+   ! attempt_upload "post-multipart-token" -X POST -H "PRIVATE-TOKEN: ${GITCODE_TOKEN}" -F "file=@${APK}" "$upload_url" && \
+   ! attempt_upload "put-raw-anonymous" -X PUT --upload-file "$APK" "$upload_url" && \
+   ! attempt_upload "put-raw-token" -X PUT -H "PRIVATE-TOKEN: ${GITCODE_TOKEN}" --upload-file "$APK" "$upload_url"; then
+  echo "Failed to upload GitCode release asset." >&2
+  exit 1
+fi
 release_json="$(curl -sS -H "PRIVATE-TOKEN: ${GITCODE_TOKEN}" "${api}/releases/tags/${TAG}" || true)"
 asset_url="$(
   {
