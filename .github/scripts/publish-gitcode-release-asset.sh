@@ -69,15 +69,11 @@ if ! release_exists; then
   exit 1
 fi
 
-curl -fsS -X PATCH -H "PRIVATE-TOKEN: ${GITCODE_TOKEN}" "${api}/releases/${TAG}" \
-  -F "name=${TITLE}" \
-  -F "body=${body}" \
-  -F "description=${body}" \
-  >/dev/null || echo "Warning: failed to update GitCode release metadata for ${TAG}" >&2
-
 upload_json="$(curl -sS -G -H "PRIVATE-TOKEN: ${GITCODE_TOKEN}" \
   --data-urlencode "file_name=${APK_NAME}" \
   "${api}/releases/${TAG}/upload_url")"
+upload_json_file="$RUNNER_TEMP/gitcode-upload-url.json"
+printf '%s' "$upload_json" > "$upload_json_file"
 upload_url="$(printf '%s' "$upload_json" | python3 -c 'import json,sys; data=json.load(sys.stdin); print(data.get("upload_url") or data.get("url") or "")')"
 if [ -z "$upload_url" ]; then
   echo "Failed to get GitCode release upload URL: $upload_json" >&2
@@ -85,6 +81,46 @@ if [ -z "$upload_url" ]; then
 fi
 upload_url_origin="$(python3 -c 'import sys, urllib.parse; u=urllib.parse.urlsplit(sys.argv[1]); print(urllib.parse.urlunsplit((u.scheme, u.netloc, u.path, "", "")))' "$upload_url")"
 echo "GitCode release upload URL origin: ${upload_url_origin}" >&2
+python3 - "$upload_json_file" <<'PY' >&2
+import json
+import sys
+
+try:
+    with open(sys.argv[1], "r", encoding="utf-8") as file:
+        data = json.load(file)
+except Exception:
+    print("GitCode upload_url response is not valid JSON.")
+    raise SystemExit(0)
+
+def keys(value):
+    return ", ".join(sorted(str(key) for key in value.keys())) if isinstance(value, dict) else ""
+
+print(f"GitCode upload_url response keys: {keys(data)}")
+for field in ("headers", "header", "upload_headers", "uploadHeaders"):
+    if isinstance(data.get(field), dict):
+        print(f"GitCode upload_url {field} keys: {keys(data[field])}")
+PY
+mapfile -t upload_headers < <(
+  python3 - "$upload_json_file" <<'PY'
+import json
+import sys
+
+try:
+    with open(sys.argv[1], "r", encoding="utf-8") as file:
+        data = json.load(file)
+except Exception:
+    raise SystemExit(0)
+
+headers = {}
+for field in ("headers", "header", "upload_headers", "uploadHeaders"):
+    value = data.get(field)
+    if isinstance(value, dict):
+        headers.update({str(k): str(v) for k, v in value.items()})
+
+for key, value in headers.items():
+    print(f"{key}: {value}")
+PY
+)
 upload_url_with_token="${upload_url}"
 if [[ "$upload_url_with_token" == *\?* ]]; then
   upload_url_with_token="${upload_url_with_token}&access_token=${encoded_token}"
@@ -108,10 +144,12 @@ attempt_upload() {
 }
 
 if ! attempt_upload "post-multipart-anonymous" -X POST -F "file=@${APK}" "$upload_url" && \
+   ! attempt_upload "post-multipart-upload-headers" -X POST "${upload_headers[@]/#/-H}" -F "file=@${APK}" "$upload_url" && \
    ! attempt_upload "post-multipart-token" -X POST -H "PRIVATE-TOKEN: ${GITCODE_TOKEN}" -F "file=@${APK}" "$upload_url" && \
    ! attempt_upload "post-multipart-bearer" -X POST -H "Authorization: Bearer ${GITCODE_TOKEN}" -F "file=@${APK}" "$upload_url" && \
    ! attempt_upload "post-multipart-access-token" -X POST -F "file=@${APK}" "$upload_url_with_token" && \
    ! attempt_upload "put-raw-anonymous" -X PUT --upload-file "$APK" "$upload_url" && \
+   ! attempt_upload "put-raw-upload-headers" -X PUT "${upload_headers[@]/#/-H}" --upload-file "$APK" "$upload_url" && \
    ! attempt_upload "put-raw-token" -X PUT -H "PRIVATE-TOKEN: ${GITCODE_TOKEN}" --upload-file "$APK" "$upload_url" && \
    ! attempt_upload "put-raw-bearer" -X PUT -H "Authorization: Bearer ${GITCODE_TOKEN}" --upload-file "$APK" "$upload_url" && \
    ! attempt_upload "put-raw-access-token" -X PUT --upload-file "$APK" "$upload_url_with_token"; then
