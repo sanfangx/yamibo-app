@@ -27,9 +27,12 @@ json_field() {
 
 release_json="$(curl -sS -H "PRIVATE-TOKEN: ${GITCODE_TOKEN}" "${api}/releases/tags/${TAG}" || true)"
 release_id="$(printf '%s' "$release_json" | json_field id)"
+release_tag="$(printf '%s' "$release_json" | json_field tag_name)"
 
-if [ -n "$release_id" ]; then
-  curl -fsS -X DELETE -H "PRIVATE-TOKEN: ${GITCODE_TOKEN}" "${api}/releases/${release_id}" >/dev/null || true
+if [ -n "$release_id" ] || [ "$release_tag" = "$TAG" ]; then
+  if [ -n "$release_id" ]; then
+    curl -fsS -X DELETE -H "PRIVATE-TOKEN: ${GITCODE_TOKEN}" "${api}/releases/${release_id}" >/dev/null || true
+  fi
   curl -fsS -X DELETE -H "PRIVATE-TOKEN: ${GITCODE_TOKEN}" "${api}/releases/${TAG}" >/dev/null || true
 fi
 
@@ -39,8 +42,9 @@ release_json="$(curl -sS -X POST -H "PRIVATE-TOKEN: ${GITCODE_TOKEN}" "${api}/re
   -F "body=${body}" \
   -F "description=${body}")"
 release_id="$(printf '%s' "$release_json" | json_field id)"
+release_tag="$(printf '%s' "$release_json" | json_field tag_name)"
 
-if [ -z "$release_id" ]; then
+if [ -z "$release_id" ] && [ "$release_tag" != "$TAG" ]; then
   echo "Failed to create GitCode release: $release_json" >&2
   exit 1
 fi
