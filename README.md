@@ -1,5 +1,7 @@
 # Yamibo App
 
+> 拜託打顆星星吧 :star: ~
+
 百合會論壇的第三方App.
 
 ## App 展示與說明
@@ -155,3 +157,8 @@ source repo 內必須保持：
 ## License
 
 見 `LICENSE`。
+
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=LittleSurvival/yamibo-app&type=Date)](https://star-history.com/#LittleSurvival/yamibo-app&Date)
