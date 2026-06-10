@@ -59,15 +59,22 @@ Workflow steps:
 6. Create or update the GitHub Release.
 7. Upload the APK asset.
 8. Calculate the APK `sha256` and `size`.
-9. Generate a published update folder in runner temp:
+9. Upload the same APK to the Gitee and GitCode release assets.
+10. Generate target-specific published update folders in runner temp:
    - `isReady=true`
    - `releaseUrl`
    - APK asset `url`, `sha256`, and `size`
    - identical `manifest.json` and `stable.json`
-10. Run `validatePublishedUpdateManifest`.
-11. Force push the published `update` folder to the GitHub `update-release` branch.
-12. Force push the published `update` folder to the Gitee and GitCode mirror repositories.
-13. Upload the same APK to the Gitee and GitCode release assets.
+11. Run `validatePublishedUpdateManifest` for each target folder.
+12. Force push the GitHub-targeted `update` folder to the GitHub `update-release` branch.
+13. Force push the Gitee-targeted and GitCode-targeted `update` folders to their mirror repositories.
+
+Important asset URL rule:
+
+- GitHub `update-release` manifests must use the GitHub Release APK URL.
+- Gitee mirror manifests must use the Gitee Release APK URL.
+- GitCode mirror manifests must use the GitCode Release APK URL.
+- Do not publish mirror manifests that point back to GitHub APK assets.
 
 Client update source order:
 
@@ -111,15 +118,36 @@ yamibo-{channel}-v{versionName}.apk
 ```
 
 5. Calculate the APK `sha256` and `size`.
-6. Generate an `isReady=true` published manifest.
-7. Run `validatePublishedUpdateManifest`.
-8. Force push the ready `update` folder to the GitHub `update-release` branch.
-9. Force push the ready `update` folder to the Gitee and GitCode mirror repositories.
+6. Upload/copy that APK into Gitee and GitCode release assets.
+7. Generate target-specific `isReady=true` published manifests:
+   - GitHub manifest uses the GitHub release asset URL.
+   - Gitee manifest uses the Gitee release asset URL.
+   - GitCode manifest uses the GitCode release asset URL.
+8. Run `validatePublishedUpdateManifest` for each ready folder.
+9. Force push the ready GitHub `update` folder to the GitHub `update-release` branch.
+10. Force push the ready Gitee/GitCode `update` folders to their mirror repositories.
+
+## Manual Ready Update Manifests Workflow
+
+Workflow file:
+
+- `.github/workflows/manual-ready.yml`
+
+Trigger:
+
+- Run `Manual Ready Update Manifests` manually from the GitHub Actions page.
+
+Purpose:
+
+- Use this when APK releases already exist but the published update feeds need to be marked ready.
+- The workflow reads the current `update/manifest.json` version, downloads the matching GitHub Release APK, uploads/copies it into Gitee and GitCode release assets, then publishes `isReady=true` manifests to GitHub, Gitee, and GitCode.
+- Like the release and sync workflows, mirror manifests must point to their own mirror release asset URL rather than GitHub's APK URL.
 
 ## Which Workflow To Use
 
 - Normal release: push a tag and use `Release Android APK`.
 - Update feed did not sync correctly after a release: run `Sync Update Folder To Mirrors` manually with `use_latest_release_asset=true`.
+- APK assets already exist and only the public feeds should become ready: run `Manual Ready Update Manifests`.
 - A released APK has a problem and app-side update prompts should be paused: run `Sync Update Folder To Mirrors` manually with `use_latest_release_asset=false`.
 
 ## Release Safety Rules

@@ -1,13 +1,7 @@
-name: Sync Update Folder To Mirrors
+name: Manual Ready Update Manifests
 
 on:
   workflow_dispatch:
-    inputs:
-      use_latest_release_asset:
-        description: "Generate isReady=true manifests from the release matching update/manifest.json versionCode."
-        required: false
-        default: "false"
-        type: boolean
 
 permissions:
   contents: write
@@ -17,7 +11,7 @@ env:
   MIRROR_REPO: ymb-apk-release
 
 jobs:
-  sync-update:
+  manual-ready:
     runs-on: ubuntu-latest
 
     steps:
@@ -39,34 +33,10 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x gradlew
 
-      - name: Sync and validate stable manifest
+      - name: Sync and validate source manifest
         run: ./gradlew syncStableManifest validateUpdateManifest --console=plain
 
-      - name: Commit generated stable manifest to GitHub
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add update
-          git commit -m "Sync update manifest" || exit 0
-          git push
-
-      - name: Prepare not-ready public feeds
-        if: ${{ !inputs.use_latest_release_asset }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          for target in github gitee gitcode; do
-            dir="$RUNNER_TEMP/published-update/$target/update"
-            rm -rf "$dir"
-            mkdir -p "$dir"
-            cp update/manifest.json "$dir/manifest.json"
-            cp update/stable.json "$dir/stable.json"
-          done
-
       - name: Download GitHub release APK
-        if: ${{ inputs.use_latest_release_asset }}
         id: latest
         shell: bash
         env:
@@ -116,7 +86,6 @@ jobs:
           echo "github_asset_url=$github_asset_url" >> "$GITHUB_OUTPUT"
 
       - name: Publish Gitee release asset
-        if: ${{ inputs.use_latest_release_asset }}
         id: gitee_release
         shell: bash
         env:
@@ -131,7 +100,6 @@ jobs:
           bash .github/scripts/publish-gitee-release-asset.sh
 
       - name: Publish GitCode release asset
-        if: ${{ inputs.use_latest_release_asset }}
         id: gitcode_release
         shell: bash
         env:
@@ -146,7 +114,6 @@ jobs:
           bash .github/scripts/publish-gitcode-release-asset.sh
 
       - name: Generate ready public feeds
-        if: ${{ inputs.use_latest_release_asset }}
         shell: bash
         run: |
           set -euo pipefail
@@ -173,7 +140,6 @@ jobs:
             python3 .github/scripts/write-published-update-manifest.py
 
       - name: Validate ready public update folders
-        if: ${{ inputs.use_latest_release_asset }}
         shell: bash
         run: |
           set -euo pipefail
@@ -195,7 +161,7 @@ jobs:
           git -C "$dir" config user.email "github-actions[bot]@users.noreply.github.com"
           git -C "$dir" remote add origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
           git -C "$dir" add update
-          git -C "$dir" commit -m "Sync update folder"
+          git -C "$dir" commit -m "Mark update manifest ready"
           git -C "$dir" branch -M update-release
           git -C "$dir" push --force origin update-release
 
@@ -233,7 +199,7 @@ jobs:
             git -C "$dir" config user.email "github-actions[bot]@users.noreply.github.com"
             git -C "$dir" remote add origin "$remote"
             git -C "$dir" add update
-            git -C "$dir" commit -m "Sync update folder"
+            git -C "$dir" commit -m "Mark update manifest ready"
             git -C "$dir" branch -M main
             git -C "$dir" push --force origin main
           }
