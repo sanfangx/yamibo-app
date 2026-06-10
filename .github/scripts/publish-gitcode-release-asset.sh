@@ -16,9 +16,10 @@ if [ ! -s "$CHANGELOG" ]; then
 fi
 
 body="$(cat "$CHANGELOG")"
+encoded_apk_name="$(python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' "$APK_NAME")"
 api="https://gitcode.com/api/v5/repos/${MIRROR_OWNER}/${MIRROR_REPO}"
 release_url="https://gitcode.com/${MIRROR_OWNER}/${MIRROR_REPO}/releases/tag/${TAG}"
-fallback_asset_url="https://api.gitcode.com/api/v5/repos/${MIRROR_OWNER}/${MIRROR_REPO}/releases/${TAG}/attach_files/${APK_NAME}/download"
+fallback_asset_url="https://api.gitcode.com/api/v5/repos/${MIRROR_OWNER}/${MIRROR_REPO}/releases/${TAG}/attach_files/${encoded_apk_name}/download"
 
 json_field() {
   local field="$1"
@@ -73,7 +74,9 @@ curl -fsS -X PATCH -H "PRIVATE-TOKEN: ${GITCODE_TOKEN}" "${api}/releases/${TAG}"
   -F "description=${body}" \
   >/dev/null || echo "Warning: failed to update GitCode release metadata for ${TAG}" >&2
 
-upload_json="$(curl -sS -H "PRIVATE-TOKEN: ${GITCODE_TOKEN}" "${api}/releases/${TAG}/upload_url")"
+upload_json="$(curl -sS -G -H "PRIVATE-TOKEN: ${GITCODE_TOKEN}" \
+  --data-urlencode "file_name=${APK_NAME}" \
+  "${api}/releases/${TAG}/upload_url")"
 upload_url="$(printf '%s' "$upload_json" | python3 -c 'import json,sys; data=json.load(sys.stdin); print(data.get("upload_url") or data.get("url") or "")')"
 if [ -z "$upload_url" ]; then
   echo "Failed to get GitCode release upload URL: $upload_json" >&2
