@@ -40,6 +40,7 @@ object YamiboIcons {
     val Save: ImageVector by lazy { buildSave() }
     val InfoCircle: ImageVector by lazy { buildInfoCircle() }
     val ChevronUp: ImageVector by lazy { buildChevronUp() }
+    val Qq: ImageVector by lazy { buildQq() }
 
     private fun buildBackup(): ImageVector =
         ImageVector.Builder(
@@ -112,6 +113,39 @@ object YamiboIcons {
                 lineTo(26.4f, 43.5f)
                 lineTo(29.2f, 40.7f)
                 lineTo(26.4f, 37.9f)
+                close()
+            }
+        }.build()
+
+    private fun buildQq(): ImageVector =
+        ImageVector.Builder(
+            name = "Qq",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 192f,
+            viewportHeight = 192f,
+        ).apply {
+            path(
+                fill = null,
+                stroke = SolidColor(Color.Black),
+                strokeLineWidth = 12f,
+                strokeLineJoin = StrokeJoin.Round,
+            ) {
+                moveTo(153.933f, 114.718f)
+                curveToRelative(-2.953f, -9.509f, -6.349f, -17.5f, -11.573f, -30.58f)
+                curveTo(143.172f, 49.786f, 128.922f, 22f, 96.101f, 22f)
+                curveToRelative(-33.189f, 0f, -47.125f, 28.34f, -46.24f, 62.139f)
+                curveToRelative(-5.241f, 13.097f, -8.62f, 21.033f, -11.573f, 30.579f)
+                curveToRelative(-6.276f, 20.256f, -4.246f, 28.636f, -2.695f, 28.821f)
+                curveToRelative(3.323f, 0.407f, 12.94f, -15.243f, 12.94f, -15.243f)
+                curveToRelative(0f, 9.064f, 4.651f, 20.886f, 14.73f, 29.413f)
+                curveToRelative(-4.873f, 1.499f, -15.82f, 5.532f, -13.217f, 9.953f)
+                curveToRelative(2.105f, 3.57f, 36.217f, 2.275f, 46.056f, 1.165f)
+                curveToRelative(9.838f, 1.11f, 43.95f, 2.405f, 46.055f, -1.165f)
+                curveToRelative(2.602f, -4.403f, -8.362f, -8.454f, -13.217f, -9.953f)
+                curveToRelative(10.078f, -8.546f, 14.73f, -20.367f, 14.73f, -29.413f)
+                curveToRelative(0f, 0f, 9.617f, 15.65f, 12.94f, 15.243f)
+                curveToRelative(1.569f, -0.203f, 3.6f, -8.583f, -2.677f, -28.821f)
                 close()
             }
         }.build()

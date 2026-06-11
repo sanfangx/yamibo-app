@@ -32,15 +32,18 @@ import yamibo_app.composeapp.generated.resources.logo_about
 
 private const val GitHubUrl = "https://github.com/LittleSurvival/yamibo-app"
 private const val DiscordUrl = "https://discord.gg/3nhKpxM7Hc"
+private const val QqUrl = "https://qm.qq.com/q/13i8doGGV0"
 
 private data class CommunityLink(
     val title: String,
     val url: String,
-    val icon: DrawableResource,
+    val icon: DrawableResource? = null,
+    val imageVector: ImageVector? = null,
 )
 
 private val CommunityLinks = listOf(
     CommunityLink("Discord", DiscordUrl, Res.drawable.ic_discord),
+    CommunityLink("QQ", QqUrl, imageVector = YamiboIcons.Qq),
     CommunityLink("GitHub", GitHubUrl, Res.drawable.ic_github),
 )
 
@@ -112,11 +115,20 @@ internal fun AboutScreen() {
                 AboutHeaderRow(title = i18n("社群"))
                 CommunityLinks.forEach { link ->
                     AboutDivider()
-                    AboutResourceActionRow(
-                        icon = painterResource(link.icon),
-                        title = link.title,
-                        onClick = { uriHandler.openUri(link.url) },
-                    )
+                    val imageVector = link.imageVector
+                    if (imageVector != null) {
+                        AboutActionRow(
+                            icon = imageVector,
+                            title = link.title,
+                            onClick = { uriHandler.openUri(link.url) },
+                        )
+                    } else {
+                        AboutResourceActionRow(
+                            icon = painterResource(link.icon ?: return@forEach),
+                            title = link.title,
+                            onClick = { uriHandler.openUri(link.url) },
+                        )
+                    }
                 }
             }
         }

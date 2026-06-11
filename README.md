@@ -16,6 +16,7 @@ Yamibo App 以行動閱讀體驗為核心，將百合會論壇常用流程整理
 ## 社群
 
 - [Discord 社群](https://discord.gg/3nhKpxM7Hc)
+- [QQ 群聊](https://qm.qq.com/q/13i8doGGV0)
 - [GitHub 專案](https://github.com/LittleSurvival/yamibo-app)
 
 ## -- 協助開法指南 --
