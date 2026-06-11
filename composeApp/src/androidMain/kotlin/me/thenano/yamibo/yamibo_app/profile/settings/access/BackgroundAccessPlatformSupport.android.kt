@@ -1,11 +1,14 @@
 package me.thenano.yamibo.yamibo_app.profile.settings.access
 
 import android.Manifest
+import android.content.Intent
 import android.os.Build
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -15,9 +18,17 @@ actual fun rememberBackgroundAccessNotificationPermissionRequester(
     onPermissionHandled: () -> Unit,
 ): (() -> Unit)? {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return null
+    val context = LocalContext.current
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
-    ) {
+    ) { granted ->
+        if (!granted) {
+            val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            context.startActivity(intent)
+        }
         onPermissionHandled()
     }
     return {

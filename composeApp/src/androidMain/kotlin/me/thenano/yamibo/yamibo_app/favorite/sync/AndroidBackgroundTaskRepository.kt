@@ -2,7 +2,10 @@ package me.thenano.yamibo.yamibo_app.favorite.sync
 
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.flow.StateFlow
@@ -20,8 +23,11 @@ class AndroidBackgroundTaskRepository(
         if (!AndroidAppForegroundTracker.isForeground()) {
             return BackgroundTaskRepository.StartResult.Rejected(i18n("請保持 App 在前景後再開始同步。"))
         }
-        if (!NotificationManagerCompat.from(appContext).areNotificationsEnabled()) {
-            return BackgroundTaskRepository.StartResult.Rejected(i18n("請先允許通知權限，背景同步才會顯示在通知欄。"))
+        if (isNotificationAccessMissing()) {
+            return BackgroundTaskRepository.StartResult.Rejected(
+                reason = i18n("請先允許通知權限，背景同步才會顯示在通知欄。"),
+                requiresBackgroundAccessSetup = true,
+            )
         }
 
         return try {
@@ -36,6 +42,13 @@ class AndroidBackgroundTaskRepository(
     override suspend fun cancelFavoriteSync(runId: String) {
         val intent = FavoriteSyncForegroundService.createCancelIntent(appContext, runId)
         ContextCompat.startForegroundService(appContext, intent)
+    }
+
+    private fun isNotificationAccessMissing(): Boolean {
+        val runtimePermissionMissing =
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                ContextCompat.checkSelfPermission(appContext, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        return runtimePermissionMissing || !NotificationManagerCompat.from(appContext).areNotificationsEnabled()
     }
 }
 

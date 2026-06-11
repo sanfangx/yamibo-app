@@ -9,17 +9,22 @@ interface BackgroundAccessRepository {
 
     fun runAction(action: SetupAction)
 
+    data class I18nText(
+        val source: String,
+        val args: List<Any?> = emptyList(),
+    )
+
     data class SetupState(
-        val summary: String,
+        val summary: I18nText,
         val items: List<SetupItem>,
-        val platformNote: String? = null,
+        val platformNote: I18nText? = null,
     )
 
     data class SetupItem(
-        val title: String,
-        val subtitle: String,
+        val title: I18nText,
+        val subtitle: I18nText,
         val status: SetupStatus,
-        val actionLabel: String? = null,
+        val actionLabel: I18nText? = null,
         val action: SetupAction? = null,
     )
 

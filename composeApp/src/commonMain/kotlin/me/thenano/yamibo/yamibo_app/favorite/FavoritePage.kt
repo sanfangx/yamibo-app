@@ -28,6 +28,7 @@ import me.thenano.yamibo.yamibo_app.repository.FavoriteSyncRepository.FavoriteSy
 import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.*
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.FavoriteSortMode
+import me.thenano.yamibo.yamibo_app.profile.settings.access.IBackgroundAccessSetupScreen
 import me.thenano.yamibo.yamibo_app.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.INovelThreadDetailScreen
@@ -157,6 +158,13 @@ fun FavoritePage() {
         scope.launch {
             snackbarHostState.currentSnackbarData?.dismiss()
             snackbarHostState.showSnackbar(message)
+        }
+    }
+
+    fun handleSyncRejected(result: me.thenano.yamibo.yamibo_app.favorite.sync.FavoriteSyncRunner.LaunchResult.Rejected) {
+        showSnackbarMessage(result.reason)
+        if (result.requiresBackgroundAccessSetup) {
+            navigator.navigate(IBackgroundAccessSetupScreen())
         }
     }
 
@@ -420,7 +428,7 @@ fun FavoritePage() {
                                 navigator.navigate(IFavoriteSyncProgressScreen(result.runId))
                             }
                             is me.thenano.yamibo.yamibo_app.favorite.sync.FavoriteSyncRunner.LaunchResult.Rejected -> {
-                                showSnackbarMessage(i18n(result.reason))
+                                handleSyncRejected(result)
                             }
                         }
                     }
@@ -621,7 +629,7 @@ fun FavoritePage() {
                             navigator.navigate(IFavoriteSyncProgressScreen(result.runId))
                         }
                         is me.thenano.yamibo.yamibo_app.favorite.sync.FavoriteSyncRunner.LaunchResult.Rejected -> {
-                            showSnackbarMessage(i18n(result.reason))
+                            handleSyncRejected(result)
                         }
                     }
                 }

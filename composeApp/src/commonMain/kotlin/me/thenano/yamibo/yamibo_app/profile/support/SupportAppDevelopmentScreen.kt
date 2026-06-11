@@ -2,7 +2,6 @@ package me.thenano.yamibo.yamibo_app.profile.support
 
 import YamiboIcons
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,6 +33,7 @@ import coil3.compose.SubcomposeAsyncImage
 import me.thenano.yamibo.yamibo_app.components.navigation.YamiboTopBar
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
+import me.thenano.yamibo.yamibo_app.profile.profilePressScaleClickable
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.util.rememberImageRequest
 
@@ -132,7 +132,7 @@ private fun SupportLinkCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .profilePressScaleClickable(pressedScale = 0.985f, onClick = onClick),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = colors.creamSurface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
@@ -153,24 +153,33 @@ private fun SupportLinkCard(
                     model = rememberImageRequest(link.iconUrl),
                     contentDescription = title,
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .height(42.dp)
+                        .fillMaxSize()
                         .padding(horizontal = 8.dp),
                     contentScale = ContentScale.Fit,
                     loading = {
-                        CircularProgressIndicator(
-                            color = colors.brownPrimary,
-                            modifier = Modifier.size(20.dp),
-                            strokeWidth = 2.dp,
-                        )
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            CircularProgressIndicator(
+                                color = colors.brownPrimary,
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp,
+                            )
+                        }
                     },
                     error = {
-                        Text(
-                            text = title,
-                            color = colors.brownPrimary,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                        )
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = title,
+                                color = colors.brownPrimary,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
                     },
                 )
             }

@@ -427,7 +427,10 @@ private fun FavoriteSettingsContent(snackbarHostState: SnackbarHostState) {
                             navigator.navigate(IFavoriteSyncProgressScreen(result.runId))
                         }
                         is me.thenano.yamibo.yamibo_app.favorite.sync.FavoriteSyncRunner.LaunchResult.Rejected -> {
-                            snackbarHostState.showSnackbar(i18n(result.reason))
+                            snackbarHostState.showSnackbar(result.reason)
+                            if (result.requiresBackgroundAccessSetup) {
+                                navigator.navigate(IBackgroundAccessSetupScreen())
+                            }
                         }
                     }
                 }

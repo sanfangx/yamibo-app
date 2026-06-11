@@ -98,7 +98,7 @@ internal fun BackgroundAccessSetupScreen() {
                 .padding(20.dp),
         ) {
             Text(
-                text = state.summary,
+                text = state.summary.localized(),
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Medium,
                 color = colors.textDark,
@@ -106,7 +106,7 @@ internal fun BackgroundAccessSetupScreen() {
             if (state.platformNote != null) {
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    text = state.platformNote.orEmpty(),
+                    text = state.platformNote?.localized().orEmpty(),
                     fontSize = 13.sp,
                     color = colors.textDark.copy(alpha = 0.7f),
                     lineHeight = 20.sp,
@@ -172,7 +172,7 @@ private fun BackgroundAccessItemCard(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = item.title,
+                text = item.title.localized(),
                 fontSize = 16.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = colors.textDark,
@@ -193,7 +193,7 @@ private fun BackgroundAccessItemCard(
         }
 
         Text(
-            text = item.subtitle,
+            text = item.subtitle.localized(),
             fontSize = 13.sp,
             color = colors.textDark.copy(alpha = 0.72f),
             lineHeight = 20.sp,
@@ -207,9 +207,11 @@ private fun BackgroundAccessItemCard(
                     contentColor = Color.White,
                 ),
             ) {
-                Text(item.actionLabel)
+                Text(item.actionLabel.localized())
             }
         }
     }
 }
 
+private fun BackgroundAccessRepository.I18nText.localized(): String =
+    i18n(source, *args.toTypedArray())

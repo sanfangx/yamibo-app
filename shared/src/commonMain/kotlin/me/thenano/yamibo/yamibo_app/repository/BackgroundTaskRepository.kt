@@ -5,7 +5,10 @@ import kotlinx.coroutines.flow.StateFlow
 interface BackgroundTaskRepository {
     sealed interface StartResult {
         data object Started : StartResult
-        data class Rejected(val reason: String) : StartResult
+        data class Rejected(
+            val reason: String,
+            val requiresBackgroundAccessSetup: Boolean = false,
+        ) : StartResult
     }
 
     val runningFavoriteSyncRunIds: StateFlow<Set<String>>

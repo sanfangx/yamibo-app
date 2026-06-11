@@ -17,7 +17,11 @@ class FavoriteSyncRunner(
 ) {
     sealed interface LaunchResult {
         data class Started(val runId: String) : LaunchResult
-        data class Rejected(val reason: String, val runId: String? = null) : LaunchResult
+        data class Rejected(
+            val reason: String,
+            val runId: String? = null,
+            val requiresBackgroundAccessSetup: Boolean = false,
+        ) : LaunchResult
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -55,7 +59,11 @@ class FavoriteSyncRunner(
                 pendingActivationStartedAt.remove(runId)
                 repository.markRunInterrupted(runId, result.reason)
                 refreshStateFromRepository()
-                return LaunchResult.Rejected(i18n(result.reason), runId)
+                return LaunchResult.Rejected(
+                    reason = i18n(result.reason),
+                    runId = runId,
+                    requiresBackgroundAccessSetup = result.requiresBackgroundAccessSetup,
+                )
             }
         }
     }
@@ -75,7 +83,11 @@ class FavoriteSyncRunner(
                     pendingActivationStartedAt.remove(runId)
                     repository.markRunInterrupted(runId, result.reason)
                     refreshStateFromRepository()
-                    return LaunchResult.Rejected(i18n(result.reason), runId)
+                    return LaunchResult.Rejected(
+                        reason = i18n(result.reason),
+                        runId = runId,
+                        requiresBackgroundAccessSetup = result.requiresBackgroundAccessSetup,
+                    )
                 }
             }
         }
@@ -115,4 +127,3 @@ class FavoriteSyncRunner(
         } ?: FavoriteSyncState.Idle
     }
 }
-
