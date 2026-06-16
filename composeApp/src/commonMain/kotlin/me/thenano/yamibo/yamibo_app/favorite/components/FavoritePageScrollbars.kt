@@ -7,7 +7,6 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -139,6 +138,8 @@ private fun FavoriteScrollbar(
 
     // Animate thumb width: wider when dragging for better visibility
     val thumbWidth = remember { Animatable(6f) }
+    var dragStartThumbOffsetPx by remember { mutableStateOf(0f) }
+    var dragDeltaPx by remember { mutableStateOf(0f) }
     LaunchedEffect(isDragging) {
         thumbWidth.animateTo(
             targetValue = if (isDragging) 10f else 6f,
@@ -167,38 +168,13 @@ private fun FavoriteScrollbar(
             val progress = (firstVisibleIndex.toFloat() / hiddenCount.toFloat()).coerceIn(0f, 1f)
             val thumbOffsetPx = travelPx * progress
 
-            fun scrollFromTouch(y: Float) {
-                val ratio = ((y - thumbHeightPx / 2f) / travelPx.coerceAtLeast(1f)).coerceIn(0f, 1f)
+            fun scrollFromThumbOffset(offsetPx: Float) {
+                val ratio = (offsetPx / travelPx.coerceAtLeast(1f)).coerceIn(0f, 1f)
                 val targetIndex = (ratio * hiddenCount.toFloat()).roundToInt().coerceIn(0, totalItems - 1)
                 scope.launch { onScrollToIndex(targetIndex) }
             }
 
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    // Tap anywhere on the track to jump to that position
-                    .pointerInput(Unit) {
-                        detectTapGestures { offset ->
-                            scrollFromTouch(offset.y)
-                        }
-                    }
-                    // Use a stable key (Unit) so the gesture detector is NOT reset
-                    // on every scroll frame. This prevents jitter and dropped drags.
-                    .pointerInput(Unit) {
-                        detectDragGestures(
-                            onDragStart = { offset ->
-                                isDragging = true
-                                scrollFromTouch(offset.y)
-                            },
-                            onDrag = { change, _ ->
-                                change.consume()
-                                scrollFromTouch(change.position.y)
-                            },
-                            onDragEnd = { isDragging = false },
-                            onDragCancel = { isDragging = false },
-                        )
-                    },
-            ) {
+            Box(modifier = Modifier.fillMaxSize()) {
                 Box(
                     modifier = Modifier
                         .align(Alignment.CenterEnd)
@@ -210,10 +186,33 @@ private fun FavoriteScrollbar(
                     modifier = Modifier
                         .offset { IntOffset(0, thumbOffsetPx.roundToInt()) }
                         .align(Alignment.TopEnd)
-                        .width(thumbWidth.value.dp)
+                        .width(36.dp)
                         .height(with(LocalDensity.current) { thumbHeightPx.toDp() })
-                        .background(colors.brownDeep.copy(alpha = 0.80f), RoundedCornerShape(999.dp)),
-                )
+                        .pointerInput(Unit) {
+                            detectDragGestures(
+                                onDragStart = {
+                                    isDragging = true
+                                    dragStartThumbOffsetPx = thumbOffsetPx
+                                    dragDeltaPx = 0f
+                                },
+                                onDrag = { change, dragAmount ->
+                                    change.consume()
+                                    dragDeltaPx += dragAmount.y
+                                    scrollFromThumbOffset(dragStartThumbOffsetPx + dragDeltaPx)
+                                },
+                                onDragEnd = { isDragging = false },
+                                onDragCancel = { isDragging = false },
+                            )
+                        },
+                    contentAlignment = Alignment.CenterEnd,
+                ) {
+                    Box(
+                        modifier = Modifier
+                        .width(thumbWidth.value.dp)
+                            .fillMaxHeight()
+                            .background(colors.brownDeep.copy(alpha = 0.80f), RoundedCornerShape(999.dp)),
+                    )
+                }
             }
         }
     }

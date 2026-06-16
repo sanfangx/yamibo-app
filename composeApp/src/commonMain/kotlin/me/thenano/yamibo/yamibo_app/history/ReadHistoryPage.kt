@@ -155,8 +155,10 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
         }
     }
 
-    suspend fun loadPage(page: Int) {
-        state = HistoryState.Loading
+    suspend fun loadPage(page: Int, showLoading: Boolean = true) {
+        if (showLoading) {
+            state = HistoryState.Loading
+        }
         try {
             refreshFilterCounts()
             val count = readHistoryRepo.getCombinedHistoryCountByFilters(selectedFilters)
@@ -175,10 +177,12 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
         }
     }
 
-    suspend fun doSearch(query: String, page: Int = 1) {
+    suspend fun doSearch(query: String, page: Int = 1, showLoading: Boolean = true) {
         val trimmed = query.trim()
         if (trimmed.isEmpty()) return
-        state = HistoryState.Loading
+        if (showLoading) {
+            state = HistoryState.Loading
+        }
         try {
             val count = readHistoryRepo.searchCombinedHistoryCount(trimmed)
             if (count == 0L) {
@@ -337,9 +341,16 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
             // Let the popped reader dispose and persist its final visible anchor before reading history again.
             delay(320.milliseconds)
             if (mode == PageMode.Search && searchQuery.isNotBlank()) {
-                doSearch(searchQuery, currentPage)
+                doSearch(
+                    query = searchQuery,
+                    page = currentPage,
+                    showLoading = state.shouldShowBlockingLoading(),
+                )
             } else if (mode != PageMode.Select) {
-                loadPage(currentPage)
+                loadPage(
+                    page = currentPage,
+                    showLoading = state.shouldShowBlockingLoading(),
+                )
             }
         }
     }
@@ -801,4 +812,8 @@ private fun selectedHistoryFilterLabel(
         labels.size <= 2 -> labels.joinToString("、")
         else -> labels.take(2).joinToString("、") + " +${labels.size - 2}"
     }
+}
+
+private fun HistoryState.shouldShowBlockingLoading(): Boolean {
+    return this !is HistoryState.Success && this !is HistoryState.Empty
 }
