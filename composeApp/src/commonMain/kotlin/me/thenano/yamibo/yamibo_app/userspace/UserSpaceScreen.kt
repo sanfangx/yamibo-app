@@ -114,7 +114,7 @@ fun UserSpaceScreen(
     }
     var currentPage by remember { mutableIntStateOf(1) }
     var state by remember { mutableStateOf<UserSpaceState>(UserSpaceState.Loading) }
-    var profile by remember { mutableStateOf<ProfilePage?>(null) }
+    var profile by remember { mutableStateOf(repository.getCachedProfile(userId)) }
     var isRefreshing by remember { mutableStateOf(false) }
     var viewAllBlogFilter by remember(userId, group) { mutableStateOf(ViewAllBlogFilter.Latest) }
     var addFriendProfile by remember { mutableStateOf<ProfilePage?>(null) }
@@ -650,7 +650,7 @@ private suspend fun fetchContent(
     }
 }
 
-private suspend fun cachedContent(
+private fun cachedContent(
     repository: me.thenano.yamibo.yamibo_app.repository.UserSpaceRepository,
     userId: UserId?,
     tab: UserSpaceSubPage,

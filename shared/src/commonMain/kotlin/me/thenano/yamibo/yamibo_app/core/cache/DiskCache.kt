@@ -5,17 +5,17 @@ package me.thenano.yamibo.yamibo_app.core.cache
  */
 interface DiskCache<T : Any> {
     /** Sets value in the cache by specific key. Automatically serializes and handles eviction asynchronously. */
-    suspend fun set(key: String, value: T)
+    fun set(key: String, value: T)
 
     /** Retrieves value from the cache by key. May return null if missing or expired. */
-    suspend fun get(key: String): T?
+    fun get(key: String): T?
 
     /** Removes a specific entry in the cache. */
-    suspend fun remove(key: String)
+    fun remove(key: String)
 
     /** Removes entries whose keys start with the given prefix. */
-    suspend fun removeByPrefix(prefix: String)
+    fun removeByPrefix(prefix: String)
 
     /** Clears all entries in this cache namespace. */
-    suspend fun clear()
+    fun clear()
 }

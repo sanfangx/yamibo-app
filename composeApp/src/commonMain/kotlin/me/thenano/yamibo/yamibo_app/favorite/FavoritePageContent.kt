@@ -2,6 +2,8 @@
 
 import YamiboIcons
 import androidx.compose.animation.*
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -12,7 +14,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.staggeredgrid.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
@@ -20,9 +21,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.favorite.components.*
 import me.thenano.yamibo.yamibo_app.favorite.sync.FavoriteSyncStatusCard
 import me.thenano.yamibo.yamibo_app.i18n.i18n
@@ -35,13 +39,6 @@ import me.thenano.yamibo.yamibo_app.repository.settings.FavoriteGridMode
 import me.thenano.yamibo.yamibo_app.repository.settings.FavoriteSortMode
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 
-private data class FavoriteCategoryTransitionContent(
-    val categoryId: Long,
-    val entries: List<FavoriteGridEntry>,
-    val contentLoading: Boolean,
-    val showDefaultSyncHint: Boolean,
-)
-
 @Composable
 internal fun FavoritePageContent(
     ready: FavoritePageState.Ready,
@@ -49,13 +46,10 @@ internal fun FavoritePageContent(
     searchActive: Boolean,
     searchQuery: String,
     searchCategoryMatchCounts: Map<Long, Int>,
-    favoriteFilterActive: Boolean,
-    showFavoriteCounts: Boolean,
     sortMode: FavoriteSortMode,
     sortDescending: Boolean,
     favoriteGridMode: FavoriteGridMode,
     gridEntries: List<FavoriteGridEntry>,
-    contentLoading: Boolean,
     openedCollection: FavoriteCollectionWithItems?,
     selectedItemIds: Set<Long>,
     selectedCollectionIds: Set<Long>,
@@ -65,8 +59,6 @@ internal fun FavoritePageContent(
     onCreateCategory: () -> Unit,
     onManageCategory: () -> Unit,
     onEnterSearch: () -> Unit,
-    onShowFilter: () -> Unit,
-    onToggleFavoriteCounts: () -> Unit,
     onSearchQueryChange: (String) -> Unit,
     onSearchSubmit: () -> Unit,
     onExitSearch: () -> Unit,
@@ -101,11 +93,7 @@ internal fun FavoritePageContent(
             FavoritePageMode.Normal -> {
                 FavoriteHeaderMenuRow(
                     title = i18n("我的收藏"),
-                    filterActive = favoriteFilterActive,
-                    showFavoriteCounts = showFavoriteCounts,
                     onSearch = onEnterSearch,
-                    onShowFilter = onShowFilter,
-                    onToggleFavoriteCounts = onToggleFavoriteCounts,
                     onCreateCategory = onCreateCategory,
                     onManageCategory = onManageCategory,
                     onSyncFavorites = onSyncFavorites,
@@ -150,7 +138,7 @@ internal fun FavoritePageContent(
                     text = {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(category.name, fontSize = 15.sp, fontWeight = if (category.id == ready.selectedCategoryId) FontWeight.Bold else FontWeight.Medium)
-                            if (searchCategoryMatchCounts.containsKey(category.id)) {
+                            if (searchActive && searchQuery.isNotBlank()) {
                                 Text(
                                     text = searchCategoryMatchCounts[category.id]?.toString() ?: "0",
                                     fontSize = 11.sp,
@@ -232,39 +220,38 @@ internal fun FavoritePageContent(
                 }
             }
         } else {
-            val selectedCategory = ready.categories.firstOrNull { it.id == ready.selectedCategoryId }
-            val transitionContent = FavoriteCategoryTransitionContent(
-                categoryId = ready.selectedCategoryId,
-                entries = gridEntries,
-                contentLoading = contentLoading,
-                showDefaultSyncHint = !searchActive &&
-                    selectedCategory?.name == LocalFavoriteRepository.DEFAULT_CATEGORY_NAME,
-            )
-            AnimatedContent(
-                targetState = transitionContent,
-                transitionSpec = {
-                    val initialIndex = ready.categories.indexOfFirst { it.id == initialState.categoryId }
-                    val targetIndex = ready.categories.indexOfFirst { it.id == targetState.categoryId }
-                    val direction = if (targetIndex >= initialIndex) 1 else -1
-                    (slideInHorizontally(animationSpec = tween(durationMillis = 180)) { width -> width * direction / 4 } +
-                        fadeIn(animationSpec = tween(durationMillis = 120))) togetherWith
-                        (slideOutHorizontally(animationSpec = tween(durationMillis = 160)) { width -> -width * direction / 4 } +
-                            fadeOut(animationSpec = tween(durationMillis = 120))) using SizeTransform(clip = false)
-                },
-                contentKey = { it.categoryId },
-                label = "favorite_category_content",
-                modifier = Modifier.fillMaxSize(),
-            ) { categoryContent ->
+            val selectedTabIndex = ready.categories.indexOfFirst { it.id == ready.selectedCategoryId }.coerceAtLeast(0)
+            val previousTabIndex = remember { mutableIntStateOf(selectedTabIndex) }
+            val density = LocalDensity.current
+            val direction = when {
+                selectedTabIndex > previousTabIndex.intValue -> 1f
+                selectedTabIndex < previousTabIndex.intValue -> -1f
+                else -> 0f
+            }
+            val initialOffsetPx = with(density) { (16.dp * direction).toPx() }
+            val initialAlpha = if (direction == 0f) 1f else 0.28f
+            val contentOffsetX = remember(selectedTabIndex) { Animatable(initialOffsetPx) }
+            val contentAlpha = remember(selectedTabIndex) { Animatable(initialAlpha) }
+            LaunchedEffect(selectedTabIndex) {
+                if (direction == 0f) {
+                    contentOffsetX.snapTo(0f)
+                    contentAlpha.snapTo(1f)
+                } else {
+                    launch { contentOffsetX.animateTo(targetValue = 0f, animationSpec = tween(durationMillis = 150)) }
+                    contentAlpha.animateTo(targetValue = 1f, animationSpec = tween(durationMillis = 150))
+                }
+                previousTabIndex.intValue = selectedTabIndex
+            }
+            Box(Modifier.fillMaxSize().graphicsLayer { translationX = contentOffsetX.value; alpha = contentAlpha.value }) {
                 Box(Modifier.fillMaxSize()) {
-                    if (categoryContent.contentLoading) {
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(color = colors.brownPrimary, modifier = Modifier.size(28.dp))
-                        }
-                    } else if (categoryContent.entries.isEmpty()) {
+                    if (gridEntries.isEmpty()) {
+                        val selectedCategory = ready.categories.firstOrNull { it.id == ready.selectedCategoryId }
+                        val showDefaultSyncHint = !searchActive &&
+                            selectedCategory?.name == LocalFavoriteRepository.DEFAULT_CATEGORY_NAME
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Text(i18n("目前還沒有收藏"), color = colors.textDark.copy(alpha = 0.52f), fontSize = 16.sp)
-                                if (categoryContent.showDefaultSyncHint) {
+                                if (showDefaultSyncHint) {
                                     Text(
                                         text = i18n("若收藏尚未同步，可使用右上角 ⋮ > 同步百合會收藏 同步"),
                                         color = colors.textDark.copy(alpha = 0.42f),
@@ -275,9 +262,9 @@ internal fun FavoritePageContent(
                         }
                     } else {
                         FavoriteGridLayout(
-                            entries = categoryContent.entries,
+                            entries = gridEntries,
                             favoriteGridMode = favoriteGridMode,
-                            scrollResetKey = "category:${categoryContent.categoryId}|$sortMode|$sortDescending|$favoriteGridMode",
+                            scrollResetKey = "category:${ready.selectedCategoryId}|$sortMode|$sortDescending|$favoriteGridMode",
                             selecting = mode == FavoritePageMode.Select,
                             selectedItemIds = selectedItemIds,
                             selectedCollectionIds = selectedCollectionIds,

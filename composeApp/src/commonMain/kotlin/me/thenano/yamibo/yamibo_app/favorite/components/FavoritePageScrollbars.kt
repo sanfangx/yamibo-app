@@ -1,8 +1,5 @@
 package me.thenano.yamibo.yamibo_app.favorite.components
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -37,7 +34,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import kotlin.math.roundToInt
-import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
 fun FavoriteListScrollbar(
@@ -122,24 +118,23 @@ private fun FavoriteScrollbar(
     val colors = YamiboTheme.colors
     val scope = rememberCoroutineScope()
 
-    // Track whether the user is actively dragging the thumb
     var isDragging by remember { mutableStateOf(false) }
-    var scrollbarVisible by remember { mutableStateOf(false) }
-    val keepVisible = isScrollInProgress || isDragging
+    var isVisible by remember { mutableStateOf(false) }
+    var dragStartOffsetPx by remember { mutableStateOf(0f) }
+    var dragDeltaPx by remember { mutableStateOf(0f) }
 
-    LaunchedEffect(keepVisible) {
-        if (keepVisible) {
-            scrollbarVisible = true
+    LaunchedEffect(isScrollInProgress, isDragging, firstVisibleIndex) {
+        if (isScrollInProgress || isDragging) {
+            isVisible = true
         } else {
-            delay(800.milliseconds)
-            scrollbarVisible = false
+            delay(1200)
+            isVisible = false
         }
     }
 
-    // Animate thumb width: wider when dragging for better visibility
+    if (!isVisible) return
+
     val thumbWidth = remember { Animatable(6f) }
-    var dragStartThumbOffsetPx by remember { mutableStateOf(0f) }
-    var dragDeltaPx by remember { mutableStateOf(0f) }
     LaunchedEffect(isDragging) {
         thumbWidth.animateTo(
             targetValue = if (isDragging) 10f else 6f,
@@ -147,73 +142,62 @@ private fun FavoriteScrollbar(
         )
     }
 
-    AnimatedVisibility(
-        visible = scrollbarVisible,
-        enter = fadeIn(animationSpec = tween(durationMillis = 90)),
-        exit = fadeOut(animationSpec = tween(durationMillis = 360)),
-        modifier = modifier,
+    BoxWithConstraints(
+        modifier = modifier
+            .fillMaxHeight()
+            .width(36.dp)
+            .padding(end = 4.dp, top = 10.dp, bottom = 92.dp),
     ) {
-        BoxWithConstraints(
+        val trackHeightPx = constraints.maxHeight.toFloat().coerceAtLeast(1f)
+        val hiddenCount = (totalItems - visibleCount).coerceAtLeast(1)
+        val thumbHeightPx = (trackHeightPx * (visibleCount.toFloat() / totalItems.toFloat()))
+            .coerceAtLeast(with(LocalDensity.current) { 48.dp.toPx() })
+            .coerceAtMost(trackHeightPx * 0.5f)
+        val travelPx = (trackHeightPx - thumbHeightPx).coerceAtLeast(0f)
+        val progress = (firstVisibleIndex.toFloat() / hiddenCount.toFloat()).coerceIn(0f, 1f)
+        val thumbOffsetPx = travelPx * progress
+
+        fun scrollFromThumbOffset(offsetPx: Float) {
+            val ratio = (offsetPx / travelPx.coerceAtLeast(1f)).coerceIn(0f, 1f)
+            val targetIndex = (ratio * hiddenCount.toFloat()).roundToInt().coerceIn(0, totalItems - 1)
+            scope.launch { onScrollToIndex(targetIndex) }
+        }
+
+        Box(
             modifier = Modifier
-                .fillMaxHeight()
-                .width(36.dp)
-                .padding(end = 4.dp, top = 10.dp, bottom = 92.dp),
+                .fillMaxSize(),
         ) {
-            val trackHeightPx = constraints.maxHeight.toFloat().coerceAtLeast(1f)
-            val hiddenCount = (totalItems - visibleCount).coerceAtLeast(1)
-            val thumbHeightPx = (trackHeightPx * (visibleCount.toFloat() / totalItems.toFloat()))
-                .coerceAtLeast(with(LocalDensity.current) { 48.dp.toPx() })
-                .coerceAtMost(trackHeightPx * 0.5f)
-            val travelPx = (trackHeightPx - thumbHeightPx).coerceAtLeast(0f)
-            val progress = (firstVisibleIndex.toFloat() / hiddenCount.toFloat()).coerceIn(0f, 1f)
-            val thumbOffsetPx = travelPx * progress
-
-            fun scrollFromThumbOffset(offsetPx: Float) {
-                val ratio = (offsetPx / travelPx.coerceAtLeast(1f)).coerceIn(0f, 1f)
-                val targetIndex = (ratio * hiddenCount.toFloat()).roundToInt().coerceIn(0, totalItems - 1)
-                scope.launch { onScrollToIndex(targetIndex) }
-            }
-
-            Box(modifier = Modifier.fillMaxSize()) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.CenterEnd)
-                        .fillMaxHeight()
-                        .width(thumbWidth.value.dp)
-                        .background(colors.brownPrimary.copy(alpha = 0.10f), RoundedCornerShape(999.dp)),
-                )
-                Box(
-                    modifier = Modifier
-                        .offset { IntOffset(0, thumbOffsetPx.roundToInt()) }
-                        .align(Alignment.TopEnd)
-                        .width(36.dp)
-                        .height(with(LocalDensity.current) { thumbHeightPx.toDp() })
-                        .pointerInput(Unit) {
-                            detectDragGestures(
-                                onDragStart = {
-                                    isDragging = true
-                                    dragStartThumbOffsetPx = thumbOffsetPx
-                                    dragDeltaPx = 0f
-                                },
-                                onDrag = { change, dragAmount ->
-                                    change.consume()
-                                    dragDeltaPx += dragAmount.y
-                                    scrollFromThumbOffset(dragStartThumbOffsetPx + dragDeltaPx)
-                                },
-                                onDragEnd = { isDragging = false },
-                                onDragCancel = { isDragging = false },
-                            )
-                        },
-                    contentAlignment = Alignment.CenterEnd,
-                ) {
-                    Box(
-                        modifier = Modifier
-                        .width(thumbWidth.value.dp)
-                            .fillMaxHeight()
-                            .background(colors.brownDeep.copy(alpha = 0.80f), RoundedCornerShape(999.dp)),
-                    )
-                }
-            }
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .fillMaxHeight()
+                    .width(thumbWidth.value.dp)
+                    .background(colors.brownPrimary.copy(alpha = 0.10f), RoundedCornerShape(999.dp)),
+            )
+            Box(
+                modifier = Modifier
+                    .offset { IntOffset(0, thumbOffsetPx.roundToInt()) }
+                    .align(Alignment.TopEnd)
+                    .width(thumbWidth.value.dp)
+                    .height(with(LocalDensity.current) { thumbHeightPx.toDp() })
+                    .pointerInput(totalItems, visibleCount) {
+                        detectDragGestures(
+                            onDragStart = {
+                                isDragging = true
+                                dragStartOffsetPx = thumbOffsetPx
+                                dragDeltaPx = 0f
+                            },
+                            onDrag = { change, dragAmount ->
+                                change.consume()
+                                dragDeltaPx += dragAmount.y
+                                scrollFromThumbOffset(dragStartOffsetPx + dragDeltaPx)
+                            },
+                            onDragEnd = { isDragging = false },
+                            onDragCancel = { isDragging = false },
+                        )
+                    }
+                    .background(colors.brownDeep.copy(alpha = 0.80f), RoundedCornerShape(999.dp)),
+            )
         }
     }
 }

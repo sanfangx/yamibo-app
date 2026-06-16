@@ -32,14 +32,14 @@ class IOSTagRepository(
         return yamiboClient.fetchExtractTagsInThreadById(tid)
     }
 
-    override suspend fun getCachedTagPage(tagId: TagId, page: Int): TagPage? =
+    override fun getCachedTagPage(tagId: TagId, page: Int): TagPage? =
         tagCache.get(TagRepository.TagCacheKey(tagId.value, page).toCacheKey())
 
-    override suspend fun setCachedTagPage(tagId: TagId, page: Int, tagPage: TagPage) {
+    override fun setCachedTagPage(tagId: TagId, page: Int, tagPage: TagPage) {
         tagCache.set(TagRepository.TagCacheKey(tagId.value, page).toCacheKey(), tagPage)
     }
 
-    override suspend fun clearCachedTagPage(tagId: TagId) {
+    override fun clearCachedTagPage(tagId: TagId) {
         tagCache.removeByPrefix(TagRepository.TagCacheKey.keyPrefix(tagId.value))
     }
 }

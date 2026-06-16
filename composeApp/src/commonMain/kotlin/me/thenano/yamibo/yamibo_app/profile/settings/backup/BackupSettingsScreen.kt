@@ -22,7 +22,6 @@ import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.LocalAppSettingsRepository
 import me.thenano.yamibo.yamibo_app.LocalBackupRepository
 import me.thenano.yamibo.yamibo_app.LocalBackupScheduler
-import me.thenano.yamibo.yamibo_app.components.navigation.YamiboTopBar
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.i18n.localizedLabel
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
@@ -78,7 +77,27 @@ internal fun BackupSettingsScreen() {
 
     Scaffold(
         topBar = {
-            YamiboTopBar(title = i18n("設定與收藏備份"), titleFontSize = 18, onBack = navigator::pop)
+            TopAppBar(
+                title = {
+                    Text(
+                        text = i18n("設定與收藏備份"),
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = { navigator.pop() }) {
+                        Text(YamiboIcons.Back, color = Color.White, fontSize = 20.sp)
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = colors.brownDeep,
+                    scrolledContainerColor = colors.brownDeep,
+                ),
+            )
         },
         snackbarHost = { YamiboSnackbarHost(snackbarHostState) },
         containerColor = colors.creamBackground,

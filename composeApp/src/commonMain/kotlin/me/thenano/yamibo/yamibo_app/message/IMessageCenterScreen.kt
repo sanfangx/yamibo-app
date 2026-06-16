@@ -18,6 +18,7 @@ private data class MessageCenterRestorePayload(
 class IMessageCenterScreen(
     val initialTab: MessageCenterTab = MessageCenterTab.PrivateMessages,
     val mainTabTopBar: Boolean = false,
+    private val onPrivateMessageUnreadChange: (Boolean) -> Unit = {},
 ) : RestorableNavigatable {
     override val id = buildId(initialTab.name, mainTabTopBar.toString())
     override val restoreDecoder = Decoder
@@ -32,17 +33,18 @@ class IMessageCenterScreen(
 
     @Composable
     override fun Content() {
-        MessageCenterScreen(initialTab = initialTab, mainTabTopBar = mainTabTopBar)
+        MessageCenterScreen(
+            initialTab = initialTab,
+            mainTabTopBar = mainTabTopBar,
+            onPrivateMessageUnreadChange = onPrivateMessageUnreadChange,
+        )
     }
 
     companion object Decoder : TypedRestorableNavigatableDecoder<IMessageCenterScreen>(IMessageCenterScreen::class) {
         override fun decode(payload: String): RestorableNavigatable {
             val data = decodeRestorePayload<MessageCenterRestorePayload>(payload)
             return IMessageCenterScreen(
-                initialTab = when (data.initialTabName) {
-                    MessageCenterTab.Notices.name -> MessageCenterTab.Notices
-                    else -> MessageCenterTab.PrivateMessages
-                },
+                initialTab = MessageCenterTab.valueOf(data.initialTabName),
                 mainTabTopBar = data.mainTabTopBar,
             )
         }

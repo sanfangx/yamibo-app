@@ -26,7 +26,6 @@ import me.thenano.yamibo.yamibo_app.AppVersion
 import me.thenano.yamibo.yamibo_app.LocalAppSettingsRepository
 import me.thenano.yamibo.yamibo_app.LocalAppUpdateRepository
 import me.thenano.yamibo.yamibo_app.components.controls.YamiboSingleSelectDialog
-import me.thenano.yamibo.yamibo_app.components.navigation.YamiboTopBar
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.appupdate.AppUpdateAsset
 import me.thenano.yamibo.yamibo_app.repository.appupdate.AppUpdateCheckResult
@@ -64,7 +63,27 @@ internal fun AppUpdateScreen() {
 
     Scaffold(
         topBar = {
-            YamiboTopBar(title = i18n("App 更新"), titleFontSize = 18, onBack = navigator::pop)
+            TopAppBar(
+                title = {
+                    Text(
+                        text = i18n("App 更新"),
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = { navigator.pop() }) {
+                        Text(YamiboIcons.Back, color = Color.White, fontSize = 20.sp)
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = colors.brownDeep,
+                    scrolledContainerColor = colors.brownDeep,
+                ),
+            )
         },
         containerColor = colors.creamBackground,
     ) { padding ->

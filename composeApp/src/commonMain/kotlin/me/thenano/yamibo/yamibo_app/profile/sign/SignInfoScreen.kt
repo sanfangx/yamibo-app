@@ -50,7 +50,6 @@ import io.github.littlesurvival.YamiboRoute
 import io.github.littlesurvival.core.YamiboResult
 import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.LocalSignRepository
-import me.thenano.yamibo.yamibo_app.components.navigation.YamiboTopBar
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.navigation.Navigatable
 import me.thenano.yamibo.yamibo_app.repository.SignRepository
@@ -109,7 +108,27 @@ private fun SignInfoScreen(onInfoLoaded: () -> Unit) {
 
     Scaffold(
         topBar = {
-            YamiboTopBar(title = i18n("簽到資訊"), titleFontSize = 18, onBack = navigator::pop)
+            TopAppBar(
+                title = {
+                    Text(
+                        text = i18n("簽到資訊"),
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = { navigator.pop() }) {
+                        Text(YamiboIcons.Back, color = Color.White, fontSize = 20.sp)
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = colors.brownDeep,
+                    scrolledContainerColor = colors.brownDeep,
+                ),
+            )
         },
         containerColor = colors.creamBackground,
     ) { paddingValues ->

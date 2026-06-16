@@ -38,7 +38,6 @@ import me.thenano.yamibo.yamibo_app.thread.reader.IThreadReaderScreen
 import me.thenano.yamibo.yamibo_app.util.shareText
 import me.thenano.yamibo.yamibo_app.util.state
 import me.thenano.yamibo.yamibo_app.repository.LocalBookMarkRepository as BookMarkRepository
-import me.thenano.yamibo.yamibo_app.repository.LocalChapterStateRepository as ChapterStateRepository
 
 /** Tag page state */
 internal sealed interface TagDetailState {
@@ -61,7 +60,6 @@ internal fun TagDetailScreen(
     val favoriteSyncRepository = LocalFavoriteSyncRepository.current
     val detailNoteRepository = LocalDetailNoteRepository.current
     val bookMarkRepository = LocalBookMarkRepository.current
-    val chapterStateRepository = LocalChapterStateRepository.current
     val historyRepo = LocalReadHistoryRepository.current
     val platformContext = LocalPlatformContext.current
 
@@ -90,22 +88,14 @@ internal fun TagDetailScreen(
     var detailNote by remember { mutableStateOf<DetailNoteRepository.DetailNote?>(null) }
     var showNoteDialog by remember { mutableStateOf(false) }
     var threadBookMarkEntries by remember { mutableStateOf<Map<Long, BookMarkRepository.Entry>>(emptyMap()) }
-    var threadChapterStates by remember { mutableStateOf<Map<Long, ChapterStateRepository.Entry>>(emptyMap()) }
     var actionThread by remember { mutableStateOf<ThreadSummary?>(null) }
 
     val appSettingsRepo = LocalAppSettingsRepository.current
     val isMangaMode = appSettingsRepo.isMangaMode.state()
-    val stackSize = navigator.stack.size
 
     suspend fun reloadThreadBookMarks() {
         threadBookMarkEntries = bookMarkRepository
             .getEntriesByParent(BookMarkRepository.TargetType.TagMangaThread, tagId.value.toLong())
-            .associateBy { it.targetId }
-    }
-
-    suspend fun reloadThreadChapterStates() {
-        threadChapterStates = chapterStateRepository
-            .getEntriesByParent(ChapterStateRepository.TargetType.TagMangaThread, tagId.value.toLong())
             .associateBy { it.targetId }
     }
 
@@ -120,9 +110,8 @@ internal fun TagDetailScreen(
         reloadNote()
     }
 
-    LaunchedEffect(tagId, stackSize) {
+    LaunchedEffect(tagId) {
         reloadThreadBookMarks()
-        reloadThreadChapterStates()
     }
 
     // Reading history
@@ -174,6 +163,7 @@ internal fun TagDetailScreen(
         loadPage(1)
     }
 
+    val stackSize = navigator.stack.size
     // Load reading history for manga tags (hot reload on resume/back navigation)
     LaunchedEffect(tagId, stackSize) {
         mangaTagHistory = historyRepo.getTagMangaReaderModeHistoryPosition(tagId)
@@ -239,11 +229,7 @@ internal fun TagDetailScreen(
         val isNovel = fid?.let { YamiboForum.isNovelForum(it) } == true
 
         if (isMangaMode && isManga) {
-            val threadState = threadChapterStates[thread.tid.value.toLong()]
-            val threadHistory = mangaTagHistory?.takeIf { it.threadId == thread.tid }
-            val initialImagePage = threadState?.lastPageIndex?.plus(1)
-                ?: threadHistory?.threadImagePageIndex?.plus(1)
-                ?: 1
+            val isLastReadThread = mangaTagHistory?.threadId == thread.tid
             navigator.navigate(
                 IImageReaderScreen(
                     tid = thread.tid,
@@ -252,8 +238,8 @@ internal fun TagDetailScreen(
                     threadTitle = thread.title,
                     authorId = thread.author?.uid,
                     imageList = emptyList(),
-                    initialPage = initialImagePage.coerceAtLeast(1),
-                    loadHistory = threadHistory != null,
+                    initialPage = 1,
+                    loadHistory = isLastReadThread,
                     tagId = tagId,
                     tagName = currentTagName,
                     tagThreads = threads,
@@ -425,9 +411,9 @@ internal fun TagDetailScreen(
                             bookmarkedThreadIds = threadBookMarkEntries.values
                                 .filter { it.bookmarked }
                                 .mapTo(mutableSetOf()) { it.targetId },
-                            readThreadIds = emptySet(),
-                            chapterStates = threadChapterStates,
-                            tagMangaHistory = mangaTagHistory,
+                            readThreadIds = threadBookMarkEntries.values
+                                .filter { it.read }
+                                .mapTo(mutableSetOf()) { it.targetId },
                             onThreadLongPress = { actionThread = it },
                         )
                     }
@@ -569,11 +555,9 @@ internal fun TagDetailScreen(
 
     actionThread?.let { thread ->
         val entry = threadBookMarkEntries[thread.tid.value.toLong()]
-        val chapterState = threadChapterStates[thread.tid.value.toLong()]
         BookMarkActionDialog(
             bookmarked = entry?.bookmarked == true,
-            read = chapterState?.read == true,
-            hasProgress = chapterState?.hasProgress == true,
+            read = entry?.read == true,
             onDismiss = { actionThread = null },
             onToggleBookMark = {
                 actionThread = null
@@ -593,46 +577,38 @@ internal fun TagDetailScreen(
                     )
                 }
             },
-            onMarkRead = {
+            onToggleRead = {
                 actionThread = null
                 scope.launch {
-                    chapterStateRepository.setRead(
-                        targetType = ChapterStateRepository.TargetType.TagMangaThread,
+                    val next = entry?.read != true
+                    bookMarkRepository.setRead(
+                        targetType = BookMarkRepository.TargetType.TagMangaThread,
                         parentId = tagId.value.toLong(),
                         targetId = thread.tid.value.toLong(),
                         title = thread.title,
-                        read = true,
+                        read = next,
                     )
-                    reloadThreadChapterStates()
-                    snackbarHostState.showSnackbar(i18n("已標為已讀"), duration = SnackbarDuration.Short)
-                }
-            },
-            onMarkUnread = {
-                actionThread = null
-                scope.launch {
-                    chapterStateRepository.setRead(
-                        targetType = ChapterStateRepository.TargetType.TagMangaThread,
-                        parentId = tagId.value.toLong(),
-                        targetId = thread.tid.value.toLong(),
-                        title = thread.title,
-                        read = false,
+                    reloadThreadBookMarks()
+                    snackbarHostState.showSnackbar(
+                        if (next) i18n("已標為已讀") else i18n("已標為未讀"),
+                        duration = SnackbarDuration.Short,
                     )
-                    reloadThreadChapterStates()
-                    snackbarHostState.showSnackbar(i18n("已標為未讀"), duration = SnackbarDuration.Short)
                 }
             },
             onClearHistory = {
                 actionThread = null
                 scope.launch {
-                    chapterStateRepository.clearTarget(
-                        targetType = ChapterStateRepository.TargetType.TagMangaThread,
+                    bookMarkRepository.setRead(
+                        targetType = BookMarkRepository.TargetType.TagMangaThread,
                         parentId = tagId.value.toLong(),
                         targetId = thread.tid.value.toLong(),
+                        title = thread.title,
+                        read = false,
                     )
                     if (mangaTagHistory?.threadId == thread.tid) {
                         mangaTagHistory = null
                     }
-                    reloadThreadChapterStates()
+                    reloadThreadBookMarks()
                     snackbarHostState.showSnackbar(i18n("已清除閱讀紀錄"), duration = SnackbarDuration.Short)
                 }
             },
@@ -644,11 +620,9 @@ internal fun TagDetailScreen(
 private fun BookMarkActionDialog(
     bookmarked: Boolean,
     read: Boolean,
-    hasProgress: Boolean,
     onDismiss: () -> Unit,
     onToggleBookMark: () -> Unit,
-    onMarkRead: () -> Unit,
-    onMarkUnread: () -> Unit,
+    onToggleRead: () -> Unit,
     onClearHistory: () -> Unit,
 ) {
     val colors = YamiboTheme.colors
@@ -658,14 +632,7 @@ private fun BookMarkActionDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 YamiboActionRow(if (bookmarked) i18n("移除書籤") else i18n("新增書籤"), onToggleBookMark)
-                if (read) {
-                    YamiboActionRow(i18n("標為未讀"), onMarkUnread)
-                } else if (hasProgress) {
-                    YamiboActionRow(i18n("標為已讀"), onMarkRead)
-                    YamiboActionRow(i18n("標為未讀"), onMarkUnread)
-                } else {
-                    YamiboActionRow(i18n("標為已讀"), onMarkRead)
-                }
+                YamiboActionRow(if (read) i18n("標為未讀") else i18n("標為已讀"), onToggleRead)
                 YamiboActionRow(i18n("清除閱讀紀錄"), onClearHistory)
             }
         },

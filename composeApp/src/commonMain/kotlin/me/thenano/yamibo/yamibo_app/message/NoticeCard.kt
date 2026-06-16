@@ -1,11 +1,12 @@
 package me.thenano.yamibo.yamibo_app.message
 
-import YamiboIcons
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 
+import YamiboIcons
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -24,7 +25,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.littlesurvival.dto.page.NoticeItem
@@ -55,7 +55,7 @@ internal fun NoticeCard(
             .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.Top,
     ) {
-        if (item.avatarUrl != null) {
+        if (noticeUserId != null || !item.avatarUrl.isNullOrBlank()) {
             UserAvatar(
                 item.avatarUrl,
                 size = 42,
@@ -71,7 +71,19 @@ internal fun NoticeCard(
                 contentDescription = "Avatar",
             )
         } else {
-            NoticeSystemIcon(item.contentHtml)
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .background(colors.brownPrimary.copy(alpha = 0.12f), CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = YamiboIcons.Sync,
+                    contentDescription = i18n("系統消息"),
+                    tint = colors.brownPrimary,
+                    modifier = Modifier.size(22.dp),
+                )
+            }
         }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
@@ -91,36 +103,6 @@ internal fun NoticeCard(
         SmallActionButton(i18n("屏蔽"), onAction)
     }
     HorizontalDivider(color = colors.brownLight.copy(alpha = 0.35f))
-}
-
-@Composable
-private fun NoticeSystemIcon(contentHtml: String) {
-    val colors = YamiboTheme.colors
-    Surface(
-        modifier = Modifier.size(42.dp),
-        shape = CircleShape,
-        color = colors.brownLight.copy(alpha = 0.16f),
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Icon(
-                imageVector = contentHtml.noticeIcon(),
-                contentDescription = null,
-                tint = colors.brownDeep,
-                modifier = Modifier.size(22.dp),
-            )
-        }
-    }
-}
-
-private fun String.noticeIcon(): ImageVector {
-    val text = lowercase()
-    return when {
-        text.contains("同步") || text.contains("sync") -> YamiboIcons.Sync
-        text.contains("更新") || text.contains("update") -> YamiboIcons.New
-        text.contains("回覆") || text.contains("回复") || text.contains("reply") -> YamiboIcons.Reply
-        text.contains("收藏") || text.contains("favorite") -> YamiboIcons.StarFilled
-        else -> YamiboIcons.InfoCircle
-    }
 }
 
 private fun String.toYamiboAvatarUserId(): UserId? {

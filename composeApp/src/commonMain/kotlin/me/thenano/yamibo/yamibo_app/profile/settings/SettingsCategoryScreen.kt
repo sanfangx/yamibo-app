@@ -24,7 +24,6 @@ import me.thenano.yamibo.yamibo_app.LocalAppSettingsRepository
 import me.thenano.yamibo.yamibo_app.LocalDiskCacheFactory
 import me.thenano.yamibo.yamibo_app.LocalFavoriteSyncRunner
 import me.thenano.yamibo.yamibo_app.LocalFavoriteUpdateRunner
-import me.thenano.yamibo.yamibo_app.components.navigation.YamiboTopBar
 import me.thenano.yamibo.yamibo_app.core.cache.CacheStorageBreakdown
 import me.thenano.yamibo.yamibo_app.favorite.IFavoriteCategoryManageScreen
 import me.thenano.yamibo.yamibo_app.favorite.sync.FavoriteSyncStatusCard
@@ -64,7 +63,27 @@ internal fun SettingsCategoryScreen(category: String) {
 
     Scaffold(
         topBar = {
-            YamiboTopBar(title = title, titleFontSize = 18, onBack = navigator::pop)
+            TopAppBar(
+                title = {
+                    Text(
+                        text = title,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = { navigator.pop() }) {
+                        Text(YamiboIcons.Back, color = Color.White, fontSize = 20.sp)
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = colors.brownDeep,
+                    scrolledContainerColor = colors.brownDeep,
+                ),
+            )
         },
         snackbarHost = { YamiboSnackbarHost(snackbarHostState) },
         containerColor = colors.creamBackground,
@@ -77,7 +96,7 @@ internal fun SettingsCategoryScreen(category: String) {
                 .padding(20.dp),
         ) {
             when (category) {
-                "appearance" -> AppearanceContent(snackbarHostState)
+                "appearance" -> AppearanceContent()
                 "language" -> LanguageContent()
                 "novel_reader" -> NovelReaderContent()
                 "manga_reader" -> MangaReaderContent()
@@ -102,7 +121,7 @@ private fun SectionLabel(text: String) {
 }
 
 @Composable
-private fun AppearanceContent(snackbarHostState: SnackbarHostState) {
+private fun AppearanceContent() {
     val appSettingsRepo = LocalAppSettingsRepository.current
     val themeMode = appSettingsRepo.themeMode.state()
     val themeScheme = appSettingsRepo.themeScheme.state()
@@ -123,14 +142,6 @@ private fun AppearanceContent(snackbarHostState: SnackbarHostState) {
         checked = showHomeSwiperImages,
         onCheckedChange = { appSettingsRepo.showHomeSwiperImages.setValue(it) },
     )
-
-    Spacer(Modifier.height(24.dp))
-    SectionLabel(i18n("字體"))
-    FontManagementSetting(snackbarHostState)
-    Spacer(Modifier.height(18.dp))
-    AppFontSelectorSetting()
-    Spacer(Modifier.height(18.dp))
-    ReaderFontSelectorSetting()
 }
 
 @Composable
@@ -171,10 +182,6 @@ private fun NovelReaderContent() {
 
     SectionLabel(i18n("行距"))
     NovelLineSpacingSetting()
-    Spacer(Modifier.height(24.dp))
-
-    SectionLabel(i18n("字體"))
-    ReaderFontSelectorSetting()
     Spacer(Modifier.height(24.dp))
 
     SectionLabel(i18n("內容寬度"))

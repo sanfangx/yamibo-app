@@ -61,7 +61,12 @@ fun BlogReaderScreen(
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     var currentPage by remember(blogId, userId) { mutableIntStateOf(1) }
-    var state by remember(blogId, userId) { mutableStateOf<BlogReaderState>(BlogReaderState.Loading) }
+    var state by remember(blogId, userId) {
+        mutableStateOf(
+            repository.getCachedBlogPage(blogId, userId, 1)?.let { BlogReaderState.Success(it) }
+                ?: BlogReaderState.Loading
+        )
+    }
     var commentText by remember(blogId) { mutableStateOf("") }
     var submitting by remember { mutableStateOf(false) }
 

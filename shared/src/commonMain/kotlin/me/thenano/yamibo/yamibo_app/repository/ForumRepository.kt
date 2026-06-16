@@ -52,19 +52,19 @@ interface ForumRepository {
 
     suspend fun addFavorite(forumId: ForumId, formHash: FormHash): YamiboResult<String>
 
-    suspend fun getCachedHomePage(): HomePage?
-    suspend fun getCachedForumPage(
+    fun getCachedHomePage(): HomePage?
+    fun getCachedForumPage(
         fid: ForumId,
         page: Int = 1,
         filterType: FilterType? = null,
         orderType: OrderType? = null,
     ): ForumPage?
-    suspend fun setCachedForumPage(
+    fun setCachedForumPage(
         fid: ForumId,
         page: Int,
         forumPage: ForumPage,
         filterType: FilterType? = null,
         orderType: OrderType? = null,
     )
-    suspend fun clearCachedForum(fid: ForumId)
+    fun clearCachedForum(fid: ForumId)
 }

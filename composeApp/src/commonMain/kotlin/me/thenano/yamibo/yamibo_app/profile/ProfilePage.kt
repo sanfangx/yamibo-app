@@ -5,6 +5,7 @@ import me.thenano.yamibo.yamibo_app.i18n.i18n
 
 import YamiboIcons
 import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -26,6 +27,8 @@ import me.thenano.yamibo.yamibo_app.LocalSignRepository
 import me.thenano.yamibo.yamibo_app.event.AppEventBus
 import me.thenano.yamibo.yamibo_app.event.events.LoginSuccessEvent
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
+import me.thenano.yamibo.yamibo_app.message.IMessageCenterScreen
+import me.thenano.yamibo.yamibo_app.message.MessageCenterTab
 import me.thenano.yamibo.yamibo_app.profile.about.IAboutScreen
 import me.thenano.yamibo.yamibo_app.profile.settings.ISettingsScreen
 import me.thenano.yamibo.yamibo_app.profile.settings.backup.IBackupSettingsScreen
@@ -37,7 +40,10 @@ import me.thenano.yamibo.yamibo_app.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme.colors
 
 @Composable
-fun ProfilePage() {
+fun ProfilePage(
+    hasNewMessage: Boolean = false,
+    onNewMessageStatusChange: (Boolean) -> Unit = {},
+) {
     val authRepository = LocalAuthRepository.current
     val signRepository = LocalSignRepository.current
     val appSettingsRepository = LocalAppSettingsRepository.current
@@ -239,6 +245,22 @@ fun ProfilePage() {
             )
 
             EntryCard(
+                title = i18n("我的消息"),
+                icon = YamiboIcons.Message,
+                showBadge = hasNewMessage,
+                onClick = {
+                    navigator.navigate(
+                        IMessageCenterScreen(
+                            initialTab = MessageCenterTab.PrivateMessages,
+                            onPrivateMessageUnreadChange = onNewMessageStatusChange,
+                        )
+                    )
+                },
+            )
+
+            EntryDivider()
+
+            EntryCard(
                 title = i18n("設定"),
                 icon = YamiboIcons.Setting,
                 onClick = { navigator.navigate(ISettingsScreen()) }
@@ -373,6 +395,7 @@ private fun EntryDivider() {
 private fun EntryCard(
     title: String,
     icon: ImageVector,
+    showBadge: Boolean = false,
     onClick: () -> Unit = {},
 ) {
     Card(
@@ -390,12 +413,23 @@ private fun EntryCard(
                 .padding(horizontal = 20.dp, vertical = 18.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = title,
-                tint = colors.brownPrimary,
-                modifier = Modifier.size(24.dp)
-            )
+            Box {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = title,
+                    tint = colors.brownPrimary,
+                    modifier = Modifier.size(24.dp)
+                )
+                if (showBadge) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .offset(x = 3.dp, y = (-2).dp)
+                            .size(8.dp)
+                            .background(colors.redAccent, CircleShape)
+                    )
+                }
+            }
             Spacer(Modifier.size(16.dp))
             Text(
                 text = title,

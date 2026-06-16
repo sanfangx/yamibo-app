@@ -74,34 +74,24 @@ fun TagThreadCard(
         ) {
             // Author + Time (Top)
             Row(verticalAlignment = Alignment.CenterVertically) {
-                var hasLeadingMetadata = false
-                thread.author?.let { author ->
+                if (thread.author != null) {
                     Text(
-                        text = author.name,
+                        text = thread.author!!.name,
                         fontSize = 12.sp,
                         color = colors.brownPrimary,
                         fontWeight = FontWeight.Medium,
                         modifier = Modifier.clickable {
+                            val author = thread.author!!
                             navigator.navigate(IUserSpaceScreen(author.uid, author.name))
                         }
                     )
-                    hasLeadingMetadata = true
                 }
                 val lastUpdate = thread.lastUpdate
                 if (lastUpdate != null) {
                     Text(
-                        text = "${if (hasLeadingMetadata) " · " else ""}${lastUpdate.text}",
+                        text = " · ${lastUpdate.text}",
                         fontSize = 12.sp,
                         color = colors.textDark.copy(alpha = 0.4f)
-                    )
-                    hasLeadingMetadata = true
-                }
-                if (readingProgressText != null) {
-                    Text(
-                        text = "${if (hasLeadingMetadata) " · " else ""}$readingProgressText",
-                        fontSize = 12.sp,
-                        color = colors.orangeAccent,
-                        fontWeight = FontWeight.Medium,
                     )
                 }
             }
@@ -173,6 +163,17 @@ fun TagThreadCard(
                 }
                 
                 Spacer(Modifier.weight(1f))
+                
+                // Reading progress text in middle/right
+                if (readingProgressText != null) {
+                    Text(
+                        text = readingProgressText,
+                        fontSize = 11.sp,
+                        color = colors.orangeAccent,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Spacer(Modifier.width(12.dp))
+                }
                 
                 // Forum Name (Right)
                 val forumName = thread.fid?.let { YamiboForum.toForumName(it) }

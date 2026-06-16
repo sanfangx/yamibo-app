@@ -35,7 +35,6 @@ import me.thenano.yamibo.yamibo_app.thread.reader.IThreadReaderScreen
 import me.thenano.yamibo.yamibo_app.util.shareText
 import me.thenano.yamibo.yamibo_app.util.time.epochMillisOrNull
 import me.thenano.yamibo.yamibo_app.repository.LocalBookMarkRepository as BookMarkRepository
-import me.thenano.yamibo.yamibo_app.repository.LocalChapterStateRepository as ChapterStateRepository
 
 /** Thread detail state */
 internal sealed interface ThreadState {
@@ -55,10 +54,8 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
     val favoriteSyncRepository = LocalFavoriteSyncRepository.current
     val detailNoteRepository = LocalDetailNoteRepository.current
     val bookMarkRepository = LocalBookMarkRepository.current
-    val chapterStateRepository = LocalChapterStateRepository.current
     val readHistoryRepo = LocalReadHistoryRepository.current
     val navigator = LocalNavigator.current
-    val stackSize = navigator.stack.size
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val platformContext = LocalPlatformContext.current
@@ -89,19 +86,12 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
     var detailNote by remember { mutableStateOf<DetailNoteRepository.DetailNote?>(null) }
     var showNoteDialog by remember { mutableStateOf(false) }
     var postBookMarkEntries by remember { mutableStateOf<Map<Long, BookMarkRepository.Entry>>(emptyMap()) }
-    var postChapterStates by remember { mutableStateOf<Map<Long, ChapterStateRepository.Entry>>(emptyMap()) }
     var actionPost by remember { mutableStateOf<Post?>(null) }
     val noteAuthorId = authorId?.value?.toLong() ?: 0L
 
     suspend fun reloadPostBookMarks() {
         postBookMarkEntries = bookMarkRepository
             .getEntriesByParent(BookMarkRepository.TargetType.ThreadPost, tid.value.toLong())
-            .associateBy { it.targetId }
-    }
-
-    suspend fun reloadPostChapterStates() {
-        postChapterStates = chapterStateRepository
-            .getEntriesByParent(ChapterStateRepository.TargetType.ThreadPost, tid.value.toLong())
             .associateBy { it.targetId }
     }
 
@@ -117,9 +107,8 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
         reloadNote()
     }
 
-    LaunchedEffect(tid, stackSize) {
+    LaunchedEffect(tid) {
         reloadPostBookMarks()
-        reloadPostChapterStates()
     }
 
     /** Load reading history for this thread */
@@ -440,8 +429,9 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
                             bookmarkedPostIds = postBookMarkEntries.values
                                 .filter { it.bookmarked }
                                 .mapTo(mutableSetOf()) { it.targetId },
-                            readPostIds = emptySet(),
-                            chapterStates = postChapterStates,
+                            readPostIds = postBookMarkEntries.values
+                                .filter { it.read }
+                                .mapTo(mutableSetOf()) { it.targetId },
                         )
                     }
             }
@@ -624,11 +614,9 @@ if (showNoteDialog) {
 
 actionPost?.let { post ->
     val entry = postBookMarkEntries[post.pid.value.toLong()]
-    val chapterState = postChapterStates[post.pid.value.toLong()]
     BookMarkActionDialog(
         bookmarked = entry?.bookmarked == true,
-        read = chapterState?.read == true,
-        hasProgress = chapterState?.hasProgress == true,
+        read = entry?.read == true,
         onDismiss = { actionPost = null },
         onToggleBookMark = {
             actionPost = null
@@ -648,45 +636,37 @@ actionPost?.let { post ->
                 )
             }
         },
-        onMarkRead = {
+        onToggleRead = {
             actionPost = null
             scope.launch {
-                chapterStateRepository.setRead(
-                    targetType = ChapterStateRepository.TargetType.ThreadPost,
+                val next = entry?.read != true
+                bookMarkRepository.setRead(
+                    targetType = BookMarkRepository.TargetType.ThreadPost,
                     parentId = tid.value.toLong(),
                     targetId = post.pid.value.toLong(),
                     title = post.title.ifBlank { i18n("（無標題）") },
-                    read = true,
+                    read = next,
                 )
-                reloadPostChapterStates()
-                snackbarHostState.showSnackbar(i18n("已標為已讀"), duration = SnackbarDuration.Short)
-            }
-        },
-        onMarkUnread = {
-            actionPost = null
-            scope.launch {
-                chapterStateRepository.setRead(
-                    targetType = ChapterStateRepository.TargetType.ThreadPost,
-                    parentId = tid.value.toLong(),
-                    targetId = post.pid.value.toLong(),
-                    title = post.title.ifBlank { i18n("（無標題）") },
-                    read = false,
+                reloadPostBookMarks()
+                snackbarHostState.showSnackbar(
+                    if (next) i18n("已標為已讀") else i18n("已標為未讀"),
+                    duration = SnackbarDuration.Short,
                 )
-                reloadPostChapterStates()
-                snackbarHostState.showSnackbar(i18n("已標為未讀"), duration = SnackbarDuration.Short)
             }
         },
         onClearHistory = {
             actionPost = null
             scope.launch {
-                chapterStateRepository.clearParent(
-                    targetType = ChapterStateRepository.TargetType.ThreadPost,
+                bookMarkRepository.setRead(
+                    targetType = BookMarkRepository.TargetType.ThreadPost,
                     parentId = tid.value.toLong(),
+                    targetId = post.pid.value.toLong(),
+                    title = post.title.ifBlank { i18n("（無標題）") },
+                    read = false,
                 )
-                readHistoryRepo.deleteHistory(tid, ReadHistoryRepository.ThreadEntryType.Novel, authorId)
                 readHistory = null
-                reloadPostChapterStates()
-                snackbarHostState.showSnackbar(i18n("已清除全部閱讀紀錄"), duration = SnackbarDuration.Short)
+                reloadPostBookMarks()
+                snackbarHostState.showSnackbar(i18n("已清除閱讀紀錄"), duration = SnackbarDuration.Short)
             }
         },
     )
@@ -715,7 +695,6 @@ private fun ThreadContent(
     onNoteClick: () -> Unit,
     bookmarkedPostIds: Set<Long>,
     readPostIds: Set<Long>,
-    chapterStates: Map<Long, ChapterStateRepository.Entry>,
 ) {
     val colors = YamiboTheme.colors
     val thread = threadPage.thread
@@ -783,7 +762,6 @@ private fun ThreadContent(
                 posts = posts,
                 bookmarkedPostIds = bookmarkedPostIds,
                 readPostIds = readPostIds,
-                chapterStates = chapterStates,
                 isFirstPage = page == 1,
                 onToggle = {
                     onTogglePage(page)
@@ -802,11 +780,9 @@ private fun ThreadContent(
 private fun BookMarkActionDialog(
     bookmarked: Boolean,
     read: Boolean,
-    hasProgress: Boolean,
     onDismiss: () -> Unit,
     onToggleBookMark: () -> Unit,
-    onMarkRead: () -> Unit,
-    onMarkUnread: () -> Unit,
+    onToggleRead: () -> Unit,
     onClearHistory: () -> Unit,
 ) {
     val colors = YamiboTheme.colors
@@ -816,13 +792,8 @@ private fun BookMarkActionDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 YamiboActionRow(if (bookmarked) i18n("移除書籤") else i18n("新增書籤"), onToggleBookMark)
-                if (hasProgress) {
-                    YamiboActionRow(i18n("標為已讀"), onMarkRead)
-                    YamiboActionRow(i18n("標為未讀"), onMarkUnread)
-                } else {
-                    YamiboActionRow(if (read) i18n("標為未讀") else i18n("標為已讀"), if (read) onMarkUnread else onMarkRead)
-                }
-                YamiboActionRow(i18n("清除全部閱讀紀錄"), onClearHistory)
+                YamiboActionRow(if (read) i18n("標為未讀") else i18n("標為已讀"), onToggleRead)
+                YamiboActionRow(i18n("清除閱讀紀錄"), onClearHistory)
             }
         },
         confirmButton = {},

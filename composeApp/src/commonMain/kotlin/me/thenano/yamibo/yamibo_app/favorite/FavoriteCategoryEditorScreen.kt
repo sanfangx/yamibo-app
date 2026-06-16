@@ -28,7 +28,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.thenano.yamibo.yamibo_app.LocalFavoriteRepository
-import me.thenano.yamibo.yamibo_app.components.navigation.YamiboTopBar
 import me.thenano.yamibo.yamibo_app.favorite.components.*
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
@@ -153,11 +152,21 @@ internal fun FavoriteCategoryEditorScreen(categoryId: Long?) {
             YamiboSnackbarHost(snackbarHostState)
         },
         topBar = {
-            YamiboTopBar(
-                title = if (categoryId == null) i18n("新增類別") else i18n("編輯類別"),
-                titleFontSize = 18,
-                onBack = navigator::pop,
-            ) {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = if (categoryId == null) i18n("新增類別") else i18n("編輯類別"),
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = { navigator.pop() }) {
+                        Text(YamiboIcons.Back, color = colors.creamBackground, fontSize = 20.sp)
+                    }
+                },
+                actions = {
                     Surface(
                         onClick = {
                             scope.launch {
@@ -193,7 +202,9 @@ internal fun FavoriteCategoryEditorScreen(categoryId: Long?) {
                             fontWeight = FontWeight.SemiBold,
                         )
                     }
-            }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = colors.brownDeep),
+            )
         },
     ) { paddingValues ->
         LazyColumn(

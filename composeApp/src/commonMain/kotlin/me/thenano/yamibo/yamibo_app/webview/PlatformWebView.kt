@@ -15,7 +15,6 @@ import androidx.compose.ui.platform.LocalUriHandler
 import me.thenano.yamibo.yamibo_app.profile.LoadingOverlay
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.navigation.Navigatable
-import me.thenano.yamibo.yamibo_app.systembars.SystemBarsEffect
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 
 /** Platform-specific WebView content implementation */
@@ -52,11 +51,6 @@ internal fun PlatformWebViewScreen(
     val navigator = LocalNavigator.current
     val uriHandler = LocalUriHandler.current
     val colors = YamiboTheme.colors
-    SystemBarsEffect(
-        statusBarColor = colors.brownDeep,
-        navigationBarColor = colors.brownDeep,
-        priority = 100,
-    )
 
     var currentTitle by remember(initialTitle) { mutableStateOf(initialTitle) }
     var currentUrl by remember { mutableStateOf(initialUrl) }

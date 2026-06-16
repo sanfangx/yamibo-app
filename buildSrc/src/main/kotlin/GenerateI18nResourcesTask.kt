@@ -116,8 +116,8 @@ abstract class GenerateI18nResourcesTask : DefaultTask() {
         return Settings(
             scanDirs = dirsProp("scanDirs", scanDirs.get()).map { root.resolve(it).normalize() },
             glossaryFiles = listOfNotNull(
-                fileProp("baseTranslations", baseTranslations.orNull?.asFile),
                 fileProp("glossary", glossary.orNull?.asFile),
+                fileProp("baseTranslations", baseTranslations.orNull?.asFile),
             ),
             composeAssetResourcesDir = composeAssetResourcesDir.orNull?.asFile,
             outputComposeResources = prop("outputComposeResources")
@@ -181,14 +181,7 @@ abstract class GenerateI18nResourcesTask : DefaultTask() {
         language: String,
         glossaryRows: List<GlossaryRow>,
     ): String {
-        glossaryRows
-            .firstNotNullOfOrNull { row ->
-                row.takeIf { it.matches(source) }
-                    ?.values
-                    ?.get(language)
-                    ?.takeIf { it.isNotBlank() }
-            }
-            ?.let { return it }
+        glossaryRows.firstOrNull { it.matches(source) }?.values?.get(language)?.takeIf { it.isNotBlank() }?.let { return it }
 
         var converted = source
         glossaryRows

@@ -59,7 +59,12 @@ fun PrivateMessageScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val listState = rememberLazyListState()
     var currentPage by remember(toUser) { mutableIntStateOf(1) }
-    var state by remember(toUser) { mutableStateOf<PrivateMessageState>(PrivateMessageState.Loading) }
+    var state by remember(toUser) {
+        mutableStateOf(
+            repository.getCachedPrivateMessagePage(toUser)?.let { PrivateMessageState.Success(it) }
+                ?: PrivateMessageState.Loading
+        )
+    }
     var input by remember(toUser) { mutableStateOf("") }
     var sending by remember { mutableStateOf(false) }
 
@@ -288,3 +293,4 @@ private fun PrivateMessageError(message: String, onRetry: () -> Unit) {
 private fun EmptyPrivateMessages() {
     YamiboEmptyContent(message = i18n("沒有找到消息"), modifier = Modifier.padding(vertical = 80.dp))
 }
+

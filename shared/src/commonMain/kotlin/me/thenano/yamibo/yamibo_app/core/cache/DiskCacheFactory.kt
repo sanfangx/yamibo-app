@@ -177,14 +177,25 @@ class DiskCacheImpl<T : Any>(
 ) : DiskCache<T> {
 
     private val queries = database.diskCacheEntryQueries
+    private val scope = CoroutineScope(Dispatchers.IO)
     private val namespaceDir = rootCacheDir / namespace
     
     private data class MemoryEntry<T>(val value: T, val createdAt: Long)
     private val memoryCache = mutableMapOf<String, MemoryEntry<T>>()
 
+    init {
+        if (serializer != null) {
+            try {
+                fileSystem.createDirectories(namespaceDir)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
     private fun getFilePath(key: String) = namespaceDir / "$key.json"
 
-    override suspend fun set(key: String, value: T) {
+    override fun set(key: String, value: T) {
         val now = getTimeMillis()
         
         // L1 Cache
@@ -203,34 +214,35 @@ class DiskCacheImpl<T : Any>(
             return
         }
 
-        withContext(Dispatchers.IO) {
-            val file = getFilePath(key)
-            try {
-                fileSystem.createDirectories(namespaceDir)
-                fileSystem.sink(file).buffer().use { sink ->
-                    sink.writeUtf8(serializedValue)
-                }
-            } catch (e: Exception) {
-                Logger.e("DiskCacheImpl", "Failed to write value to file system for key $key", e)
-                return@withContext
+        // Write to File System synchronously
+        val file = getFilePath(key)
+        try {
+            fileSystem.sink(file).buffer().use { sink ->
+                sink.writeUtf8(serializedValue)
             }
+        } catch (e: Exception) {
+            Logger.e("DiskCacheImpl", "Failed to write value to file system for key $key", e)
+            return
+        }
 
-            try {
-                queries.upsert(
-                    namespace = namespace,
-                    cacheKey = key,
-                    createdAt = now,
-                    lastAccessedAt = now
-                )
-                maintainLRU()
-            } catch (e: Exception) {
-                Logger.e("DiskCacheImpl", "Failed to update DB metadata for key $key", e)
-                try { fileSystem.delete(file) } catch (_: Exception) {}
-            }
+        // Update DB Metadata
+        try {
+            queries.upsert(
+                namespace = namespace,
+                cacheKey = key,
+                createdAt = now,
+                lastAccessedAt = now
+            )
+            // Trigger LRU asynchronously
+            maintainLRU()
+        } catch (e: Exception) {
+            Logger.e("DiskCacheImpl", "Failed to update DB metadata for key $key", e)
+            // Cleanup file if DB failed
+            try { fileSystem.delete(file) } catch (_: Exception) {}
         }
     }
 
-    override suspend fun get(key: String): T? {
+    override fun get(key: String): T? {
         val now = getTimeMillis()
         
         // Try L1 Memory Cache
@@ -248,17 +260,21 @@ class DiskCacheImpl<T : Any>(
 
         if (serializer == null) return null
 
-        val diskEntry = withContext(Dispatchers.IO) {
-            val entry = try {
-                queries.get(namespace, key).executeAsOneOrNull()
-            } catch (_: Exception) {
-                null
-            } ?: return@withContext null
+        // 2. Try L2 Disk Cache
+        val entry = try {
+            queries.get(namespace, key).executeAsOneOrNull()
+        } catch (_: Exception) {
+            null
+        } ?: return null
 
-            if (expirationMs != null && now - entry.createdAt > expirationMs) {
-                return@withContext DiskReadResult.Expired
-            }
+        // Check Expiration
+        if (expirationMs != null && now - entry.createdAt > expirationMs) {
+            remove(key)
+            return null
+        }
 
+        // Update Access Time async
+        scope.launch {
             try {
                 queries.updateAccessTime(
                     lastAccessedAt = now,
@@ -266,119 +282,97 @@ class DiskCacheImpl<T : Any>(
                     cacheKey = key
                 )
             } catch (_: Exception) {}
-
-            val file = getFilePath(key)
-            val jsonString = try {
-                if (fileSystem.exists(file)) {
-                    fileSystem.source(file).buffer().use { source ->
-                        source.readUtf8()
-                    }
-                } else null
-            } catch (e: Exception) {
-                e.printStackTrace()
-                null
-            }
-
-            if (jsonString == null) {
-                return@withContext DiskReadResult.MissingFile
-            }
-
-            try {
-                DiskReadResult.Hit(json.decodeFromString(serializer, jsonString), entry.createdAt)
-            } catch (e: Exception) {
-                e.printStackTrace()
-                DiskReadResult.DecodeFailure
-            }
         }
 
-        return when (diskEntry) {
-            is DiskReadResult.Hit<*> -> {
-                @Suppress("UNCHECKED_CAST")
-                val decoded = diskEntry.value as T
-                memoryCache[key] = MemoryEntry(decoded, diskEntry.createdAt)
-                if (memoryCache.size > maxSize) {
-                    memoryCache.keys.firstOrNull()?.let { memoryCache.remove(it) }
+        val file = getFilePath(key)
+        val jsonString = try {
+            if (fileSystem.exists(file)) {
+                fileSystem.source(file).buffer().use { source ->
+                    source.readUtf8()
                 }
-                decoded
+            } else null
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+
+        if (jsonString == null) {
+            remove(key) // File missing, clean up DB
+            return null
+        }
+
+        return try {
+            val decoded = json.decodeFromString(serializer, jsonString)
+            // Populate L1 cache
+            memoryCache[key] = MemoryEntry(decoded, entry.createdAt)
+            if (memoryCache.size > maxSize) {
+                memoryCache.keys.firstOrNull()?.let { memoryCache.remove(it) }
             }
-            DiskReadResult.Expired,
-            DiskReadResult.MissingFile,
-            DiskReadResult.DecodeFailure -> {
-                remove(key)
-                null
-            }
-            null -> null
+            decoded
+        } catch (e: Exception) {
+            e.printStackTrace()
+            remove(key)
+            null
         }
     }
 
-    override suspend fun remove(key: String) {
+    override fun remove(key: String) {
         memoryCache.remove(key)
         if (serializer == null) return
-        withContext(Dispatchers.IO) {
-            try {
-                queries.delete(namespace, key)
-                fileSystem.delete(getFilePath(key))
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+        try {
+            queries.delete(namespace, key)
+            fileSystem.delete(getFilePath(key))
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 
-    override suspend fun removeByPrefix(prefix: String) {
+    override fun removeByPrefix(prefix: String) {
         val memMatching = memoryCache.keys.filter { it.startsWith(prefix) }
         memMatching.forEach { memoryCache.remove(it) }
         
         if (serializer == null) return
-        withContext(Dispatchers.IO) {
-            try {
-                val matchingKeys = queries.getKeysByPrefix(namespace, "$prefix%").executeAsList()
-                queries.deleteByPrefix(namespace, "$prefix%")
-                matchingKeys.forEach { key ->
-                    try {
-                        fileSystem.delete(getFilePath(key))
-                    } catch (_: Exception) {}
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-    }
-
-    override suspend fun clear() {
-        memoryCache.clear()
-        if (serializer == null) return
-        withContext(Dispatchers.IO) {
-            try {
-                queries.clearNamespace(namespace)
-                if (fileSystem.exists(namespaceDir)) {
-                    fileSystem.deleteRecursively(namespaceDir)
-                }
-                fileSystem.createDirectories(namespaceDir)
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-    }
-
-    private suspend fun maintainLRU() {
-        if (serializer == null) return
         try {
-            val targets = queries.getLRUTargets(namespace, maxSize.toLong()).executeAsList()
-            if (targets.isNotEmpty()) {
-                // Start deleting excess entries from DB and file system
-                targets.forEach { targetKey ->
-                    remove(targetKey)
-                }
+            val matchingKeys = queries.getKeysByPrefix(namespace, "$prefix%").executeAsList()
+            queries.deleteByPrefix(namespace, "$prefix%")
+            matchingKeys.forEach { key ->
+                try {
+                    fileSystem.delete(getFilePath(key))
+                } catch (_: Exception) {}
             }
         } catch (e: Exception) {
             e.printStackTrace()
         }
     }
 
-    private sealed interface DiskReadResult {
-        data class Hit<T : Any>(val value: T, val createdAt: Long) : DiskReadResult
-        data object Expired : DiskReadResult
-        data object MissingFile : DiskReadResult
-        data object DecodeFailure : DiskReadResult
+    override fun clear() {
+        memoryCache.clear()
+        if (serializer == null) return
+        try {
+            queries.clearNamespace(namespace)
+            if (fileSystem.exists(namespaceDir)) {
+                fileSystem.deleteRecursively(namespaceDir)
+                fileSystem.createDirectories(namespaceDir)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    private fun maintainLRU() {
+        if (serializer == null) return
+        scope.launch {
+            try {
+                val targets = queries.getLRUTargets(namespace, maxSize.toLong()).executeAsList()
+                if (targets.isNotEmpty()) {
+                    // Start deleting excess entries from DB and file system
+                    targets.forEach { targetKey ->
+                        remove(targetKey)
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 }

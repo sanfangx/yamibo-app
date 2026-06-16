@@ -24,6 +24,6 @@ interface BlogRepository {
         formHash: FormHash
     ): YamiboResult<String>
 
-    suspend fun getCachedBlogPage(blogId: BlogId, userId: UserId? = null, page: Int = 1): BlogPage?
-    suspend fun clearCachedBlog(blogId: BlogId)
+    fun getCachedBlogPage(blogId: BlogId, userId: UserId? = null, page: Int = 1): BlogPage?
+    fun clearCachedBlog(blogId: BlogId)
 }

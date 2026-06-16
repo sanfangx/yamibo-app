@@ -1,14 +1,11 @@
 ﻿package me.thenano.yamibo.yamibo_app
 
 import YamiboIcons
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -22,25 +19,22 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import kotlinx.serialization.Serializable
 import me.thenano.yamibo.yamibo_app.favorite.FavoritePage
-import me.thenano.yamibo.yamibo_app.favorite.updates.FavoriteUpdatesScreen
 import me.thenano.yamibo.yamibo_app.history.ReadHistoryPage
 import me.thenano.yamibo.yamibo_app.i18n.i18n
-import me.thenano.yamibo.yamibo_app.message.MessageCenterScreen
-import me.thenano.yamibo.yamibo_app.message.MessageCenterTab
 import me.thenano.yamibo.yamibo_app.navigation.*
 import me.thenano.yamibo.yamibo_app.profile.ProfilePage
-import me.thenano.yamibo.yamibo_app.systembars.SystemBarsEffect
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 
 enum class MainTab(val icon: ImageVector) {
     Home(YamiboIcons.Home),
     History(YamiboIcons.History),
-    Updates(YamiboIcons.New),
     Message(YamiboIcons.Message),
     Favorite(YamiboIcons.Explore),
     Profile(YamiboIcons.Profile)
@@ -84,18 +78,15 @@ data class BottomNavItem(
 fun MainScreen(initialTab: MainTab = MainTab.Home) {
     val colors = YamiboTheme.colors
     val navigator = LocalNavigator.current
-    var currentTab by rememberSaveable { mutableStateOf(initialTab) }
+    var currentTab by rememberSaveable {
+        mutableStateOf(if (initialTab == MainTab.Message) MainTab.Profile else initialTab)
+    }
     var reTapHistoryToken by remember { mutableIntStateOf(0) }
     var hasNewMessage by rememberSaveable { mutableStateOf(false) }
     val tabStateHolder = rememberSaveableStateHolder()
-    val statusBarColor = when (currentTab) {
-        MainTab.Home -> colors.brownDeep
-        else -> colors.creamBackground
+    val visibleTabs = remember {
+        listOf(MainTab.Home, MainTab.History, MainTab.Favorite, MainTab.Profile)
     }
-    SystemBarsEffect(
-        statusBarColor = statusBarColor,
-        navigationBarColor = colors.navBarBg,
-    )
 
     DisposableEffect(currentTab) {
         val handler = {
@@ -116,19 +107,19 @@ fun MainScreen(initialTab: MainTab = MainTab.Home) {
         contentWindowInsets = WindowInsets(0.dp),
         bottomBar = {
             MainScreenBottomBar(
-                tabs = MainTab.entries.map {
+                tabs = visibleTabs.map {
                     BottomNavItem(
                         tab = it,
                         title = it.titleText(),
                         icon = it.icon,
-                        showBadge = it == MainTab.Message && hasNewMessage,
+                        showBadge = it == MainTab.Profile && hasNewMessage,
                     )
                 },
                 currentTab = BottomNavItem(
                     tab = currentTab,
                     title = currentTab.titleText(),
                     icon = currentTab.icon,
-                    showBadge = currentTab == MainTab.Message && hasNewMessage,
+                    showBadge = currentTab == MainTab.Profile && hasNewMessage,
                 ),
                 onTabSelected = { selected ->
                     val newTab = selected.tab
@@ -146,31 +137,22 @@ fun MainScreen(initialTab: MainTab = MainTab.Home) {
                     .fillMaxSize()
                     .background(colors.creamBackground)
         ) {
-            AnimatedContent(
-                targetState = currentTab,
-                transitionSpec = {
-                    fadeIn(animationSpec = tween(durationMillis = 140)) togetherWith
-                        fadeOut(animationSpec = tween(durationMillis = 100))
-                },
-                label = "main_tab_content",
-                modifier = Modifier.fillMaxSize(),
-            ) { tab ->
-                tabStateHolder.SaveableStateProvider(tab.name) {
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        when (tab) {
-                            MainTab.Home -> HomeScreenContent(
-                                onNewMessageStatusChange = { hasNewMessage = it },
-                            )
-                            MainTab.History -> ReadHistoryPage(reTapHistoryToken)
-                            MainTab.Updates -> FavoriteUpdatesScreen()
-                            MainTab.Message -> MessageCenterScreen(
-                                initialTab = MessageCenterTab.PrivateMessages,
-                                mainTabTopBar = true,
-                                onPrivateMessageUnreadChange = { hasNewMessage = it },
-                            )
-                            MainTab.Favorite -> FavoritePage()
-                            MainTab.Profile -> ProfilePage()
-                        }
+            tabStateHolder.SaveableStateProvider(currentTab.name) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    when (currentTab) {
+                        MainTab.Home -> HomeScreenContent(
+                            onNewMessageStatusChange = { hasNewMessage = it },
+                        )
+                        MainTab.History -> ReadHistoryPage(reTapHistoryToken)
+                        MainTab.Message -> ProfilePage(
+                            hasNewMessage = hasNewMessage,
+                            onNewMessageStatusChange = { hasNewMessage = it },
+                        )
+                        MainTab.Favorite -> FavoritePage()
+                        MainTab.Profile -> ProfilePage(
+                            hasNewMessage = hasNewMessage,
+                            onNewMessageStatusChange = { hasNewMessage = it },
+                        )
                     }
                 }
             }
@@ -182,8 +164,7 @@ private fun MainTab.titleText(): String {
     return when (this) {
         MainTab.Home -> i18n("首頁")
         MainTab.History -> i18n("紀錄")
-        MainTab.Updates -> i18n("更新")
-        MainTab.Message -> i18n("消息")
+        MainTab.Message -> i18n("我的消息")
         MainTab.Favorite -> i18n("收藏")
         MainTab.Profile -> i18n("我的")
     }

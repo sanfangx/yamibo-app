@@ -51,7 +51,7 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import me.thenano.yamibo.yamibo_app.LocalChapterStateRepository
+import me.thenano.yamibo.yamibo_app.LocalBookMarkRepository
 import me.thenano.yamibo.yamibo_app.LocalFavoriteRepository
 import me.thenano.yamibo.yamibo_app.LocalReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.components.navigation.YamiboTopBar
@@ -71,19 +71,19 @@ fun ProfileStatisticsModule() {
     val navigator = LocalNavigator.current
     val favoriteRepository = LocalFavoriteRepository.current
     val readHistoryRepository = LocalReadHistoryRepository.current
-    val chapterStateRepository = LocalChapterStateRepository.current
+    val bookMarkRepository = LocalBookMarkRepository.current
 
     var chartType by rememberSaveable { mutableStateOf(ProfileChartType.Bar) }
     var chartRange by rememberSaveable { mutableStateOf(ProfileStatsRange.Week) }
     var state by remember { mutableStateOf(ProfileStatisticsState.loading(chartRange)) }
 
-    LaunchedEffect(chartRange, favoriteRepository, readHistoryRepository, chapterStateRepository) {
+    LaunchedEffect(chartRange, favoriteRepository, readHistoryRepository, bookMarkRepository) {
         state = ProfileStatisticsState.loading(chartRange)
         state = loadProfileStatistics(
             range = chartRange,
             favoriteRepository = favoriteRepository,
             readHistoryRepository = readHistoryRepository,
-            chapterStateRepository = chapterStateRepository,
+            bookMarkRepository = bookMarkRepository,
         )
     }
 
@@ -424,7 +424,7 @@ private suspend fun loadProfileStatistics(
     range: ProfileStatsRange,
     favoriteRepository: me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository,
     readHistoryRepository: ReadHistoryRepository,
-    chapterStateRepository: me.thenano.yamibo.yamibo_app.repository.LocalChapterStateRepository,
+    bookMarkRepository: me.thenano.yamibo.yamibo_app.repository.LocalBookMarkRepository,
 ): ProfileStatisticsState {
     val chartRangeKeys = dateKeysForRange(range, readHistoryRepository)
     val chartDurationByDate = readHistoryRepository.getReadingDurationDays(
@@ -432,7 +432,7 @@ private suspend fun loadProfileStatistics(
         chartRangeKeys.endDateKey,
     ).associateBy { it.dateKey }
     val favoriteItems = favoriteRepository.getAllFavoriteItems()
-    val chapterStateEntries = chapterStateRepository.getAllEntries()
+    val bookmarkEntries = bookMarkRepository.getAllEntries()
     val favoriteRatios = favoriteRepository.getCategories()
         .map { category -> category.toRatioItem(favoriteRepository) }
         .filter { it.count > 0 }
@@ -444,7 +444,7 @@ private suspend fun loadProfileStatistics(
         .map { (type, count) -> RatioItem(type.label, count) }
         .sortedByDescending { it.count }
 
-    val finishedWorkCount = chapterStateEntries
+    val finishedWorkCount = bookmarkEntries
         .groupBy { "${it.targetType.name}:${it.parentId}" }
         .values
         .count { entries -> entries.isNotEmpty() && entries.all { it.read } }
@@ -454,8 +454,8 @@ private suspend fun loadProfileStatistics(
         allReadingMillis = readHistoryRepository.getReadingDurationTotal(ALL_START_DATE_KEY, chartRangeKeys.endDateKey),
         weekReadingMillis = readHistoryRepository.getReadingDurationTotal(dateKeysForLast(7).first(), chartRangeKeys.endDateKey),
         monthReadingMillis = readHistoryRepository.getReadingDurationTotal(currentMonthStartDateKey(), chartRangeKeys.endDateKey),
-        chapterCount = chapterStateEntries.size,
-        readChapterCount = chapterStateEntries.count { it.read },
+        chapterCount = bookmarkEntries.size,
+        readChapterCount = bookmarkEntries.count { it.read },
         finishedWorkCount = finishedWorkCount,
         favoriteRatios = favoriteRatios,
         favoriteTypeRatios = favoriteTypeRatios,

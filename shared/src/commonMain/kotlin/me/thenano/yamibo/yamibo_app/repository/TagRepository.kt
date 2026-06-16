@@ -18,7 +18,7 @@ interface TagRepository {
     suspend fun fetchTagPage(tagId: TagId, page: Int = 1): YamiboResult<TagPage>
     suspend fun fetchExtractTags(tid: ThreadId): YamiboResult<Tags>
 
-    suspend fun getCachedTagPage(tagId: TagId, page: Int = 1): TagPage?
-    suspend fun setCachedTagPage(tagId: TagId, page: Int, tagPage: TagPage)
-    suspend fun clearCachedTagPage(tagId: TagId)
+    fun getCachedTagPage(tagId: TagId, page: Int = 1): TagPage?
+    fun setCachedTagPage(tagId: TagId, page: Int, tagPage: TagPage)
+    fun clearCachedTagPage(tagId: TagId)
 }

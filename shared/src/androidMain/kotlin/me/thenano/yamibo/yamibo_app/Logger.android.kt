@@ -5,7 +5,7 @@ import android.util.Log as AndroidLog
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 actual object Logger {
     actual fun v(tag: String, message: String, throwable: Throwable?) {
-        val formattedTag = "VERBOSE($tag)"
+        val formattedTag = "FUCK_VERBOSE($tag)"
         if (throwable != null) {
             AndroidLog.v(formattedTag, message, throwable)
         } else {
@@ -14,7 +14,7 @@ actual object Logger {
     }
 
     actual fun d(tag: String, message: String, throwable: Throwable?) {
-        val formattedTag = "DEBUG($tag)"
+        val formattedTag = "FUCK_DEBUG($tag)"
         if (throwable != null) {
             AndroidLog.d(formattedTag, message, throwable)
         } else {
@@ -23,7 +23,7 @@ actual object Logger {
     }
 
     actual fun i(tag: String, message: String, throwable: Throwable?) {
-        val formattedTag = "INFO($tag)"
+        val formattedTag = "FUCK_INFO($tag)"
         if (throwable != null) {
             AndroidLog.i(formattedTag, message, throwable)
         } else {
@@ -32,7 +32,7 @@ actual object Logger {
     }
 
     actual fun w(tag: String, message: String, throwable: Throwable?) {
-        val formattedTag = "WARN($tag)"
+        val formattedTag = "FUCK_WARN($tag)"
         if (throwable != null) {
             AndroidLog.w(formattedTag, message, throwable)
         } else {
@@ -41,7 +41,7 @@ actual object Logger {
     }
 
     actual fun e(tag: String, message: String, throwable: Throwable?) {
-        val formattedTag = "ERROR($tag)"
+        val formattedTag = "FUCK_ERROR($tag)"
         if (throwable != null) {
             AndroidLog.e(formattedTag, message, throwable)
         } else {

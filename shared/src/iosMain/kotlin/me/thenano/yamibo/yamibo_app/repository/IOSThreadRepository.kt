@@ -74,17 +74,17 @@ class IOSThreadRepository(
         return yamiboClient.fetchCommentPost(tId, pId, message, formHash)
     }
 
-    override suspend fun getCachedThread(tid: ThreadId, authorId: UserId?, page: Int): ThreadPage? {
+    override fun getCachedThread(tid: ThreadId, authorId: UserId?, page: Int): ThreadPage? {
         val key = ThreadRepository.ThreadCacheKey(tid.value, page, authorId?.value).toCacheKey()
         return threadCache.get(key)
     }
 
-    override suspend fun setCachedThread(tid: ThreadId, authorId: UserId?, page: Int, threadPage: ThreadPage) {
+    override fun setCachedThread(tid: ThreadId, authorId: UserId?, page: Int, threadPage: ThreadPage) {
         val key = ThreadRepository.ThreadCacheKey(tid.value, page, authorId?.value).toCacheKey()
         threadCache.set(key, threadPage)
     }
 
-    override suspend fun clearCachedThread(tid: ThreadId) {
+    override fun clearCachedThread(tid: ThreadId) {
         threadCache.removeByPrefix(ThreadRepository.ThreadCacheKey.keyPrefix(tid.value))
     }
 }

@@ -117,7 +117,7 @@ internal fun CommentReaderScreen(
      *
      * Also scans the entire page to pre-cache comments for other author posts.
      */
-    suspend fun extractAndCacheComments(threadPage: ThreadPage, startFromPost: Boolean = true): Pair<List<Post>, Boolean> {
+    fun extractAndCacheComments(threadPage: ThreadPage, startFromPost: Boolean = true): Pair<List<Post>, Boolean> {
         val allPosts = threadPage.posts
         val pageNum = threadPage.pageNav?.currentPage ?: 1
 
@@ -183,7 +183,7 @@ internal fun CommentReaderScreen(
      * Fetches the next full-view page and collects user posts until
      * the next author post is found.
      */
-    suspend fun extractContinuationComments(threadPage: ThreadPage): Pair<List<Post>, Boolean> {
+    fun extractContinuationComments(threadPage: ThreadPage): Pair<List<Post>, Boolean> {
         val allPosts = threadPage.posts
         val pageNum = threadPage.pageNav?.currentPage ?: 1
 
@@ -523,3 +523,4 @@ internal fun CommentReaderScreen(
         }
     }
 }
+

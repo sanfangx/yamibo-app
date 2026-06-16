@@ -60,20 +60,20 @@ interface UserSpaceRepository {
     ): YamiboResult<String>
     suspend fun fetchNotices(page: Int = 1): YamiboResult<UserSpaceNoticePage>
 
-    suspend fun getCachedProfile(userId: UserId? = null): ProfilePage?
-    suspend fun getCachedThreads(userId: UserId? = null, page: Int = 1): UserSpaceThreadPage?
-    suspend fun getCachedReplies(userId: UserId? = null, page: Int = 1): UserSpaceThreadReplyPage?
-    suspend fun getCachedMyBlogs(userId: UserId? = null, page: Int = 1): UserSpaceBlogPage?
-    suspend fun getCachedFriendBlogs(page: Int = 1): UserSpaceBlogPage?
-    suspend fun getCachedViewAllBlogs(type: YamiboRoute.UserSpace.Blog.ViewAllType, page: Int = 1): UserSpaceBlogPage?
-    suspend fun getCachedFriends(type: YamiboRoute.UserSpace.FriendPageType, page: Int = 1): UserSpaceFriendPage?
-    suspend fun getCachedPrivateMessages(page: Int = 1): UserSpacePrivateMessagePage?
-    suspend fun getCachedPrivateMessagePage(toUser: UserId, page: Int? = null): PrivateMessagePage?
-    suspend fun getCachedNotices(page: Int = 1): UserSpaceNoticePage?
+    fun getCachedProfile(userId: UserId? = null): ProfilePage?
+    fun getCachedThreads(userId: UserId? = null, page: Int = 1): UserSpaceThreadPage?
+    fun getCachedReplies(userId: UserId? = null, page: Int = 1): UserSpaceThreadReplyPage?
+    fun getCachedMyBlogs(userId: UserId? = null, page: Int = 1): UserSpaceBlogPage?
+    fun getCachedFriendBlogs(page: Int = 1): UserSpaceBlogPage?
+    fun getCachedViewAllBlogs(type: YamiboRoute.UserSpace.Blog.ViewAllType, page: Int = 1): UserSpaceBlogPage?
+    fun getCachedFriends(type: YamiboRoute.UserSpace.FriendPageType, page: Int = 1): UserSpaceFriendPage?
+    fun getCachedPrivateMessages(page: Int = 1): UserSpacePrivateMessagePage?
+    fun getCachedPrivateMessagePage(toUser: UserId, page: Int? = null): PrivateMessagePage?
+    fun getCachedNotices(page: Int = 1): UserSpaceNoticePage?
 
-    suspend fun clearUserPages(userId: UserId?)
-    suspend fun clearFriendPages(type: YamiboRoute.UserSpace.FriendPageType? = null)
-    suspend fun clearMessagePages()
-    suspend fun clearPrivateMessagePages(toUser: UserId)
-    suspend fun clearNoticePages()
+    fun clearUserPages(userId: UserId?)
+    fun clearFriendPages(type: YamiboRoute.UserSpace.FriendPageType? = null)
+    fun clearMessagePages()
+    fun clearPrivateMessagePages(toUser: UserId)
+    fun clearNoticePages()
 }

@@ -10,8 +10,6 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import coil3.compose.SubcomposeAsyncImage
 import androidx.compose.material3.*
@@ -196,17 +194,14 @@ private fun HomeContent(homePage: HomePage, onSearch: () -> Unit) {
 private fun HomeSwiper(images: List<SwiperImages>) {
     val colors = YamiboTheme.colors
     val navigator = LocalNavigator.current
-    val scope = rememberCoroutineScope()
-    val pagerState = rememberPagerState(pageCount = { images.size })
-    val page = pagerState.currentPage.coerceIn(0, images.lastIndex)
-    val current = images.getOrNull(page) ?: return
+    var page by remember(images) { mutableStateOf(0) }
+    val current = images.getOrNull(page.coerceIn(0, images.lastIndex)) ?: return
 
-    LaunchedEffect(images, pagerState) {
+    LaunchedEffect(images) {
         if (images.size <= 1) return@LaunchedEffect
         while (true) {
-            kotlinx.coroutines.delay(3_000)
-            val nextPage = (pagerState.currentPage + 1) % images.size
-            pagerState.animateScrollToPage(nextPage)
+            kotlinx.coroutines.delay(5_000)
+            page = (page + 1) % images.size
         }
     }
 
@@ -232,11 +227,24 @@ private fun HomeSwiper(images: List<SwiperImages>) {
                     }
                 },
         ) {
-            HorizontalPager(
-                state = pagerState,
+            AnimatedContent(
+                targetState = page,
+                transitionSpec = {
+                    (slideInHorizontally(
+                        animationSpec = tween(durationMillis = 360, easing = FastOutSlowInEasing),
+                        initialOffsetX = { fullWidth -> fullWidth },
+                    ) + fadeIn(animationSpec = tween(180)))
+                        .togetherWith(
+                            slideOutHorizontally(
+                                animationSpec = tween(durationMillis = 360, easing = FastOutSlowInEasing),
+                                targetOffsetX = { fullWidth -> -fullWidth },
+                            ) + fadeOut(animationSpec = tween(180))
+                        )
+                },
+                label = "home_swiper_transition",
                 modifier = Modifier.fillMaxSize(),
-            ) { index ->
-                val target = images.getOrNull(index) ?: current
+            ) { targetPage ->
+                val target = images.getOrNull(targetPage.coerceIn(0, images.lastIndex)) ?: current
                 key(target.imageUrl) {
                     SubcomposeAsyncImage(
                         model = rememberImageRequest(target.imageUrl),
@@ -287,11 +295,7 @@ private fun HomeSwiper(images: List<SwiperImages>) {
                                 .clickable(
                                     interactionSource = remember { MutableInteractionSource() },
                                     indication = null,
-                                ) {
-                                    scope.launch {
-                                        pagerState.animateScrollToPage(index)
-                                    }
-                                },
+                                ) { page = index },
                         )
                     }
                 }
@@ -307,6 +311,7 @@ private fun HomeHeader(onSearch: () -> Unit) {
     Row(
         modifier =
             Modifier.fillMaxWidth()
+                .statusBarsPadding()
                 .background(
                     Brush.verticalGradient(
                         colors =
@@ -317,7 +322,6 @@ private fun HomeHeader(onSearch: () -> Unit) {
                             )
                     )
                 )
-                .statusBarsPadding()
                 .padding(horizontal = 16.dp, vertical = 20.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically

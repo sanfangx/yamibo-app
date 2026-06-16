@@ -33,7 +33,6 @@ import io.github.littlesurvival.dto.page.FilterType
 import io.github.littlesurvival.dto.page.ForumPage
 import io.github.littlesurvival.dto.page.OrderType
 import io.github.littlesurvival.dto.page.PinnedItem
-import io.github.littlesurvival.dto.value.ForumFilterTypeId
 import io.github.littlesurvival.dto.value.ForumId
 import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.IMainScreen
@@ -41,8 +40,6 @@ import me.thenano.yamibo.yamibo_app.LocalAuthRepository
 import me.thenano.yamibo.yamibo_app.LocalForumRepository
 import me.thenano.yamibo.yamibo_app.MainTab
 import me.thenano.yamibo.yamibo_app.components.controls.YamiboSingleSelectDialog
-import me.thenano.yamibo.yamibo_app.components.navigation.YamiboTopBar
-import me.thenano.yamibo.yamibo_app.components.navigation.YamiboTopBarIconAction
 import me.thenano.yamibo.yamibo_app.forum.components.*
 import me.thenano.yamibo.yamibo_app.forum.search.ISearchScreen
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
@@ -63,14 +60,7 @@ private sealed interface ForumState {
 /** Main Forum Screen Entry */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ForumPageScreen(
-    fid: ForumId,
-    name: String,
-    initialPage: Int = 1,
-    initialFilterTypeId: Int? = null,
-    initialOrderFilter: String? = null,
-    initialOrderBy: String? = null,
-) {
+fun ForumPageScreen(fid: ForumId, name: String) {
     val colors = YamiboTheme.colors
     val forumRepository = LocalForumRepository.current
     val authRepository = LocalAuthRepository.current
@@ -78,35 +68,13 @@ fun ForumPageScreen(
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    val initialFilterType = remember(initialFilterTypeId) {
-        initialFilterTypeId?.let { FilterType(name = "", id = ForumFilterTypeId(it)) }
-    }
-    val initialOrderType = remember(initialOrderFilter, initialOrderBy) {
-        if (initialOrderFilter != null || initialOrderBy != null) {
-            OrderType(name = "", filter = initialOrderFilter, orderBy = initialOrderBy)
-        } else {
-            null
-        }
-    }
-
     var state by remember { mutableStateOf<ForumState>(ForumState.Loading) }
-    var currentPage by remember { mutableIntStateOf(initialPage.coerceAtLeast(1)) }
+    var currentPage by remember { mutableIntStateOf(1) }
     var isRefreshing by remember { mutableStateOf(false) }
-    var selectedOrderType by remember { mutableStateOf<OrderType?>(initialOrderType) }
-    var selectedFilterType by remember { mutableStateOf<FilterType?>(initialFilterType) }
+    var selectedOrderType by remember { mutableStateOf<OrderType?>(null) }
+    var selectedFilterType by remember { mutableStateOf<FilterType?>(null) }
     var showOrderDialog by remember { mutableStateOf(false) }
     var showFilterDialog by remember { mutableStateOf(false) }
-
-    fun syncSelectedOptionsFromPage(page: ForumPage) {
-        selectedFilterType?.id?.value?.let { selectedId ->
-            page.filterTypes.orEmpty().firstOrNull { it.id?.value == selectedId }?.let { selectedFilterType = it }
-        }
-        selectedOrderType?.let { selected ->
-            page.orderType.orEmpty()
-                .firstOrNull { it.filter == selected.filter && it.orderBy == selected.orderBy }
-                ?.let { selectedOrderType = it }
-        }
-    }
 
     suspend fun loadPage(
         page: Int,
@@ -117,7 +85,6 @@ fun ForumPageScreen(
         val cached = if (preferCache) forumRepository.getCachedForumPage(fid, page, filterType, orderType) else null
         if (cached != null) {
             currentPage = cached.pageNav?.currentPage ?: page
-            syncSelectedOptionsFromPage(cached)
             state = ForumState.Success(cached)
             return
         }
@@ -127,7 +94,6 @@ fun ForumPageScreen(
             when (result) {
                 is YamiboResult.Success -> {
                     currentPage = result.value.pageNav?.currentPage ?: page
-                    syncSelectedOptionsFromPage(result.value)
                     ForumState.Success(result.value)
                 }
 
@@ -135,8 +101,14 @@ fun ForumPageScreen(
             }
     }
 
-    LaunchedEffect(fid, initialPage, initialFilterTypeId, initialOrderFilter, initialOrderBy) {
-        loadPage(initialPage.coerceAtLeast(1), initialFilterType, initialOrderType)
+    LaunchedEffect(fid) {
+        val cached = forumRepository.getCachedForumPage(fid, filterType = selectedFilterType, orderType = selectedOrderType)
+        if (cached != null) {
+            currentPage = cached.pageNav?.currentPage ?: 1
+            state = ForumState.Success(cached)
+            return@LaunchedEffect
+        }
+        loadPage(1)
     }
 
     Scaffold(
@@ -234,7 +206,6 @@ fun ForumPageScreen(
                                             selectedFilterType,
                                             selectedOrderType,
                                         )
-                                        syncSelectedOptionsFromPage(result.value)
                                         state = ForumState.Success(result.value)
                                     }
 
@@ -258,16 +229,8 @@ fun ForumPageScreen(
                             onShowOrderDialog = { showOrderDialog = true },
                             onShowFilterDialog = { showFilterDialog = true },
                             onPageChange = { page ->
-                                navigator.navigate(
-                                    IForumScreen(
-                                        fid = fid,
-                                        name = current.page.forum.name,
-                                        initialPage = page,
-                                        filterTypeId = selectedFilterType?.id?.value,
-                                        orderFilter = selectedOrderType?.filter,
-                                        orderBy = selectedOrderType?.orderBy,
-                                    )
-                                )
+                                state = ForumState.Loading
+                                scope.launch { loadPage(page) }
                             },
                             onSubForumClick = { subFid, subName ->
                                 navigator.navigate(IForumScreen(subFid, subName))
@@ -362,24 +325,37 @@ private fun ForumTopBar(
     val colors = YamiboTheme.colors
     var showMenu by remember { mutableStateOf(false) }
 
-    YamiboTopBar(
-        title = title,
-        titleFontSize = 18,
-        onBack = onBack,
-    ) {
-            YamiboTopBarIconAction(
-                icon = YamiboIcons.Search,
-                contentDescription = i18n("搜尋"),
-                onClick = onSearch,
-                iconSize = 34,
+    TopAppBar(
+        title = {
+            Text(
+                text = title,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                maxLines = 1
             )
-            Box(modifier = Modifier.offset(y = 0.dp)) {
-                YamiboTopBarIconAction(
-                    icon = YamiboIcons.ThreeDots,
-                    contentDescription = i18n("更多"),
-                    onClick = { showMenu = true },
-                    iconSize = 24,
+        },
+        navigationIcon = {
+            IconButton(onClick = onBack) { Text(YamiboIcons.Back, color = Color.White, fontSize = 20.sp) }
+        },
+        actions = {
+            IconButton(onClick = onSearch, modifier = Modifier.offset(y = 5.dp)) {
+                Icon(
+                    imageVector = YamiboIcons.Search,
+                    contentDescription = i18n("搜尋"),
+                    tint = Color.White,
+                    modifier = Modifier.size(34.dp)
                 )
+            }
+            Box(modifier = Modifier.offset(y = 0.dp)) {
+                IconButton(onClick = { showMenu = true }) {
+                    Icon(
+                        imageVector = YamiboIcons.ThreeDots,
+                        contentDescription = i18n("更多"),
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
                 DropdownMenu(
                     expanded = showMenu,
                     onDismissRequest = { showMenu = false },
@@ -443,7 +419,13 @@ private fun ForumTopBar(
                     )
                 }
             }
-    }
+        },
+        colors =
+            TopAppBarDefaults.topAppBarColors(
+                containerColor = colors.brownDeep,
+                scrolledContainerColor = colors.brownDeep
+            )
+    )
 }
 
 /** Forum Content (scrollable body below sticky top bar) */

@@ -14,17 +14,17 @@ import io.github.littlesurvival.dto.value.ThreadId
 interface NovelPrePostCommentsCacheRepository {
 
     /** Full-view ThreadPage cache (key: tid + page) */
-    suspend fun getCachedFullPage(tid: ThreadId, page: Int): ThreadPage?
-    suspend fun setCachedFullPage(tid: ThreadId, page: Int, threadPage: ThreadPage)
+    fun getCachedFullPage(tid: ThreadId, page: Int): ThreadPage?
+    fun setCachedFullPage(tid: ThreadId, page: Int, threadPage: ThreadPage)
 
     /** Per-post comment cache — stores comments belonging to a specific author post */
-    suspend fun getCachedComments(tid: ThreadId, postId: PostId): List<Post>?
-    suspend fun setCachedComments(tid: ThreadId, postId: PostId, comments: List<Post>)
+    fun getCachedComments(tid: ThreadId, postId: PostId): List<Post>?
+    fun setCachedComments(tid: ThreadId, postId: PostId, comments: List<Post>)
 
     /** Whether a post's comments are fully loaded (no more pages to fetch) */
-    suspend fun isCommentComplete(tid: ThreadId, postId: PostId): Boolean
-    suspend fun setCommentComplete(tid: ThreadId, postId: PostId, complete: Boolean)
+    fun isCommentComplete(tid: ThreadId, postId: PostId): Boolean
+    fun setCommentComplete(tid: ThreadId, postId: PostId, complete: Boolean)
 
     /** Clear all cache for a given thread */
-    suspend fun clearCache(tid: ThreadId)
+    fun clearCache(tid: ThreadId)
 }
