@@ -76,9 +76,9 @@ class IOSForumRepository(
         return yamiboClient.fetchAddFavorite(forumId, formHash)
     }
 
-    override fun getCachedHomePage(): HomePage? = homeCache.get(HOME_CACHE_KEY)
+    override suspend fun getCachedHomePage(): HomePage? = homeCache.get(HOME_CACHE_KEY)
 
-    override fun getCachedForumPage(
+    override suspend fun getCachedForumPage(
         fid: ForumId,
         page: Int,
         filterType: FilterType?,
@@ -86,7 +86,7 @@ class IOSForumRepository(
     ): ForumPage? =
         forumCache.get(forumCacheKey(fid, page, filterType, orderType))
 
-    override fun setCachedForumPage(
+    override suspend fun setCachedForumPage(
         fid: ForumId,
         page: Int,
         forumPage: ForumPage,
@@ -96,7 +96,7 @@ class IOSForumRepository(
         forumCache.set(forumCacheKey(fid, page, filterType, orderType), forumPage)
     }
 
-    override fun clearCachedForum(fid: ForumId) {
+    override suspend fun clearCachedForum(fid: ForumId) {
         forumCache.removeByPrefix(ForumRepository.ForumCacheKey.keyPrefix(fid.value))
     }
 

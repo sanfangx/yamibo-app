@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.zIndex
 import coil3.ImageLoader
+import coil3.PlatformContext
 import coil3.compose.setSingletonImageLoaderFactory
 import coil3.memory.MemoryCache
 import coil3.network.ktor3.KtorNetworkFetcherFactory
@@ -77,7 +78,8 @@ fun HomeScreenContent(
 
 @Composable
 fun App() {
-    setSingletonImageLoaderFactory { context ->
+    val imageLoaderFactory = remember {
+        { context: PlatformContext ->
         ImageLoader.Builder(context)
             .memoryCache {
                 MemoryCache.Builder()
@@ -88,7 +90,9 @@ fun App() {
                 add(KtorNetworkFetcherFactory())
             }
             .build()
+        }
     }
+    setSingletonImageLoaderFactory(imageLoaderFactory)
 
     val navigator = LocalNavigator.current
     val appSettingsRepository = LocalAppSettingsRepository.current

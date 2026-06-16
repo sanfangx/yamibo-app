@@ -152,25 +152,25 @@ class UserSpaceRepositoryImpl(
         return result
     }
 
-    override fun getCachedProfile(userId: UserId?): ProfilePage? = profileCache.get(profileKey(userId))
-    override fun getCachedThreads(userId: UserId?, page: Int): UserSpaceThreadPage? =
+    override suspend fun getCachedProfile(userId: UserId?): ProfilePage? = profileCache.get(profileKey(userId))
+    override suspend fun getCachedThreads(userId: UserId?, page: Int): UserSpaceThreadPage? =
         threadCache.get(UserSpaceRepository.UserPageCacheKey(userId?.value, page).toCacheKey())
-    override fun getCachedReplies(userId: UserId?, page: Int): UserSpaceThreadReplyPage? =
+    override suspend fun getCachedReplies(userId: UserId?, page: Int): UserSpaceThreadReplyPage? =
         replyCache.get(UserSpaceRepository.UserPageCacheKey(userId?.value, page).toCacheKey())
-    override fun getCachedMyBlogs(userId: UserId?, page: Int): UserSpaceBlogPage? =
+    override suspend fun getCachedMyBlogs(userId: UserId?, page: Int): UserSpaceBlogPage? =
         blogCache.get(UserSpaceRepository.TypedPageCacheKey("my", userId?.value, page).toCacheKey())
-    override fun getCachedFriendBlogs(page: Int): UserSpaceBlogPage? =
+    override suspend fun getCachedFriendBlogs(page: Int): UserSpaceBlogPage? =
         blogCache.get(UserSpaceRepository.TypedPageCacheKey("friend", null, page).toCacheKey())
-    override fun getCachedViewAllBlogs(type: YamiboRoute.UserSpace.Blog.ViewAllType, page: Int): UserSpaceBlogPage? =
+    override suspend fun getCachedViewAllBlogs(type: YamiboRoute.UserSpace.Blog.ViewAllType, page: Int): UserSpaceBlogPage? =
         blogCache.get(UserSpaceRepository.TypedPageCacheKey("all_${type.name}", null, page).toCacheKey())
-    override fun getCachedFriends(type: YamiboRoute.UserSpace.FriendPageType, page: Int): UserSpaceFriendPage? =
+    override suspend fun getCachedFriends(type: YamiboRoute.UserSpace.FriendPageType, page: Int): UserSpaceFriendPage? =
         friendCache.get(UserSpaceRepository.TypedPageCacheKey(type.name, null, page).toCacheKey())
-    override fun getCachedPrivateMessages(page: Int): UserSpacePrivateMessagePage? = messageCache.get(page.toString())
-    override fun getCachedPrivateMessagePage(toUser: UserId, page: Int?): PrivateMessagePage? =
+    override suspend fun getCachedPrivateMessages(page: Int): UserSpacePrivateMessagePage? = messageCache.get(page.toString())
+    override suspend fun getCachedPrivateMessagePage(toUser: UserId, page: Int?): PrivateMessagePage? =
         privateMessageCache.get(privateMessageKey(toUser, page))
-    override fun getCachedNotices(page: Int): UserSpaceNoticePage? = noticeCache.get(page.toString())
+    override suspend fun getCachedNotices(page: Int): UserSpaceNoticePage? = noticeCache.get(page.toString())
 
-    override fun clearUserPages(userId: UserId?) {
+    override suspend fun clearUserPages(userId: UserId?) {
         val prefix = UserSpaceRepository.UserPageCacheKey.keyPrefix(userId?.value)
         threadCache.removeByPrefix(prefix)
         replyCache.removeByPrefix(prefix)
@@ -178,7 +178,7 @@ class UserSpaceRepositoryImpl(
         profileCache.remove(profileKey(userId))
     }
 
-    override fun clearFriendPages(type: YamiboRoute.UserSpace.FriendPageType?) {
+    override suspend fun clearFriendPages(type: YamiboRoute.UserSpace.FriendPageType?) {
         if (type == null) {
             YamiboRoute.UserSpace.FriendPageType.entries.forEach { friendCache.removeByPrefix("${it.name}_") }
         } else {
@@ -186,15 +186,15 @@ class UserSpaceRepositoryImpl(
         }
     }
 
-    override fun clearMessagePages() {
+    override suspend fun clearMessagePages() {
         messageCache.clear()
     }
 
-    override fun clearPrivateMessagePages(toUser: UserId) {
+    override suspend fun clearPrivateMessagePages(toUser: UserId) {
         privateMessageCache.removeByPrefix("${toUser.value}_")
     }
 
-    override fun clearNoticePages() {
+    override suspend fun clearNoticePages() {
         noticeCache.clear()
     }
 

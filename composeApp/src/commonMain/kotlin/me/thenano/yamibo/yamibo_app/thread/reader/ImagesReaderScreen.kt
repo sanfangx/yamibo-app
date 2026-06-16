@@ -43,10 +43,11 @@ import io.github.littlesurvival.core.YamiboResult
 import io.github.littlesurvival.dto.model.ThreadSummary
 import io.github.littlesurvival.dto.value.*
 import io.github.littlesurvival.dto.page.*
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import me.thenano.yamibo.yamibo_app.LocalReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.LocalMangaReaderSettingsRepository
 import me.thenano.yamibo.yamibo_app.LocalChapterStateRepository
@@ -311,7 +312,7 @@ fun ImagesReaderScreen(
 
                             fun onRestoreScrollListState(history: ReadHistoryRepository.AnyReadingHistory) {
                                 when(history) {
-                                    is ReadHistoryRepository.TagMangaReadingHistory,is ReadHistoryRepository.TagMangaReadingHistory -> {
+                                    is ReadHistoryRepository.TagMangaReadingHistory -> {
                                         snapNextTransition = true
                                         val finalPageToRestore = history.threadImagePageIndex
                                             .coerceIn(0, (actualImageList.size - 1).coerceAtLeast(0))
@@ -373,7 +374,7 @@ fun ImagesReaderScreen(
         }
     }
 
-    val currentHistorySaver by rememberUpdatedState {
+    val currentHistorySaver by rememberUpdatedState<suspend () -> Unit> {
         if (isMangaForum || tagId != null) {
             val isScroll = readingMode == ReadingMode.SCROLL_CONTINUOUS || readingMode == ReadingMode.SCROLL_GAP
             val finalIdx = if (isScroll) scrollListState.firstVisibleItemIndex else null
@@ -384,54 +385,57 @@ fun ImagesReaderScreen(
             val postIdSnap = actualPostId
             val tagPageSnap = currentTagPage
             val currentCoverSnap = actualImageList.getOrNull(1) ?: actualImageList.getOrNull(0)
-            
-            @OptIn(DelicateCoroutinesApi::class)
-            GlobalScope.launch {
-                if (tagId != null && tagName != null) {
-                    val finalCover = if (actualImageList.isEmpty()) {
-                        historyRepo.getTagMangaReaderModeHistoryPosition(tagId)?.coverUrl
-                    } else {
-                        currentCoverSnap
-                    }
 
-                    historyRepo.saveTagMangaReaderModeHistory(
-                        ReadHistoryRepository.TagMangaReadingHistory(
-                            tagId = tagId,
-                            tagName = tagName,
-                            tagPage = tagPageSnap,
-                            threadId = activeTidSnap,
-                            threadTitle = activeTitle,
-                            threadImagePageIndex = snapshotPage.coerceIn(minPage(), maxPage()),
-                            threadImageTotalPages = total.coerceAtLeast(1),
-                            firstVisibleItemIndex = finalIdx,
-                            firstVisibleItemOffset = finalOffset,
-                            lastVisitTime = currentTimeMillis(),
-                            coverUrl = finalCover
-                        )
-                    )
-                    syncTagMangaProgress(
-                        pageIndex = snapshotPage.coerceIn(minPage(), maxPage()),
-                        totalPages = total.coerceAtLeast(1),
-                    )
-                } else if (isMangaForum && postIdSnap != null) {
-                    historyRepo.saveImagePosition(
-                        ReadHistoryRepository.ImageReadingHistory(
-                            postId = postIdSnap,
-                            threadId = activeTidSnap,
-                            pageIndex = snapshotPage,
-                            totalPages = total,
-                            firstVisibleItemIndex = finalIdx,
-                            firstVisibleItemOffset = finalOffset,
-                            lastVisitTime = currentTimeMillis()
-                        )
-                    )
+            if (tagId != null && tagName != null) {
+                val finalCover = if (actualImageList.isEmpty()) {
+                    historyRepo.getTagMangaReaderModeHistoryPosition(tagId)?.coverUrl
+                } else {
+                    currentCoverSnap
                 }
+
+                historyRepo.saveTagMangaReaderModeHistory(
+                    ReadHistoryRepository.TagMangaReadingHistory(
+                        tagId = tagId,
+                        tagName = tagName,
+                        tagPage = tagPageSnap,
+                        threadId = activeTidSnap,
+                        threadTitle = activeTitle,
+                        threadImagePageIndex = snapshotPage.coerceIn(minPage(), maxPage()),
+                        threadImageTotalPages = total.coerceAtLeast(1),
+                        firstVisibleItemIndex = finalIdx,
+                        firstVisibleItemOffset = finalOffset,
+                        lastVisitTime = currentTimeMillis(),
+                        coverUrl = finalCover
+                    )
+                )
+                syncTagMangaProgress(
+                    pageIndex = snapshotPage.coerceIn(minPage(), maxPage()),
+                    totalPages = total.coerceAtLeast(1),
+                )
+            } else if (isMangaForum && postIdSnap != null) {
+                historyRepo.saveImagePosition(
+                    ReadHistoryRepository.ImageReadingHistory(
+                        postId = postIdSnap,
+                        threadId = activeTidSnap,
+                        pageIndex = snapshotPage,
+                        totalPages = total,
+                        firstVisibleItemIndex = finalIdx,
+                        firstVisibleItemOffset = finalOffset,
+                        lastVisitTime = currentTimeMillis()
+                    )
+                )
             }
         }
     }
 
-    DisposableEffect(Unit) {
-        onDispose { currentHistorySaver() }
+    LaunchedEffect(Unit) {
+        try {
+            awaitCancellation()
+        } finally {
+            withContext(NonCancellable) {
+                currentHistorySaver()
+            }
+        }
     }
 
     LaunchedEffect(activeTid, currentPage, currentTagPage) {
@@ -908,7 +912,11 @@ fun ImagesReaderScreen(
                             }
                         }
                     } else {
-                        itemsIndexed(actualImageList) { index, url ->
+                        itemsIndexed(
+                            items = actualImageList,
+                            key = { index, url -> "$activeTid:$index:$url" },
+                            contentType = { _, _ -> "reader_image" },
+                        ) { index, url ->
                             ImageViewer(
                                 url = url,
                                 contentDescription = i18n("第{}頁", index + 1),

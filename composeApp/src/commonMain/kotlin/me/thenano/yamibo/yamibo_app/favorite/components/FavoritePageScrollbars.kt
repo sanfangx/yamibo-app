@@ -1,5 +1,8 @@
 package me.thenano.yamibo.yamibo_app.favorite.components
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -31,9 +34,11 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import kotlin.math.roundToInt
+import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
 fun FavoriteListScrollbar(
@@ -53,6 +58,7 @@ fun FavoriteListScrollbar(
         totalItems = totalItems,
         firstVisibleIndex = firstVisibleIndex,
         visibleCount = visibleCount,
+        isScrollInProgress = state.isScrollInProgress,
         onScrollToIndex = { index -> state.scrollToItem(index) },
     )
 }
@@ -75,6 +81,7 @@ fun FavoriteGridScrollbar(
         totalItems = totalItems,
         firstVisibleIndex = firstVisibleIndex,
         visibleCount = visibleCount,
+        isScrollInProgress = state.isScrollInProgress,
         onScrollToIndex = { index -> state.scrollToItem(index) },
     )
 }
@@ -97,6 +104,7 @@ fun FavoriteStaggeredScrollbar(
         totalItems = totalItems,
         firstVisibleIndex = firstVisibleIndex,
         visibleCount = visibleCount,
+        isScrollInProgress = state.isScrollInProgress,
         onScrollToIndex = { index -> state.scrollToItem(index) },
     )
 }
@@ -106,6 +114,7 @@ private fun FavoriteScrollbar(
     totalItems: Int,
     firstVisibleIndex: Int,
     visibleCount: Int,
+    isScrollInProgress: Boolean,
     onScrollToIndex: suspend (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -116,6 +125,17 @@ private fun FavoriteScrollbar(
 
     // Track whether the user is actively dragging the thumb
     var isDragging by remember { mutableStateOf(false) }
+    var scrollbarVisible by remember { mutableStateOf(false) }
+    val keepVisible = isScrollInProgress || isDragging
+
+    LaunchedEffect(keepVisible) {
+        if (keepVisible) {
+            scrollbarVisible = true
+        } else {
+            delay(800.milliseconds)
+            scrollbarVisible = false
+        }
+    }
 
     // Animate thumb width: wider when dragging for better visibility
     val thumbWidth = remember { Animatable(6f) }
@@ -126,70 +146,75 @@ private fun FavoriteScrollbar(
         )
     }
 
-    BoxWithConstraints(
-        modifier = modifier
-            .fillMaxHeight()
-            .width(36.dp)
-            .padding(end = 4.dp, top = 10.dp, bottom = 92.dp),
+    AnimatedVisibility(
+        visible = scrollbarVisible,
+        enter = fadeIn(animationSpec = tween(durationMillis = 90)),
+        exit = fadeOut(animationSpec = tween(durationMillis = 360)),
+        modifier = modifier,
     ) {
-        val trackHeightPx = constraints.maxHeight.toFloat().coerceAtLeast(1f)
-        val hiddenCount = (totalItems - visibleCount).coerceAtLeast(1)
-        val thumbHeightPx = (trackHeightPx * (visibleCount.toFloat() / totalItems.toFloat()))
-            .coerceAtLeast(with(LocalDensity.current) { 48.dp.toPx() })
-            .coerceAtMost(trackHeightPx * 0.5f)
-        val travelPx = (trackHeightPx - thumbHeightPx).coerceAtLeast(0f)
-        val progress = (firstVisibleIndex.toFloat() / hiddenCount.toFloat()).coerceIn(0f, 1f)
-        val thumbOffsetPx = travelPx * progress
-
-        fun scrollFromTouch(y: Float) {
-            val ratio = ((y - thumbHeightPx / 2f) / travelPx.coerceAtLeast(1f)).coerceIn(0f, 1f)
-            val targetIndex = (ratio * hiddenCount.toFloat()).roundToInt().coerceIn(0, totalItems - 1)
-            scope.launch { onScrollToIndex(targetIndex) }
-        }
-
-        Box(
+        BoxWithConstraints(
             modifier = Modifier
-                .fillMaxSize()
-                // Tap anywhere on the track to jump to that position
-                .pointerInput(Unit) {
-                    detectTapGestures { offset ->
-                        scrollFromTouch(offset.y)
-                    }
-                }
-                // Use a stable key (Unit) so the gesture detector is NOT reset
-                // on every scroll frame — this prevents jitter and dropped drags.
-                .pointerInput(Unit) {
-                    detectDragGestures(
-                        onDragStart = { offset ->
-                            isDragging = true
-                            scrollFromTouch(offset.y)
-                        },
-                        onDrag = { change, _ ->
-                            change.consume()
-                            scrollFromTouch(change.position.y)
-                        },
-                        onDragEnd = { isDragging = false },
-                        onDragCancel = { isDragging = false },
-                    )
-                },
+                .fillMaxHeight()
+                .width(36.dp)
+                .padding(end = 4.dp, top = 10.dp, bottom = 92.dp),
         ) {
-            // Track background — wider for better visibility
+            val trackHeightPx = constraints.maxHeight.toFloat().coerceAtLeast(1f)
+            val hiddenCount = (totalItems - visibleCount).coerceAtLeast(1)
+            val thumbHeightPx = (trackHeightPx * (visibleCount.toFloat() / totalItems.toFloat()))
+                .coerceAtLeast(with(LocalDensity.current) { 48.dp.toPx() })
+                .coerceAtMost(trackHeightPx * 0.5f)
+            val travelPx = (trackHeightPx - thumbHeightPx).coerceAtLeast(0f)
+            val progress = (firstVisibleIndex.toFloat() / hiddenCount.toFloat()).coerceIn(0f, 1f)
+            val thumbOffsetPx = travelPx * progress
+
+            fun scrollFromTouch(y: Float) {
+                val ratio = ((y - thumbHeightPx / 2f) / travelPx.coerceAtLeast(1f)).coerceIn(0f, 1f)
+                val targetIndex = (ratio * hiddenCount.toFloat()).roundToInt().coerceIn(0, totalItems - 1)
+                scope.launch { onScrollToIndex(targetIndex) }
+            }
+
             Box(
                 modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .fillMaxHeight()
-                    .width(thumbWidth.value.dp)
-                    .background(colors.brownPrimary.copy(alpha = 0.10f), RoundedCornerShape(999.dp)),
-            )
-            // Thumb — wider, taller minimum, more opaque for easy touch targeting
-            Box(
-                modifier = Modifier
-                    .offset { IntOffset(0, thumbOffsetPx.roundToInt()) }
-                    .align(Alignment.TopEnd)
-                    .width(thumbWidth.value.dp)
-                    .height(with(LocalDensity.current) { thumbHeightPx.toDp() })
-                    .background(colors.brownDeep.copy(alpha = 0.80f), RoundedCornerShape(999.dp)),
-            )
+                    .fillMaxSize()
+                    // Tap anywhere on the track to jump to that position
+                    .pointerInput(Unit) {
+                        detectTapGestures { offset ->
+                            scrollFromTouch(offset.y)
+                        }
+                    }
+                    // Use a stable key (Unit) so the gesture detector is NOT reset
+                    // on every scroll frame. This prevents jitter and dropped drags.
+                    .pointerInput(Unit) {
+                        detectDragGestures(
+                            onDragStart = { offset ->
+                                isDragging = true
+                                scrollFromTouch(offset.y)
+                            },
+                            onDrag = { change, _ ->
+                                change.consume()
+                                scrollFromTouch(change.position.y)
+                            },
+                            onDragEnd = { isDragging = false },
+                            onDragCancel = { isDragging = false },
+                        )
+                    },
+            ) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .fillMaxHeight()
+                        .width(thumbWidth.value.dp)
+                        .background(colors.brownPrimary.copy(alpha = 0.10f), RoundedCornerShape(999.dp)),
+                )
+                Box(
+                    modifier = Modifier
+                        .offset { IntOffset(0, thumbOffsetPx.roundToInt()) }
+                        .align(Alignment.TopEnd)
+                        .width(thumbWidth.value.dp)
+                        .height(with(LocalDensity.current) { thumbHeightPx.toDp() })
+                        .background(colors.brownDeep.copy(alpha = 0.80f), RoundedCornerShape(999.dp)),
+                )
+            }
         }
     }
 }

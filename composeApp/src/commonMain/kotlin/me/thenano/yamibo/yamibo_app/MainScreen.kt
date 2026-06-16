@@ -1,11 +1,14 @@
 ﻿package me.thenano.yamibo.yamibo_app
 
 import YamiboIcons
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -19,11 +22,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.zIndex
 import kotlinx.serialization.Serializable
 import me.thenano.yamibo.yamibo_app.favorite.FavoritePage
 import me.thenano.yamibo.yamibo_app.favorite.updates.FavoriteUpdatesScreen
@@ -145,21 +146,31 @@ fun MainScreen(initialTab: MainTab = MainTab.Home) {
                     .fillMaxSize()
                     .background(colors.creamBackground)
         ) {
-            tabStateHolder.SaveableStateProvider(currentTab.name) {
-                Box(modifier = Modifier.fillMaxSize()) {
-                    when (currentTab) {
-                        MainTab.Home -> HomeScreenContent(
-                            onNewMessageStatusChange = { hasNewMessage = it },
-                        )
-                        MainTab.History -> ReadHistoryPage(reTapHistoryToken)
-                        MainTab.Updates -> FavoriteUpdatesScreen()
-                        MainTab.Message -> MessageCenterScreen(
-                            initialTab = MessageCenterTab.PrivateMessages,
-                            mainTabTopBar = true,
-                            onPrivateMessageUnreadChange = { hasNewMessage = it },
-                        )
-                        MainTab.Favorite -> FavoritePage()
-                        MainTab.Profile -> ProfilePage()
+            AnimatedContent(
+                targetState = currentTab,
+                transitionSpec = {
+                    fadeIn(animationSpec = tween(durationMillis = 140)) togetherWith
+                        fadeOut(animationSpec = tween(durationMillis = 100))
+                },
+                label = "main_tab_content",
+                modifier = Modifier.fillMaxSize(),
+            ) { tab ->
+                tabStateHolder.SaveableStateProvider(tab.name) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        when (tab) {
+                            MainTab.Home -> HomeScreenContent(
+                                onNewMessageStatusChange = { hasNewMessage = it },
+                            )
+                            MainTab.History -> ReadHistoryPage(reTapHistoryToken)
+                            MainTab.Updates -> FavoriteUpdatesScreen()
+                            MainTab.Message -> MessageCenterScreen(
+                                initialTab = MessageCenterTab.PrivateMessages,
+                                mainTabTopBar = true,
+                                onPrivateMessageUnreadChange = { hasNewMessage = it },
+                            )
+                            MainTab.Favorite -> FavoritePage()
+                            MainTab.Profile -> ProfilePage()
+                        }
                     }
                 }
             }

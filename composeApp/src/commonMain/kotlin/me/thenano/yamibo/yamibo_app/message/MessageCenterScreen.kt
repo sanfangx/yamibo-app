@@ -303,7 +303,7 @@ private suspend fun fetchContent(
     MessageCenterTab.Notices -> repository.fetchNotices(page).mapSuccess { MessageCenterContent.Notices(it) }
 }
 
-private fun cachedContent(
+private suspend fun cachedContent(
     repository: me.thenano.yamibo.yamibo_app.repository.UserSpaceRepository,
     tab: MessageCenterTab,
     page: Int,

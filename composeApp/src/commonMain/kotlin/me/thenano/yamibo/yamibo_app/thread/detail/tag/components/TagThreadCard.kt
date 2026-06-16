@@ -75,14 +75,13 @@ fun TagThreadCard(
             // Author + Time (Top)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 var hasLeadingMetadata = false
-                if (thread.author != null) {
+                thread.author?.let { author ->
                     Text(
-                        text = thread.author!!.name,
+                        text = author.name,
                         fontSize = 12.sp,
                         color = colors.brownPrimary,
                         fontWeight = FontWeight.Medium,
                         modifier = Modifier.clickable {
-                            val author = thread.author!!
                             navigator.navigate(IUserSpaceScreen(author.uid, author.name))
                         }
                     )

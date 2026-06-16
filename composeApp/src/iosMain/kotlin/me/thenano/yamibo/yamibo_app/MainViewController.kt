@@ -57,7 +57,9 @@ fun MainViewController() = ComposeUIViewController {
             platform.Foundation.NSUserDomainMask, 
             true
         )
-        val cacheDir = paths.first() as String
+        val cacheDir = (paths.firstOrNull() as? String)
+            ?.takeIf { it.isNotBlank() }
+            ?: platform.Foundation.NSTemporaryDirectory()
         me.thenano.yamibo.yamibo_app.core.cache.DiskCacheFactory(dbFactory, cacheDirPath = cacheDir) 
     }
 

@@ -1,10 +1,6 @@
 package me.thenano.yamibo.yamibo_app.favorite.updates
 
 import YamiboIcons
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -44,7 +40,9 @@ import androidx.compose.ui.unit.sp
 import io.github.littlesurvival.dto.value.TagId
 import io.github.littlesurvival.dto.value.ThreadId
 import io.github.littlesurvival.dto.value.UserId
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import me.thenano.yamibo.yamibo_app.LocalAppSettingsRepository
 import me.thenano.yamibo.yamibo_app.LocalFavoriteUpdateRepository
 import me.thenano.yamibo.yamibo_app.LocalFavoriteUpdateRunner
@@ -75,6 +73,7 @@ private sealed interface FavoriteUpdatesState {
         val forumFilters: List<FavoriteUpdateRepository.FidFilter>,
         val categoryFilters: List<FavoriteUpdateRepository.CategoryFilter>,
         val scopeTargets: List<FavoriteUpdateRepository.ScopeTarget>,
+        val resultFilterOptions: List<UpdateResultFilterOption>,
     ) : FavoriteUpdatesState
 }
 
@@ -101,12 +100,7 @@ fun FavoriteUpdatesScreen() {
     var selectedResultFilterKeys by remember { mutableStateOf(setOf(UPDATE_RESULT_FILTER_ALL)) }
 
     suspend fun loadUpdates() {
-        state = FavoriteUpdatesState.Success(
-            events = favoriteUpdateRepository.getActiveEvents(),
-            forumFilters = favoriteUpdateRepository.getFidFilters(),
-            categoryFilters = favoriteUpdateRepository.getCategoryFilters(),
-            scopeTargets = favoriteUpdateRepository.getScopeTargets(),
-        )
+        state = favoriteUpdateRepository.loadFavoriteUpdatesState()
     }
 
     LaunchedEffect(Unit) {
@@ -149,94 +143,92 @@ fun FavoriteUpdatesScreen() {
                 .fillMaxSize()
                 .background(colors.creamBackground),
         ) {
-            AnimatedContent(
-                targetState = state,
-                transitionSpec = { fadeIn() togetherWith fadeOut() },
-                label = "favorite_updates_state",
-                modifier = Modifier.fillMaxSize(),
-            ) { current ->
-                when (current) {
-                    FavoriteUpdatesState.Loading -> YamiboLoadingContent()
-                    is FavoriteUpdatesState.Success -> PullToRefreshBox(
-                        isRefreshing = isRefreshing,
-                        onRefresh = {
-                            isRefreshing = true
-                            scope.launch {
+            when (val current = state) {
+                FavoriteUpdatesState.Loading -> YamiboLoadingContent()
+                is FavoriteUpdatesState.Success -> PullToRefreshBox(
+                    isRefreshing = isRefreshing,
+                    onRefresh = {
+                        isRefreshing = true
+                        scope.launch {
+                            try {
                                 loadUpdates()
+                            } finally {
                                 isRefreshing = false
                             }
+                        }
+                    },
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    val resultFilterOptions = current.resultFilterOptions
+                    val normalizedResultFilterKeys = normalizeUpdateResultFilterKeys(
+                        selectedResultFilterKeys,
+                        resultFilterOptions,
+                    )
+                    val filteredEvents = remember(current.events, normalizedResultFilterKeys, resultFilterOptions) {
+                        filterUpdateEvents(current.events, normalizedResultFilterKeys, resultFilterOptions)
+                    }
+                    FavoriteUpdatesContent(
+                        events = filteredEvents,
+                        runState = favoriteUpdateRunState,
+                        onUpdateEventClick = { event ->
+                            scope.launch {
+                                withContext(Dispatchers.Default) {
+                                    favoriteUpdateRepository.markEventRead(event.id)
+                                }
+                            }
+                            navigateFavoriteUpdateEvent(event, navigator)
                         },
-                        modifier = Modifier.fillMaxSize(),
-                    ) {
-                        val resultFilterOptions = remember(current.events) {
-                            buildUpdateResultFilterOptions(current.events)
-                        }
-                        val normalizedResultFilterKeys = normalizeUpdateResultFilterKeys(
-                            selectedResultFilterKeys,
-                            resultFilterOptions,
-                        )
-                        val filteredEvents = remember(current.events, normalizedResultFilterKeys, resultFilterOptions) {
-                            filterUpdateEvents(current.events, normalizedResultFilterKeys, resultFilterOptions)
-                        }
-                        FavoriteUpdatesContent(
-                            events = filteredEvents,
-                            runState = favoriteUpdateRunState,
-                            onUpdateEventClick = { event ->
-                                scope.launch { favoriteUpdateRepository.markEventRead(event.id) }
-                                navigateFavoriteUpdateEvent(event, navigator)
-                            },
-                            onGlobalFavoriteUpdate = { showGlobalRefreshConfirm = true },
-                            onCancelFavoriteUpdate = { runId ->
-                                scope.launch {
-                                    favoriteUpdateRunner.cancelUpdate(runId)
-                                    loadUpdates()
-                                    snackbarHostState.showSnackbar(i18n("已取消收藏更新檢查"), duration = SnackbarDuration.Short)
-                                }
-                            },
-                            onInterruptFavoriteUpdate = { runId ->
-                                scope.launch {
-                                    favoriteUpdateRunner.interruptUpdate(runId)
-                                    loadUpdates()
-                                    snackbarHostState.showSnackbar(i18n("已中斷收藏更新檢查"), duration = SnackbarDuration.Short)
-                                }
-                            },
-                            onResumeFavoriteUpdate = {
-                                scope.launch {
-                                    when (val result = favoriteUpdateRunner.resumeInterruptedUpdate()) {
-                                        is FavoriteUpdateRunner.LaunchResult.Started -> {
-                                            appSettingsRepository.favoriteUpdateHiddenRunId.setValue("")
-                                            loadUpdates()
-                                            snackbarHostState.showSnackbar(i18n("繼續檢查收藏更新"), duration = SnackbarDuration.Short)
-                                        }
-                                        is FavoriteUpdateRunner.LaunchResult.Rejected -> {
-                                            snackbarHostState.showSnackbar(i18n(result.reason), duration = SnackbarDuration.Short)
-                                        }
-                                        null -> {
-                                            snackbarHostState.showSnackbar(i18n("沒有可繼續的收藏更新任務"), duration = SnackbarDuration.Short)
-                                        }
+                        onGlobalFavoriteUpdate = { showGlobalRefreshConfirm = true },
+                        onCancelFavoriteUpdate = { runId ->
+                            scope.launch {
+                                favoriteUpdateRunner.cancelUpdate(runId)
+                                loadUpdates()
+                                snackbarHostState.showSnackbar(i18n("已取消收藏更新檢查"), duration = SnackbarDuration.Short)
+                            }
+                        },
+                        onInterruptFavoriteUpdate = { runId ->
+                            scope.launch {
+                                favoriteUpdateRunner.interruptUpdate(runId)
+                                loadUpdates()
+                                snackbarHostState.showSnackbar(i18n("已中斷收藏更新檢查"), duration = SnackbarDuration.Short)
+                            }
+                        },
+                        onResumeFavoriteUpdate = {
+                            scope.launch {
+                                when (val result = favoriteUpdateRunner.resumeInterruptedUpdate()) {
+                                    is FavoriteUpdateRunner.LaunchResult.Started -> {
+                                        appSettingsRepository.favoriteUpdateHiddenRunId.setValue("")
+                                        loadUpdates()
+                                        snackbarHostState.showSnackbar(i18n("繼續檢查收藏更新"), duration = SnackbarDuration.Short)
+                                    }
+                                    is FavoriteUpdateRunner.LaunchResult.Rejected -> {
+                                        snackbarHostState.showSnackbar(i18n(result.reason), duration = SnackbarDuration.Short)
+                                    }
+                                    null -> {
+                                        snackbarHostState.showSnackbar(i18n("沒有可繼續的收藏更新任務"), duration = SnackbarDuration.Short)
                                     }
                                 }
-                            },
-                            favoriteUpdateInterval = favoriteUpdateInterval,
-                            onFavoriteUpdateIntervalChange = { interval ->
-                                scope.launch {
-                                    appSettingsRepository.favoriteUpdateInterval.setValue(interval)
-                                    favoriteUpdateRunner.schedulePeriodicUpdate(interval)
-                                    snackbarHostState.showSnackbar(
-                                        i18n("刷新週期已改為 {}", interval.localizedLabel()),
-                                        duration = SnackbarDuration.Short,
-                                    )
-                                }
-                            },
-                            favoriteUpdateHiddenRunId = favoriteUpdateHiddenRunId,
-                            onHideFavoriteUpdateStatus = { runId ->
-                                appSettingsRepository.favoriteUpdateHiddenRunId.setValue(runId)
-                            },
-                            resultFilterActive = isUpdateResultFilterRestricted(normalizedResultFilterKeys, resultFilterOptions),
-                            resultFilterLabel = updateResultFilterLabel(normalizedResultFilterKeys, resultFilterOptions),
-                            onShowResultFilter = { showResultFilterDialog = true },
-                        )
-                    }
+                            }
+                        },
+                        favoriteUpdateInterval = favoriteUpdateInterval,
+                        onFavoriteUpdateIntervalChange = { interval ->
+                            scope.launch {
+                                appSettingsRepository.favoriteUpdateInterval.setValue(interval)
+                                favoriteUpdateRunner.schedulePeriodicUpdate(interval)
+                                snackbarHostState.showSnackbar(
+                                    i18n("刷新週期已改為 {}", interval.localizedLabel()),
+                                    duration = SnackbarDuration.Short,
+                                )
+                            }
+                        },
+                        favoriteUpdateHiddenRunId = favoriteUpdateHiddenRunId,
+                        onHideFavoriteUpdateStatus = { runId ->
+                            appSettingsRepository.favoriteUpdateHiddenRunId.setValue(runId)
+                        },
+                        resultFilterActive = isUpdateResultFilterRestricted(normalizedResultFilterKeys, resultFilterOptions),
+                        resultFilterLabel = updateResultFilterLabel(normalizedResultFilterKeys, resultFilterOptions),
+                        onShowResultFilter = { showResultFilterDialog = true },
+                    )
                 }
             }
         }
@@ -274,7 +266,7 @@ fun FavoriteUpdatesScreen() {
 
     val success = state as? FavoriteUpdatesState.Success
     if (showResultFilterDialog && success != null) {
-        val options = buildUpdateResultFilterOptions(success.events)
+        val options = success.resultFilterOptions
         UpdateResultFilterDialog(
             options = options,
             selectedKeys = normalizeUpdateResultFilterKeys(selectedResultFilterKeys, options),
@@ -310,6 +302,18 @@ fun FavoriteUpdatesScreen() {
         )
     }
 }
+
+private suspend fun FavoriteUpdateRepository.loadFavoriteUpdatesState(): FavoriteUpdatesState.Success =
+    withContext(Dispatchers.Default) {
+        val events = getActiveEvents()
+        FavoriteUpdatesState.Success(
+            events = events,
+            forumFilters = getFidFilters(),
+            categoryFilters = getCategoryFilters(),
+            scopeTargets = getScopeTargets(),
+            resultFilterOptions = buildUpdateResultFilterOptions(events),
+        )
+    }
 
 private const val UPDATE_RESULT_FILTER_ALL = "all"
 

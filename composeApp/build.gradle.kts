@@ -64,6 +64,11 @@ compose.resources {
     customDirectory("commonMain", layout.buildDirectory.dir("generated/i18n/composeResources"))
 }
 
+composeCompiler {
+    reportsDestination = layout.buildDirectory.dir("compose_compiler/reports")
+    metricsDestination = layout.buildDirectory.dir("compose_compiler/metrics")
+}
+
 i18nAutoMerge {
     scanDirs.set(listOf("composeApp/src", "shared/src"))
     glossary.set(rootProject.layout.projectDirectory.file("i18n/glossary.csv"))

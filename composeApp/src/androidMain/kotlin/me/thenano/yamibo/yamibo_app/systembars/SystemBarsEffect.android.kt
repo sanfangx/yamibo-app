@@ -51,8 +51,16 @@ private object SystemBarRequestRegistry {
         val sequence: Long,
     )
 
+    private data class Defaults(
+        val statusBarColor: Int,
+        val navigationBarColor: Int,
+        val lightStatusBars: Boolean,
+        val lightNavigationBars: Boolean,
+    )
+
     private val requests = linkedMapOf<Any, Request>()
     private var sequence = 0L
+    private var defaults: Defaults? = null
 
     fun update(
         key: Any,
@@ -61,6 +69,7 @@ private object SystemBarRequestRegistry {
         navigationBarColor: Color,
         priority: Int,
     ) {
+        captureDefaults(activity)
         requests[key] = Request(
             statusBarColor = statusBarColor,
             navigationBarColor = navigationBarColor,
@@ -78,7 +87,11 @@ private object SystemBarRequestRegistry {
     private fun apply(activity: Activity) {
         val request = requests.values.maxWithOrNull(
             compareBy<Request> { it.priority }.thenBy { it.sequence }
-        ) ?: return
+        )
+        if (request == null) {
+            restoreDefaults(activity)
+            return
+        }
         @Suppress("DEPRECATION")
         activity.window.statusBarColor = request.statusBarColor.toArgb()
         @Suppress("DEPRECATION")
@@ -86,6 +99,30 @@ private object SystemBarRequestRegistry {
         WindowInsetsControllerCompat(activity.window, activity.window.decorView).apply {
             isAppearanceLightStatusBars = request.statusBarColor.luminance() > 0.5f
             isAppearanceLightNavigationBars = request.navigationBarColor.luminance() > 0.5f
+        }
+    }
+
+    private fun captureDefaults(activity: Activity) {
+        if (defaults != null) return
+        val controller = WindowInsetsControllerCompat(activity.window, activity.window.decorView)
+        @Suppress("DEPRECATION")
+        defaults = Defaults(
+            statusBarColor = activity.window.statusBarColor,
+            navigationBarColor = activity.window.navigationBarColor,
+            lightStatusBars = controller.isAppearanceLightStatusBars,
+            lightNavigationBars = controller.isAppearanceLightNavigationBars,
+        )
+    }
+
+    private fun restoreDefaults(activity: Activity) {
+        val currentDefaults = defaults ?: return
+        @Suppress("DEPRECATION")
+        activity.window.statusBarColor = currentDefaults.statusBarColor
+        @Suppress("DEPRECATION")
+        activity.window.navigationBarColor = currentDefaults.navigationBarColor
+        WindowInsetsControllerCompat(activity.window, activity.window.decorView).apply {
+            isAppearanceLightStatusBars = currentDefaults.lightStatusBars
+            isAppearanceLightNavigationBars = currentDefaults.lightNavigationBars
         }
     }
 }

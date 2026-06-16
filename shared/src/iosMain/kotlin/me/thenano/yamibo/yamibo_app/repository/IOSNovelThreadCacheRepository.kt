@@ -16,28 +16,28 @@ class IOSNovelThreadCacheRepository(
     private val commentCache = diskCacheFactory.create<List<Post>>("novel_comments", maxSize = 50, expiration = 24.hours)
     private val commentCompleteFlags = diskCacheFactory.create<Boolean>("novel_comment_complete", maxSize = 50, expiration = 24.hours)
 
-    override fun getCachedFullPage(tid: ThreadId, page: Int): ThreadPage? =
+    override suspend fun getCachedFullPage(tid: ThreadId, page: Int): ThreadPage? =
         fullPageCache.get("${tid.value}_$page")
 
-    override fun setCachedFullPage(tid: ThreadId, page: Int, threadPage: ThreadPage) {
+    override suspend fun setCachedFullPage(tid: ThreadId, page: Int, threadPage: ThreadPage) {
         fullPageCache.set("${tid.value}_$page", threadPage)
     }
 
-    override fun getCachedComments(tid: ThreadId, postId: PostId): List<Post>? =
+    override suspend fun getCachedComments(tid: ThreadId, postId: PostId): List<Post>? =
         commentCache.get("${tid.value}_${postId.value}")
 
-    override fun setCachedComments(tid: ThreadId, postId: PostId, comments: List<Post>) {
+    override suspend fun setCachedComments(tid: ThreadId, postId: PostId, comments: List<Post>) {
         commentCache.set("${tid.value}_${postId.value}", comments)
     }
 
-    override fun isCommentComplete(tid: ThreadId, postId: PostId): Boolean =
+    override suspend fun isCommentComplete(tid: ThreadId, postId: PostId): Boolean =
         commentCompleteFlags.get("${tid.value}_${postId.value}") ?: false
 
-    override fun setCommentComplete(tid: ThreadId, postId: PostId, complete: Boolean) {
+    override suspend fun setCommentComplete(tid: ThreadId, postId: PostId, complete: Boolean) {
         commentCompleteFlags.set("${tid.value}_${postId.value}", complete)
     }
 
-    override fun clearCache(tid: ThreadId) {
+    override suspend fun clearCache(tid: ThreadId) {
         fullPageCache.clear()
         commentCache.clear()
         commentCompleteFlags.clear()

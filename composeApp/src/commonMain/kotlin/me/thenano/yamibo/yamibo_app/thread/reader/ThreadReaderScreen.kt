@@ -30,6 +30,7 @@ import io.github.littlesurvival.dto.page.Post
 import io.github.littlesurvival.dto.page.ThreadInfo
 import io.github.littlesurvival.dto.page.ThreadPage
 import io.github.littlesurvival.dto.value.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
@@ -37,6 +38,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import me.thenano.yamibo.yamibo_app.*
 import me.thenano.yamibo.yamibo_app.favorite.*
 import me.thenano.yamibo.yamibo_app.components.tracking.ReadingTimeTracker
@@ -564,28 +566,23 @@ internal fun ThreadReaderScreen(
     }
     val chineseConversionRepository = LocalChineseConversionRepository.current
     val chineseConversionMode by chineseConversionRepository.currentMode.collectAsState()
-    val convertedContentByPid = remember { mutableStateMapOf<Long, String>() }
-    var convertedContentVersion by remember { mutableIntStateOf(0) }
-
-    LaunchedEffect(posts, chineseConversionMode) {
-        convertedContentByPid.clear()
-        convertedContentVersion++
-        if (chineseConversionMode != null) {
-            posts.forEach { post ->
-                convertedContentByPid[post.pid.value.toLong()] = chineseConversionRepository.convert(post.contentHtml)
-            }
-            convertedContentVersion++
-        }
-    }
 
     val isMangaForum = forumId?.let { YamiboForum.isMangaForum(it) } == true
     val isNovelForum = forumId?.let { YamiboForum.isNovelForum(it) } == true
     val showRegularFirstPostTagBanner = isMangaForum || (!isNovelForum && !isNovelThread)
     val showNovelFirstPostTagBanner = isNovelThread && isNovelForum
-    val segmentedBodyByPostId = remember(posts, convertedContentVersion) {
-        posts.associate { post ->
-            val pid = post.pid.value.toLong()
-            pid to buildReaderBodySegments(post, convertedContentByPid[pid] ?: post.contentHtml)
+    var segmentedBodyByPostId by remember { mutableStateOf<Map<Long, List<ReaderBodySegment>?>>(emptyMap()) }
+    LaunchedEffect(posts, chineseConversionMode) {
+        segmentedBodyByPostId = withContext(Dispatchers.Default) {
+            posts.associate { post ->
+                val pid = post.pid.value.toLong()
+                val content = if (chineseConversionMode != null) {
+                    chineseConversionRepository.convert(post.contentHtml)
+                } else {
+                    post.contentHtml
+                }
+                pid to buildReaderBodySegments(post, content)
+            }
         }
     }
     val readerEntries = remember(
@@ -1079,7 +1076,7 @@ internal fun ThreadReaderScreen(
         isLoadingNextPage = true
         var loadSucceeded = false
 
-        fun loadFromCache(): Boolean {
+        suspend fun loadFromCache(): Boolean {
             val cached = threadRepository.getCachedThread(tid, authorId, page)
             if (cached != null) {
                 loadedPostsByPage[page] = cached.posts

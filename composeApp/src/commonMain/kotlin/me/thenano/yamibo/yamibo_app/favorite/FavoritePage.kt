@@ -45,6 +45,7 @@ internal sealed interface FavoritePageState {
         val content: FavoriteCategoryContent,
         val lastReadMap: Map<Long, Long>,
         val remoteFavoriteOrderMap: Map<Long, Long>,
+        val contentLoading: Boolean = false,
     ) : FavoritePageState
 }
 
@@ -78,6 +79,12 @@ private data class FavoriteForumFilterOption(
     val forumKey: String?,
     val label: String,
     val count: Int,
+)
+
+private data class FavoriteCategorySnapshot(
+    val content: FavoriteCategoryContent,
+    val lastReadMap: Map<Long, Long>,
+    val remoteFavoriteOrderMap: Map<Long, Long>,
 )
 
 sealed interface FavoriteGridEntry {
@@ -165,6 +172,8 @@ fun FavoritePage() {
     var showFavoriteCounts by rememberSaveable { mutableStateOf(false) }
     var favoriteCategoryCounts by remember { mutableStateOf<Map<Long, Int>>(emptyMap()) }
     var favoriteForumCounts by remember { mutableStateOf<List<FavoriteForumFilterOption>>(emptyList()) }
+    val categorySnapshots = remember { mutableStateMapOf<Long, FavoriteCategorySnapshot>() }
+    var reloadGeneration by remember { mutableIntStateOf(0) }
 
     fun showSnackbarMessage(message: String) {
         scope.launch {
@@ -181,6 +190,7 @@ fun FavoritePage() {
     }
 
     suspend fun reload(preferredCategoryId: Long? = null) {
+        val generation = ++reloadGeneration
         val currentSelectedCategoryId = (state as? FavoritePageState.Ready)?.selectedCategoryId
         val snapshot = withContext(Dispatchers.Default) {
             favoriteRepository.ensureDefaults()
@@ -201,14 +211,20 @@ fun FavoritePage() {
                 content.directItems.forEach(::add)
                 content.collections.forEach { addAll(it.items) }
             }.distinctBy { it.id }
-            val lastReadMap = buildMap {
-                allSortItems.forEach { item ->
-                    put(item.id, favoriteItemLastReadAt(item, readHistoryRepository))
+            val lastReadMap = if (sortMode == FavoriteSortMode.LAST_READ) {
+                buildMap {
+                    allSortItems.forEach { item ->
+                        put(item.id, favoriteItemLastReadAt(item, readHistoryRepository))
+                    }
                 }
+            } else {
+                emptyMap()
             }
-            val remoteFavoriteOrderMap = favoriteSyncRepository.getRemoteFavoriteOrderMap(
-                allSortItems.map { it.id }.toSet()
-            )
+            val remoteFavoriteOrderMap = if (sortMode == FavoriteSortMode.FAVORITED_ORDER) {
+                favoriteSyncRepository.getRemoteFavoriteOrderMap(allSortItems.map { it.id }.toSet())
+            } else {
+                emptyMap()
+            }
             FavoritePageState.Ready(
                 categories = categories,
                 selectedCategoryId = selectedCategoryId,
@@ -217,10 +233,16 @@ fun FavoritePage() {
                 remoteFavoriteOrderMap = remoteFavoriteOrderMap,
             )
         }
+        if (generation != reloadGeneration) return
         val content = snapshot.content
         if (openedCollectionId != null && content.collections.none { it.collection.id == openedCollectionId }) {
             openedCollectionId = null
         }
+        categorySnapshots[snapshot.selectedCategoryId] = FavoriteCategorySnapshot(
+            content = snapshot.content,
+            lastReadMap = snapshot.lastReadMap,
+            remoteFavoriteOrderMap = snapshot.remoteFavoriteOrderMap,
+        )
         state = snapshot
     }
 
@@ -449,6 +471,7 @@ fun FavoritePage() {
                 sortDescending = sortDescending,
                 favoriteGridMode = favoriteGridMode,
                 gridEntries = gridEntries,
+                contentLoading = ready.contentLoading,
                 openedCollection = openedCollection,
                 selectedItemIds = selectedItemIds,
                 selectedCollectionIds = selectedCollectionIds,
@@ -507,10 +530,19 @@ fun FavoritePage() {
                     }
                 },
                 onSelectCategory = { categoryId ->
+                    if (categoryId == ready.selectedCategoryId) return@FavoritePageContent
                     appSettingsRepository.favoriteLastCategoryId.setValue(categoryId.toInt())
                     openedCollectionId = null
                     selectedItemIds = emptySet()
                     selectedCollectionIds = emptySet()
+                    val cached = categorySnapshots[categoryId]
+                    state = ready.copy(
+                        selectedCategoryId = categoryId,
+                        content = cached?.content ?: FavoriteCategoryContent(emptyList(), emptyList()),
+                        lastReadMap = cached?.lastReadMap ?: emptyMap(),
+                        remoteFavoriteOrderMap = cached?.remoteFavoriteOrderMap ?: emptyMap(),
+                        contentLoading = cached == null,
+                    )
                     scope.launch { reload(categoryId) }
                 },
                 onShowGridMode = { showGridModeDialog = true },
@@ -829,6 +861,10 @@ fun FavoritePage() {
                     appSettingsRepository.favoriteSortDescending.setValue(
                         mode != FavoriteSortMode.NAME && mode != FavoriteSortMode.FORUM_NAME
                     )
+                    categorySnapshots.clear()
+                    ready?.selectedCategoryId?.let { categoryId ->
+                        scope.launch { reload(categoryId) }
+                    }
                 }
             },
             onConfirm = { showSortDialog = false },

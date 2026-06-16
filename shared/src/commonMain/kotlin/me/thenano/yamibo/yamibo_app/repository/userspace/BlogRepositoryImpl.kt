@@ -37,10 +37,10 @@ class BlogRepositoryImpl(
         return yamiboClient.fetchBlogComment(blogId, userId, message, formHash)
     }
 
-    override fun getCachedBlogPage(blogId: BlogId, userId: UserId?, page: Int): BlogPage? =
+    override suspend fun getCachedBlogPage(blogId: BlogId, userId: UserId?, page: Int): BlogPage? =
         blogPageCache.get(BlogRepository.BlogPageCacheKey(blogId.value, userId?.value, page).toCacheKey())
 
-    override fun clearCachedBlog(blogId: BlogId) {
+    override suspend fun clearCachedBlog(blogId: BlogId) {
         blogPageCache.removeByPrefix(BlogRepository.BlogPageCacheKey.keyPrefix(blogId.value))
     }
 }

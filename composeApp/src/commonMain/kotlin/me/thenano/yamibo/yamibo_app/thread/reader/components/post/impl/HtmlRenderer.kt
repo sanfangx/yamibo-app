@@ -269,6 +269,13 @@ fun HtmlBlocksRenderer(
     onImageHeightChanged: ((String, Int) -> Unit)? = null,
     onImageAspectRatioChanged: ((String, Float) -> Unit)? = null,
 ) {
+    val novelSettingsRepo = LocalNovelReaderSettingsRepository.current
+    val fontRepository = LocalFontRepository.current
+    val readerFontId = novelSettingsRepo.readerFontId.state()
+    val fontList by fontRepository.fonts.collectAsState()
+    val readerFontFamily = remember(readerFontId, fontList) {
+        fontRepository.getReaderFontFamily() ?: HtmlDefaultFontFamily
+    }
     val hasSelectableText = remember(blocks) {
         blocks.any { it is HtmlBlock.Text }
     }
@@ -288,6 +295,7 @@ fun HtmlBlocksRenderer(
                     imagePlaceholderAspectRatioFor = imagePlaceholderAspectRatioFor,
                     onImageHeightChanged = onImageHeightChanged,
                     onImageAspectRatioChanged = onImageAspectRatioChanged,
+                    readerFontFamily = readerFontFamily,
                 )
             }
         }
@@ -559,6 +567,7 @@ private fun HtmlBlockRenderer(
     imagePlaceholderAspectRatioFor: ((String) -> Float?)? = null,
     onImageHeightChanged: ((String, Int) -> Unit)? = null,
     onImageAspectRatioChanged: ((String, Float) -> Unit)? = null,
+    readerFontFamily: FontFamily = HtmlDefaultFontFamily,
 ) {
     DebugRecomposeProbe("HtmlBlockRenderer", "${block::class.simpleName}:${block.hashCode()}")
     val colors = YamiboTheme.colors
@@ -566,14 +575,8 @@ private fun HtmlBlockRenderer(
     val navigator = LocalNavigator.current
     
     val novelSettingsRepo = LocalNovelReaderSettingsRepository.current
-    val fontRepository = LocalFontRepository.current
     val fontSize = novelSettingsRepo.fontSize.state()
     val lineSpacing = novelSettingsRepo.lineSpacing.state()
-    val readerFontId = novelSettingsRepo.readerFontId.state()
-    val fontList by fontRepository.fonts.collectAsState()
-    val readerFontFamily = remember(readerFontId, fontList) {
-        fontRepository.getReaderFontFamily() ?: HtmlDefaultFontFamily
-    }
     @Suppress("DEPRECATION") val clipboardManager = LocalClipboardManager.current
     val isDarkTheme = (colors.creamBackground.red + colors.creamBackground.green + colors.creamBackground.blue) < 1.5f
 
@@ -1045,6 +1048,7 @@ private fun HtmlBlockRenderer(
                                     imagePlaceholderAspectRatioFor = imagePlaceholderAspectRatioFor,
                                     onImageHeightChanged = onImageHeightChanged,
                                     onImageAspectRatioChanged = onImageAspectRatioChanged,
+                                    readerFontFamily = readerFontFamily,
                                 )
                             }
                         }
@@ -1097,6 +1101,7 @@ private fun HtmlBlockRenderer(
                             imagePlaceholderAspectRatioFor = imagePlaceholderAspectRatioFor,
                             onImageHeightChanged = onImageHeightChanged,
                             onImageAspectRatioChanged = onImageAspectRatioChanged,
+                            readerFontFamily = readerFontFamily,
                         )
                     }
                 }
@@ -1132,6 +1137,7 @@ private fun HtmlBlockRenderer(
                             imagePlaceholderAspectRatioFor = imagePlaceholderAspectRatioFor,
                             onImageHeightChanged = onImageHeightChanged,
                             onImageAspectRatioChanged = onImageAspectRatioChanged,
+                            readerFontFamily = readerFontFamily,
                         )
                     }
                 }
@@ -1224,6 +1230,7 @@ private fun HtmlBlockRenderer(
                                                     imagePlaceholderAspectRatioFor = imagePlaceholderAspectRatioFor,
                                                     onImageHeightChanged = onImageHeightChanged,
                                                     onImageAspectRatioChanged = onImageAspectRatioChanged,
+                                                    readerFontFamily = readerFontFamily,
                                                 )
                                             }
                                         }
@@ -1254,7 +1261,11 @@ private fun HtmlBlockRenderer(
                 ) {
                     if (useLazyRows) {
                         LazyColumn(modifier = Modifier.heightIn(max = 560.dp)) {
-                            itemsIndexed(rows) { rowIdx, row -> renderRow(rowIdx, row) }
+                            itemsIndexed(
+                                items = rows,
+                                key = { rowIdx, row -> "$rowIdx:${row.hashCode()}" },
+                                contentType = { _, _ -> "html_table_row" },
+                            ) { rowIdx, row -> renderRow(rowIdx, row) }
                         }
                     } else {
                         Column {

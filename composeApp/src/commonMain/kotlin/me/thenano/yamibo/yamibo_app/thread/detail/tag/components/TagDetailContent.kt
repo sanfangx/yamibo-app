@@ -76,10 +76,10 @@ fun TagDetailContent(
         }
 
         // top page nav
-        if (tagPage.pageNav != null) {
+        tagPage.pageNav?.let { pageNav ->
             item {
                 PageNavigation(
-                    pageNav = tagPage.pageNav!!,
+                    pageNav = pageNav,
                     onPageChange = onPageChange
                 )
             }
@@ -112,10 +112,10 @@ fun TagDetailContent(
         }
 
         // bottom page nav
-        if (tagPage.pageNav != null) {
+        tagPage.pageNav?.let { pageNav ->
             item {
                 PageNavigation(
-                    pageNav = tagPage.pageNav!!,
+                    pageNav = pageNav,
                     onPageChange = onPageChange
                 )
             }

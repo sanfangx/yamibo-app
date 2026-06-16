@@ -5,6 +5,8 @@ import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 
 class AndroidFontPlatform(private val context: Context) : FontPlatform {
@@ -12,7 +14,8 @@ class AndroidFontPlatform(private val context: Context) : FontPlatform {
     override val unavailableMessage: String? = null
 
     override suspend fun importFont(sourceUri: String, displayName: String?, id: String): FontImportResult {
-        return try {
+        return withContext(Dispatchers.IO) {
+            try {
             val uri = Uri.parse(sourceUri)
             val sourceName = displayName
                 ?.takeIf { it.isNotBlank() }
@@ -20,7 +23,7 @@ class AndroidFontPlatform(private val context: Context) : FontPlatform {
                 ?: "font"
             val extension = sourceName.substringAfterLast('.', "").lowercase()
             if (extension != "ttf" && extension != "otf") {
-                return FontImportResult.Failure("Only .ttf and .otf font files are supported.")
+                return@withContext FontImportResult.Failure("Only .ttf and .otf font files are supported.")
             }
 
             val fontsDir = File(context.filesDir, "fonts").apply { mkdirs() }
@@ -31,15 +34,16 @@ class AndroidFontPlatform(private val context: Context) : FontPlatform {
                 target.outputStream().use { output ->
                     input.copyTo(output)
                 }
-            } ?: return FontImportResult.Failure("Unable to open selected font file.")
+            } ?: return@withContext FontImportResult.Failure("Unable to open selected font file.")
 
             FontImportResult.Success(
                 name = sourceName.substringBeforeLast('.').ifBlank { sourceName },
                 fileName = sourceName,
                 platformPath = target.absolutePath,
             )
-        } catch (error: Throwable) {
-            FontImportResult.Failure(error.message ?: "Unable to import selected font file.")
+            } catch (error: Throwable) {
+                FontImportResult.Failure(error.message ?: "Unable to import selected font file.")
+            }
         }
     }
 
