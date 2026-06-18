@@ -15,3 +15,10 @@ setEnabled:
 UPDATE FavoriteUpdateCategoryFilter
 SET enabled = ?, updatedAt = ?
 WHERE categoryId = ?;
+
+deleteMissing:
+DELETE FROM FavoriteUpdateCategoryFilter
+WHERE categoryId NOT IN ?;
+
+deleteAll:
+DELETE FROM FavoriteUpdateCategoryFilter;

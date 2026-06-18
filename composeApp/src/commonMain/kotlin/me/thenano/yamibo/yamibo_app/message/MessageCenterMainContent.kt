@@ -1,9 +1,10 @@
-﻿package me.thenano.yamibo.yamibo_app.message
+package me.thenano.yamibo.yamibo_app.message
 
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 
 import me.thenano.yamibo.yamibo_app.i18n.localizedLabel
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -49,7 +50,7 @@ import me.thenano.yamibo.yamibo_app.favorite.updates.FavoriteUpdateStatusCard
 import me.thenano.yamibo.yamibo_app.favorite.updates.snapshotOrNull
 import me.thenano.yamibo.yamibo_app.repository.FavoriteUpdateRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.FavoriteUpdateInterval
-import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.util.rememberImageRequest
 import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
 
@@ -78,6 +79,9 @@ internal fun MessageCenterMainContent(
     onNoticeUserClick: (UserId) -> Unit,
     onOpenPrivateMessage: (User) -> Unit,
     onMessageAction: () -> Unit,
+    isSelectMode: Boolean = false,
+    selectedEventIds: Set<Long> = emptySet(),
+    onToggleEvent: (Long) -> Unit = {},
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -108,7 +112,18 @@ internal fun MessageCenterMainContent(
                 }
                 if (content.events.isEmpty()) item { MessageCenterEmptyListMessage(i18n("沒有偵測到更新")) }
                 items(content.events, key = { it.id }) { event ->
-                    FavoriteUpdateCard(event = event, onClick = { onUpdateEventClick(event) })
+                    FavoriteUpdateCard(
+                        event = event,
+                        isSelectMode = isSelectMode,
+                        isSelected = selectedEventIds.contains(event.id),
+                        onClick = {
+                            if (isSelectMode) {
+                                onToggleEvent(event.id)
+                            } else {
+                                onUpdateEventClick(event)
+                            }
+                        }
+                    )
                 }
             }
             is MessageCenterContent.PrivateMessages -> {
@@ -261,6 +276,8 @@ private fun FavoriteUpdateFidFilterDialog(
 @Composable
 private fun FavoriteUpdateCard(
     event: FavoriteUpdateRepository.UpdateEvent,
+    isSelectMode: Boolean = false,
+    isSelected: Boolean = false,
     onClick: () -> Unit,
 ) {
     val colors = YamiboTheme.colors
@@ -268,6 +285,17 @@ private fun FavoriteUpdateCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 4.dp)
+            .then(
+                if (isSelected) {
+                    Modifier.border(
+                        width = 2.dp,
+                        color = colors.brownDeep,
+                        shape = RoundedCornerShape(16.dp)
+                    )
+                } else {
+                    Modifier
+                }
+            )
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,

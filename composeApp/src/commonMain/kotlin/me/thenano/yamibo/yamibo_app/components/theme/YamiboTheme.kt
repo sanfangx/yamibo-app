@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.theme
+package me.thenano.yamibo.yamibo_app.components.theme
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable

@@ -1,9 +1,7 @@
 ﻿package me.thenano.yamibo.yamibo_app.favorite
 
 import YamiboIcons
-import androidx.compose.animation.*
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -37,7 +35,7 @@ import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.FavoriteC
 import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.FavoriteItem
 import me.thenano.yamibo.yamibo_app.repository.settings.FavoriteGridMode
 import me.thenano.yamibo.yamibo_app.repository.settings.FavoriteSortMode
-import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
 
 @Composable
 internal fun FavoritePageContent(

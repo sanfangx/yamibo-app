@@ -45,7 +45,7 @@ import me.thenano.yamibo.yamibo_app.repository.inapplinknavigation.InAppLinkCont
 import me.thenano.yamibo.yamibo_app.repository.inapplinknavigation.InAppLinkResolveResult
 import me.thenano.yamibo.yamibo_app.repository.inapplinknavigation.InAppLinkTarget
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
-import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.INovelThreadDetailScreen
 import me.thenano.yamibo.yamibo_app.thread.detail.tag.ITagDetailScreen
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.components.ThreadTopBar
@@ -54,7 +54,6 @@ import me.thenano.yamibo.yamibo_app.thread.reader.IThreadReaderScreen
 import me.thenano.yamibo.yamibo_app.userspace.IUserSpaceScreen
 import me.thenano.yamibo.yamibo_app.userspace.blog.IBlogReaderScreen
 import me.thenano.yamibo.yamibo_app.webview.IPlatformWebView
-import me.thenano.yamibo.yamibo_app.navigation.RestorableScreenEntry
 
 @Serializable
 private data class InAppLinkResolvingRestorePayload(

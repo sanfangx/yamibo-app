@@ -27,6 +27,11 @@ UPDATE LocalFavoriteItem
 SET title = ?, coverUrl = ?, lastUpdatedTime = ?, forumId = ?, forumName = ?, authorId = ?, lastFavoriteStatusUpdateAt = ?
 WHERE id = ?;
 
+updateForumInfo:
+UPDATE LocalFavoriteItem
+SET forumId = ?, forumName = ?
+WHERE id = ?;
+
 markFavoriteStatusUpdated:
 UPDATE LocalFavoriteItem
 SET lastFavoriteStatusUpdateAt = ?

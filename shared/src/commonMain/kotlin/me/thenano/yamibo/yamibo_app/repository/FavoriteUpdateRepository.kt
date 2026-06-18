@@ -104,6 +104,8 @@ interface FavoriteUpdateRepository {
     suspend fun getActiveEventsFiltered(): List<UpdateEvent>
     suspend fun markEventRead(eventId: Long)
     suspend fun dismissEvent(eventId: Long)
+    suspend fun dismissEvents(eventIds: List<Long>)
+    suspend fun dismissAllEvents()
     suspend fun getFidFilters(): List<FidFilter>
     suspend fun setFidEnabled(fid: Int, enabled: Boolean)
     suspend fun getCategoryFilters(): List<CategoryFilter>

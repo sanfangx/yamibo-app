@@ -48,6 +48,7 @@ class FavoriteUpdateRepositoryImpl(
     private val runQueries = db.favoriteUpdateRunQueries
     private val filterQueries = db.favoriteUpdateFidFilterQueries
     private val categoryFilterQueries = db.favoriteUpdateCategoryFilterQueries
+    private val itemQueries = db.localFavoriteItemQueries
     private val interruptRequestedRunIds = linkedSetOf<String>()
     private val stateFlow = MutableStateFlow<RunState>(RunState.Idle)
 
@@ -162,7 +163,7 @@ class FavoriteUpdateRepositoryImpl(
         }
         val targets = favorites.filter { item ->
             val fid = item.scopeFid()
-            val fidMatches = fid == null || enabledFids.isEmpty() || fid in enabledFids
+            val fidMatches = enabledFids.isEmpty() || (fid != null && fid in enabledFids)
             val categoryMatches = enabledCategories.isEmpty() ||
                 categoryIdsByItem[item.id].orEmpty().any { it in enabledCategories }
             fidMatches && categoryMatches
@@ -277,6 +278,20 @@ class FavoriteUpdateRepositoryImpl(
         eventQueries.dismiss(currentTimeMillis(), eventId)
     }
 
+    override suspend fun dismissEvents(eventIds: List<Long>) {
+        if (eventIds.isEmpty()) return
+        db.transaction {
+            val now = currentTimeMillis()
+            eventIds.forEach { id ->
+                eventQueries.dismiss(now, id)
+            }
+        }
+    }
+
+    override suspend fun dismissAllEvents() {
+        eventQueries.dismissAll(currentTimeMillis())
+    }
+
     override suspend fun getFidFilters(): List<FidFilter> =
         refreshAndGetFidFilters()
 
@@ -344,6 +359,14 @@ class FavoriteUpdateRepositoryImpl(
         val latestUpdateMillis = latest?.updateTimeMillis()
         val pageCount = page.pageNav?.totalPages ?: page.pageNav?.currentPage
         val replyCount = page.thread.totalReplies
+
+        if (item.forumId == null || item.forumName.isNullOrBlank()) {
+            itemQueries.updateForumInfo(
+                forumId = page.thread.forum.fid.value.toLong(),
+                forumName = page.thread.forum.name,
+                id = item.id,
+            )
+        }
 
         if (existing?.baselineReady != 1L) {
             val shouldReportImportedUpdate = shouldReportImportedUpdate(
@@ -667,6 +690,12 @@ class FavoriteUpdateRepositoryImpl(
                 updatedAt = now,
             )
         }
+        val activeFids = counts.keys.map { it.first.toLong() }
+        if (activeFids.isNotEmpty()) {
+            filterQueries.deleteMissing(activeFids)
+        } else {
+            filterQueries.deleteAll()
+        }
     }
 
     private suspend fun refreshAndGetFidFilters(): List<FidFilter> {
@@ -683,7 +712,8 @@ class FavoriteUpdateRepositoryImpl(
             }
         }
         val existing = categoryFilterQueries.getAll().executeAsList().associateBy { it.categoryId }
-        localFavoriteRepository.getCategories().forEach { category ->
+        val activeCategories = localFavoriteRepository.getCategories()
+        activeCategories.forEach { category ->
             categoryFilterQueries.upsertFilter(
                 categoryId = category.id,
                 categoryName = category.name,
@@ -691,6 +721,12 @@ class FavoriteUpdateRepositoryImpl(
                 itemCount = (counts[category.id] ?: 0).toLong(),
                 updatedAt = now,
             )
+        }
+        val categoryIds = activeCategories.map { it.id }
+        if (categoryIds.isNotEmpty()) {
+            categoryFilterQueries.deleteMissing(categoryIds)
+        } else {
+            categoryFilterQueries.deleteAll()
         }
     }
 

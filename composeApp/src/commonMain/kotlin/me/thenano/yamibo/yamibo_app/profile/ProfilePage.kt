@@ -36,8 +36,8 @@ import me.thenano.yamibo.yamibo_app.profile.sign.ISignInfoScreen
 import me.thenano.yamibo.yamibo_app.profile.sign.ISignWebView
 import me.thenano.yamibo.yamibo_app.profile.support.ISupportAppDevelopmentScreen
 import me.thenano.yamibo.yamibo_app.repository.settings.SignInMode
-import me.thenano.yamibo.yamibo_app.theme.YamiboSnackbarHost
-import me.thenano.yamibo.yamibo_app.theme.YamiboTheme.colors
+import me.thenano.yamibo.yamibo_app.components.theme.YamiboSnackbarHost
+import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme.colors
 
 @Composable
 fun ProfilePage(
@@ -54,21 +54,42 @@ fun ProfilePage(
 
     var userInfo by remember { mutableStateOf(authRepository.currentUser()) }
     var isLoading by remember { mutableStateOf(false) }
-    var signButtonTitle by remember { mutableStateOf(i18n("點擊簽到")) }
     var signRefreshKey by remember { mutableIntStateOf(0) }
     var isSigning by remember { mutableStateOf(false) }
+    var signButtonTitle by remember {
+        mutableStateOf(
+            if (userInfo == null) {
+                i18n("點擊簽到")
+            } else {
+                when (signRepository.getKnownSignedToday()) {
+                    true -> i18n("今日已簽到")
+                    false -> i18n("點擊簽到")
+                    null -> i18n("載入中...")
+                }
+            }
+        )
+    }
 
     fun refreshSignStatus() {
+        if (isSigning) {
+            signButtonTitle = i18n("正在簽到...")
+            return
+        }
+        if (userInfo == null) {
+            signButtonTitle = i18n("點擊簽到")
+            return
+        }
+        val knownSignedToday = signRepository.getKnownSignedToday()
+        if (knownSignedToday != null) {
+            signButtonTitle = if (knownSignedToday) i18n("今日已簽到") else i18n("點擊簽到")
+            return
+        }
+        signButtonTitle = i18n("載入中...")
         coroutineScope.launch {
-            if (isSigning) {
-                signButtonTitle = i18n("正在簽到...")
-                return@launch
-            }
+            val cachedPageInfo = signRepository.getCachedPageInfo()
             signButtonTitle = when {
-                userInfo == null -> i18n("點擊簽到")
-                signRepository.getCachedPageInfo()?.hasSignedToday == true -> i18n("今日已簽到")
                 signRepository.isSignedToday() -> i18n("今日已簽到")
-                signRepository.getCachedPageInfo()?.hasSignedToday == false -> i18n("點擊簽到")
+                cachedPageInfo?.hasSignedToday == false -> i18n("點擊簽到")
                 else -> {
                     when (val result = signRepository.fetchPageInfo()) {
                         is YamiboResult.Success -> {

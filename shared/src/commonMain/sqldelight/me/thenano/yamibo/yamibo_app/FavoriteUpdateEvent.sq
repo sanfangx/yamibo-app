@@ -23,6 +23,12 @@ UPDATE FavoriteUpdateEvent
 SET dismissedAt = ?
 WHERE id = ?;
 
+dismissAll:
+UPDATE FavoriteUpdateEvent
+SET dismissedAt = ?
+WHERE dismissedAt IS NULL;
+
 deleteForTarget:
 DELETE FROM FavoriteUpdateEvent
 WHERE targetType = ? AND targetId = ? AND authorId = ?;
+

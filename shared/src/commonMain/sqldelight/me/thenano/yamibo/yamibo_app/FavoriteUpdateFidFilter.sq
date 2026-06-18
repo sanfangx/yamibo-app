@@ -19,3 +19,6 @@ WHERE fid = ?;
 deleteMissing:
 DELETE FROM FavoriteUpdateFidFilter
 WHERE fid NOT IN ?;
+
+deleteAll:
+DELETE FROM FavoriteUpdateFidFilter;

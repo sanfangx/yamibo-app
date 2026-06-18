@@ -26,7 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import me.thenano.yamibo.yamibo_app.favorite.FavoriteDialogButton
 import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.FavoriteCategory
-import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.components.controls.YamiboActionChip
 import me.thenano.yamibo.yamibo_app.components.navigation.YamiboMainTabIconAction
 import me.thenano.yamibo.yamibo_app.components.navigation.YamiboMainTabTopBar

@@ -9,7 +9,6 @@ import io.github.littlesurvival.dto.page.SignActionStatus
 import io.github.littlesurvival.dto.page.SignPage
 import io.github.littlesurvival.parse.SignPageParser
 import kotlinx.coroutines.runBlocking
-import me.thenano.yamibo.yamibo_app.Database
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.repository.AuthRepository
 import me.thenano.yamibo.yamibo_app.repository.SignRepository
@@ -17,15 +16,14 @@ import me.thenano.yamibo.yamibo_app.repository.settings.AppSettingsRepository
 import me.thenano.yamibo.yamibo_app.util.time.currentLocalDateKey
 import me.thenano.yamibo.yamibo_app.util.time.currentLocalDateKeyAt
 import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
-import me.thenano.yamibo.yamiboapp.SignDailyRecord
+import me.thenano.yamibo.yamibo_app.store.sign.SignStatusStore
 
 class SignRepositoryImpl(
-    db: Database,
+    private val signStatusStore: SignStatusStore,
     private val authRepository: AuthRepository,
     private val appSettingsRepository: AppSettingsRepository,
     private val yamiboClient: YamiboClient,
 ) : SignRepository {
-    private val recordQueries = db.signDailyRecordQueries
     private val signPageParser = SignPageParser()
 
     override suspend fun fetchPageInfo(): YamiboResult<SignRepository.SignPageInfo> {
@@ -136,14 +134,22 @@ class SignRepositoryImpl(
     }
 
     override suspend fun getTodayRecord(): SignRepository.DailyRecord? {
-        return recordQueries.getByDateKey(currentLocalDateKey()).executeAsOneOrNull()?.toModel()
+        return signStatusStore.getToday()?.let { record ->
+            SignRepository.DailyRecord(
+                dateKey = record.dateKey,
+                isSigned = record.isSigned,
+                updatedAt = record.updatedAt,
+                lastMessage = record.lastMessage,
+            )
+        }
     }
 
+    override fun getKnownSignedToday(): Boolean? =
+        signStatusStore.getToday()?.isSigned
+
     override suspend fun isSignedToday(): Boolean {
-        getCachedPageInfo()?.let { cached ->
-            if (cached.hasSignedToday) return true
-        }
-        return getTodayRecord()?.isSigned == true
+        getKnownSignedToday()?.let { return it }
+        return getCachedPageInfo()?.hasSignedToday == true
     }
 
     override suspend fun markTodaySigned(message: String?) {
@@ -309,22 +315,7 @@ class SignRepositoryImpl(
         info: SignRepository.SignPageInfo,
         message: String? = null,
     ) {
-        val dateKey = currentLocalDateKey()
-        recordQueries.upsert(
-            dateKey = dateKey,
-            isSigned = if (info.hasSignedToday) 1L else 0L,
-            updatedAt = currentTimeMillis(),
-            lastMessage = message,
-        )
-    }
-
-    private fun SignDailyRecord.toModel(): SignRepository.DailyRecord {
-        return SignRepository.DailyRecord(
-            dateKey = dateKey,
-            isSigned = isSigned != 0L,
-            updatedAt = updatedAt,
-            lastMessage = lastMessage,
-        )
+        signStatusStore.updateToday(isSigned = info.hasSignedToday, message = message)
     }
 
     private data class ParsedActionResult(
@@ -332,4 +323,3 @@ class SignRepositoryImpl(
         val message: String,
     )
 }
-

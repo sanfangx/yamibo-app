@@ -4,7 +4,7 @@ import YamiboIcons
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -35,8 +35,8 @@ import me.thenano.yamibo.yamibo_app.components.navigation.YamiboTopBar
 import me.thenano.yamibo.yamibo_app.components.navigation.YamiboTopBarIconAction
 import me.thenano.yamibo.yamibo_app.components.user.UserAvatar
 import me.thenano.yamibo.yamibo_app.i18n.i18n
-import me.thenano.yamibo.yamibo_app.theme.YamiboSnackbarHost
-import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.components.theme.YamiboSnackbarHost
+import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.HtmlRenderer
 
 private sealed interface PrivateMessageState {
@@ -166,7 +166,12 @@ fun PrivateMessageScreen(
                         if (current.page.messages.isEmpty()) {
                             item { EmptyPrivateMessages() }
                         } else {
-                            items(current.page.messages, key = { "${it.messageType}_${it.timeInfo.text}_${it.contentHtml.hashCode()}" }) { message ->
+                            itemsIndexed(
+                                items = current.page.messages,
+                                key = { index, message ->
+                                    "${message.messageType}_${message.timeInfo.text}_${message.contentHtml.hashCode()}_$index"
+                                },
+                            ) { _, message ->
                                 PrivateMessageBubble(message, currentUser)
                             }
                         }
@@ -293,4 +298,3 @@ private fun PrivateMessageError(message: String, onRetry: () -> Unit) {
 private fun EmptyPrivateMessages() {
     YamiboEmptyContent(message = i18n("沒有找到消息"), modifier = Modifier.padding(vertical = 80.dp))
 }
-

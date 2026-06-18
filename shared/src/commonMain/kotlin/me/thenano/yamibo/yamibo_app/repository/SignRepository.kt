@@ -60,6 +60,8 @@ interface SignRepository {
 
     suspend fun getTodayRecord(): DailyRecord?
 
+    fun getKnownSignedToday(): Boolean?
+
     suspend fun isSignedToday(): Boolean
 
     suspend fun markTodaySigned(message: String? = null)

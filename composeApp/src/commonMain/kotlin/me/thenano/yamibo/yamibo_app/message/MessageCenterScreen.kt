@@ -1,10 +1,6 @@
-﻿package me.thenano.yamibo.yamibo_app.message
+package me.thenano.yamibo.yamibo_app.message
 
 import YamiboIcons
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -47,8 +43,8 @@ import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.FavoriteUpdateRepository
 import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
-import me.thenano.yamibo.yamibo_app.theme.YamiboSnackbarHost
-import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.components.theme.YamiboSnackbarHost
+import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.INovelThreadDetailScreen
 import me.thenano.yamibo.yamibo_app.thread.detail.tag.ITagDetailScreen
 import me.thenano.yamibo.yamibo_app.thread.reader.IThreadReaderScreen
@@ -107,6 +103,8 @@ fun MessageCenterScreen(
     var currentPage by remember { mutableIntStateOf(1) }
     var state by remember { mutableStateOf<MessageCenterState>(MessageCenterState.Loading) }
     var isRefreshing by remember { mutableStateOf(false) }
+    var isSelectMode by remember { mutableStateOf(false) }
+    var selectedEventIds by remember { mutableStateOf(setOf<Long>()) }
     var showGlobalRefreshConfirm by remember { mutableStateOf(false) }
     var showUpdateScopeDialog by remember { mutableStateOf(false) }
     var showResultFilterDialog by remember { mutableStateOf(false) }
@@ -119,21 +117,23 @@ fun MessageCenterScreen(
 
     suspend fun loadTab(tab: MessageCenterTab, page: Int, preferCache: Boolean = true) {
         if (tab == MessageCenterTab.Updates) {
-            currentPage = 1
             val updates = withContext(Dispatchers.Default) {
                 MessageCenterContent.Updates(
-                    events = favoriteUpdateRepository.getActiveEventsFiltered(),
+                    events = favoriteUpdateRepository.getActiveEvents(),
                     filters = favoriteUpdateRepository.getFidFilters(),
                     categoryFilters = favoriteUpdateRepository.getCategoryFilters(),
                     scopeTargets = favoriteUpdateRepository.getScopeTargets(),
                     runState = favoriteUpdateRunState,
                 )
             }
+            if (tab != selectedTab) return
+            currentPage = 1
             state = MessageCenterState.Success(updates)
             return
         }
         if (preferCache) {
             cachedContent(userSpaceRepository, tab, page)?.let {
+                if (tab != selectedTab) return
                 currentPage = page
                 state = MessageCenterState.Success(it)
                 if (it is MessageCenterContent.PrivateMessages) {
@@ -143,6 +143,7 @@ fun MessageCenterScreen(
             }
         }
         val result = fetchContent(userSpaceRepository, tab, page)
+        if (tab != selectedTab) return
         state = when (result) {
             is YamiboResult.Success -> {
                 val content = result.value
@@ -167,12 +168,61 @@ fun MessageCenterScreen(
         }
     }
 
+    DisposableEffect(isSelectMode, navigator) {
+        if (!isSelectMode) {
+            onDispose { }
+        } else {
+            val handler = {
+                isSelectMode = false
+                selectedEventIds = emptySet()
+                true
+            }
+            navigator.backHandlers.add(handler)
+            onDispose { navigator.backHandlers.remove(handler) }
+        }
+    }
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = colors.creamBackground,
         snackbarHost = { YamiboSnackbarHost(hostState = snackbarHostState) },
         topBar = {
-            if (mainTabTopBar) {
+            if (updatesOnly && isSelectMode) {
+                UpdatesSelectTopBar(
+                    onSelectAll = {
+                        val updates = (state as? MessageCenterState.Success)?.content as? MessageCenterContent.Updates
+                        if (updates != null) {
+                            selectedEventIds = updates.events.map { it.id }.toSet()
+                        }
+                    },
+                    onClearAll = {
+                        scope.launch {
+                            favoriteUpdateRepository.dismissAllEvents()
+                            isSelectMode = false
+                            selectedEventIds = emptySet()
+                            loadTab(MessageCenterTab.Updates, 1, preferCache = false)
+                            snackbarHostState.showSnackbar(i18n("已刪除全部更新紀錄"))
+                        }
+                    },
+                    onCancel = {
+                        isSelectMode = false
+                        selectedEventIds = emptySet()
+                    },
+                    onDeleteSelected = {
+                        if (selectedEventIds.isNotEmpty()) {
+                            scope.launch {
+                                val deletedCount = selectedEventIds.size
+                                favoriteUpdateRepository.dismissEvents(selectedEventIds.toList())
+                                isSelectMode = false
+                                selectedEventIds = emptySet()
+                                loadTab(MessageCenterTab.Updates, 1, preferCache = false)
+                                snackbarHostState.showSnackbar(i18n("已刪除 {} 項紀錄", deletedCount))
+                            }
+                        }
+                    },
+                    selectedCount = selectedEventIds.size
+                )
+            } else if (mainTabTopBar) {
                 MessageCenterMainTopBar(
                     title = if (updatesOnly) i18n("更新") else i18n("我的消息"),
                     profile = currentUser,
@@ -185,6 +235,14 @@ fun MessageCenterScreen(
                                 onClick = { showUpdateScopeDialog = true },
                                 iconSize = 26,
                                 tint = if (updateScopeFilterActive) colors.orangeAccent else colors.brownDeep,
+                            )
+                            YamiboMainTabIconAction(
+                                icon = YamiboIcons.Trashcan,
+                                contentDescription = i18n("多選刪除"),
+                                onClick = {
+                                    isSelectMode = true
+                                    selectedEventIds = emptySet()
+                                },
                             )
                         }
                     },
@@ -212,16 +270,18 @@ fun MessageCenterScreen(
                 MessageCenterTabRow(
                     selectedTab = selectedTab,
                     includeUpdates = false,
-                    onSelect = { selectedTab = it },
+                    onSelect = { tab ->
+                        if (tab != selectedTab) {
+                            selectedTab = tab
+                            currentPage = 1
+                            isRefreshing = false
+                            state = MessageCenterState.Loading
+                        }
+                    },
                 )
             }
-            AnimatedContent(
-                targetState = state,
-                transitionSpec = { fadeIn() togetherWith fadeOut() },
-                label = "message_center_state",
-                modifier = Modifier.fillMaxSize(),
-            ) { current ->
-                when (current) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                when (val current = state) {
                     MessageCenterState.Loading -> YamiboLoadingContent()
                     is MessageCenterState.Error -> YamiboErrorContent(
                         message = current.message,
@@ -262,6 +322,7 @@ fun MessageCenterScreen(
                             selectedTab = selectedTab,
                             currentPage = currentPage,
                             onPageChange = { page ->
+                                state = MessageCenterState.Loading
                                 scope.launch { loadTab(selectedTab, page) }
                             },
                             onUpdateEventClick = { event ->
@@ -341,11 +402,20 @@ fun MessageCenterScreen(
                                     snackbarHostState.showSnackbar(i18n("TODO: 消息互動尚未接入"), duration = SnackbarDuration.Short)
                                 }
                             },
+                            isSelectMode = isSelectMode,
+                            selectedEventIds = selectedEventIds,
+                            onToggleEvent = { id ->
+                                selectedEventIds = if (id in selectedEventIds) {
+                                    selectedEventIds - id
+                                } else {
+                                    selectedEventIds + id
+                                }
+                            },
                         )
                     }
-                }
             }
         }
+    }
     }
 
     if (showGlobalRefreshConfirm) {
@@ -1010,4 +1080,45 @@ private fun isMessageListUrl(url: String): Boolean {
         url.contains("mod=space") &&
         url.contains("do=pm") &&
         !url.contains("spacecp")
+}
+
+@Composable
+private fun UpdatesSelectTopBar(
+    onSelectAll: () -> Unit,
+    onClearAll: () -> Unit,
+    onCancel: () -> Unit,
+    onDeleteSelected: () -> Unit,
+    selectedCount: Int,
+) {
+    val colors = YamiboTheme.colors
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .statusBarsPadding()
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text(
+            text = i18n("已選 {} 項", selectedCount),
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = colors.brownDeep,
+            modifier = Modifier.weight(1f),
+        )
+        Surface(onClick = onSelectAll, shape = RoundedCornerShape(10.dp), color = colors.brownPrimary.copy(alpha = 0.12f)) {
+            Text(i18n("全選"), modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), fontSize = 13.sp, fontWeight = FontWeight.Medium, color = colors.textStrong)
+        }
+        if (selectedCount > 0) {
+            Surface(onClick = onDeleteSelected, shape = RoundedCornerShape(10.dp), color = Color(0xFFE53935).copy(alpha = 0.15f)) {
+                Text(i18n("刪除"), modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Color(0xFFE53935))
+            }
+        }
+        Surface(onClick = onClearAll, shape = RoundedCornerShape(10.dp), color = Color(0xFFE53935).copy(alpha = 0.1f)) {
+            Text(i18n("清空"), modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Color(0xFFE53935))
+        }
+        Surface(onClick = onCancel, shape = RoundedCornerShape(10.dp), color = colors.brownPrimary.copy(alpha = 0.12f)) {
+            Text(i18n("取消"), modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), fontSize = 13.sp, fontWeight = FontWeight.Medium, color = colors.textStrong)
+        }
+    }
 }

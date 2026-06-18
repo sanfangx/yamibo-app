@@ -16,7 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.littlesurvival.dto.model.BlogSummary
 import io.github.littlesurvival.dto.model.User
-import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
 
 @Composable
 internal fun BlogCard(blog: BlogSummary, onClick: () -> Unit, onUserClick: (User) -> Unit) {

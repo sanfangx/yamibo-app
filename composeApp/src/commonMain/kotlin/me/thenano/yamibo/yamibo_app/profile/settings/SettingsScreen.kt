@@ -20,7 +20,7 @@ import me.thenano.yamibo.yamibo_app.profile.settings.access.IBackgroundAccessSet
 import me.thenano.yamibo.yamibo_app.profile.settings.backup.IBackupSettingsScreen
 import me.thenano.yamibo.yamibo_app.profile.settings.components.SettingsItem
 import me.thenano.yamibo.yamibo_app.profile.settings.update.IAppUpdateScreen
-import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

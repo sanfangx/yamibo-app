@@ -32,7 +32,7 @@ import io.github.littlesurvival.dto.page.FilterType
 import io.github.littlesurvival.dto.page.OrderType
 import io.github.littlesurvival.dto.page.PinnedItem
 import io.github.littlesurvival.dto.value.ForumId
-import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
 
 /** Forum stats bar (today/theme/rank with red accent) */
 @Composable
