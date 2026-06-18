@@ -43,8 +43,8 @@ class DefaultAppUpdateRepository(
             manifestUrl = "https://gitee.com/LittleSurvival/ymb-apk-release/raw/main/update/stable.json",
         ),
         AppUpdateSource(
-            name = "GitCode",
-            manifestUrl = "https://gitcode.com/LittleSurvival/ymb-apk-release/raw/main/update/stable.json",
+            name = "Gitea",
+            manifestUrl = "https://gitea.com/LittleSurvival/ymb-apk-release/raw/branch/main/update/stable.json",
         ),
     )
 

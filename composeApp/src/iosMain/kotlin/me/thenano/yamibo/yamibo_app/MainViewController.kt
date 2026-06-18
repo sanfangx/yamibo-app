@@ -20,6 +20,8 @@ import me.thenano.yamibo.yamibo_app.repository.backup.BackupRepositoryImpl
 import me.thenano.yamibo.yamibo_app.repository.chineseconversion.createChineseConversionRepository
 import me.thenano.yamibo.yamibo_app.repository.favorite.FavoriteSyncRepositoryImpl
 import me.thenano.yamibo.yamibo_app.repository.favorite.FavoriteUpdateRepositoryImpl
+import me.thenano.yamibo.yamibo_app.repository.font.DefaultFontRepository
+import me.thenano.yamibo.yamibo_app.repository.font.IOSFontPlatform
 import me.thenano.yamibo.yamibo_app.repository.appupdate.DefaultAppUpdateRepository
 import me.thenano.yamibo.yamibo_app.repository.inapplinknavigation.DefaultInAppLinkNavigationRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.AppSettingsRepository
@@ -43,6 +45,14 @@ fun MainViewController() = ComposeUIViewController {
     val appSettingsRepository = remember { AppSettingsRepository(settingsStore) }
     val novelReaderSettingsRepository = remember { NovelReaderSettingsRepository(settingsStore) }
     val mangaReaderSettingsRepository = remember { MangaReaderSettingsRepository(settingsStore) }
+    val fontRepository = remember {
+        DefaultFontRepository(
+            settingsStore = settingsStore,
+            appSettingsRepository = appSettingsRepository,
+            novelReaderSettingsRepository = novelReaderSettingsRepository,
+            platform = IOSFontPlatform(),
+        )
+    }
 
     /** Repository Logic */
     val yamiboClient = remember { YamiboClient() }
@@ -148,6 +158,7 @@ fun MainViewController() = ComposeUIViewController {
         LocalFavoriteSyncRunner provides favoriteSyncRunner,
         LocalFavoriteUpdateRepository provides favoriteUpdateRepository,
         LocalFavoriteUpdateRunner provides favoriteUpdateRunner,
+        LocalFontRepository provides fontRepository,
         LocalBackgroundAccessRepository provides backgroundAccessRepository,
         LocalNovelThreadCacheRepository provides novelCacheRepository,
         LocalReadHistoryRepository provides readHistoryRepository,

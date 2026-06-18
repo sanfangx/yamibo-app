@@ -21,7 +21,10 @@ node_modules/
 .vscode/settings.json
 *.txt
 /composeApp/src/commonTest
+!/composeApp/src/commonTest/
+!/composeApp/src/commonTest/**
 /.agent
 *.dll
 *.log
 /.tmp
+.run/composeApp releaseRun.run.xml

@@ -16,11 +16,9 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
-import androidx.core.view.WindowInsetsControllerCompat
 import io.github.littlesurvival.YamiboClient
 import me.thenano.yamibo.yamibo_app.core.cache.DiskCacheFactory
 import me.thenano.yamibo.yamibo_app.db.DatabaseFactory
@@ -38,6 +36,8 @@ import me.thenano.yamibo.yamibo_app.repository.backup.BackupRepositoryImpl
 import me.thenano.yamibo.yamibo_app.repository.chineseconversion.createChineseConversionRepository
 import me.thenano.yamibo.yamibo_app.repository.favorite.FavoriteSyncRepositoryImpl
 import me.thenano.yamibo.yamibo_app.repository.favorite.FavoriteUpdateRepositoryImpl
+import me.thenano.yamibo.yamibo_app.repository.font.AndroidFontPlatform
+import me.thenano.yamibo.yamibo_app.repository.font.DefaultFontRepository
 import me.thenano.yamibo.yamibo_app.repository.appupdate.DefaultAppUpdateRepository
 import me.thenano.yamibo.yamibo_app.repository.inapplinknavigation.DefaultInAppLinkNavigationRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.AppSettingsRepository
@@ -50,6 +50,7 @@ import me.thenano.yamibo.yamibo_app.store.AndroidUserStore
 import me.thenano.yamibo.yamibo_app.store.settings.AndroidSettingsStore
 import me.thenano.yamibo.yamibo_app.update.AndroidAppUpdatePlatform
 import me.thenano.yamibo.yamibo_app.util.state
+import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
     var lastBackTime = 0L
@@ -101,6 +102,15 @@ class MainActivity : ComponentActivity() {
             val appSettingsRepository = remember { AppSettingsRepository(settingsStore) }
             val novelReaderSettingsRepository = remember { NovelReaderSettingsRepository(settingsStore) }
             val mangaReaderSettingsRepository = remember { MangaReaderSettingsRepository(settingsStore) }
+            @SuppressLint("RememberReturnType")
+            val fontRepository = remember {
+                DefaultFontRepository(
+                    settingsStore = settingsStore,
+                    appSettingsRepository = appSettingsRepository,
+                    novelReaderSettingsRepository = novelReaderSettingsRepository,
+                    platform = AndroidFontPlatform(context),
+                )
+            }
 
             /** Repository Logic */
             val yamiboClient = remember { YamiboClient(timeoutMillis = 60_000L) }
@@ -124,6 +134,7 @@ class MainActivity : ComponentActivity() {
             val favoriteRepository = remember { AndroidLocalFavoriteRepository(dbFactory) }
             val detailNoteRepository = remember { AndroidDetailNoteRepository(dbFactory) }
             val bookMarkRepository = remember { AndroidLocalBookMarkRepository(dbFactory) }
+            val chapterStateRepository = remember { AndroidLocalChapterStateRepository(dbFactory) }
             val remoteFavoriteRepository = remember { AndroidFavoriteRepository(cookieStore, yamiboClient) }
             val favoriteSyncDatabase = remember { Database(dbFactory.createDriver()) }
             val favoriteSyncRepository = remember {
@@ -200,12 +211,14 @@ class MainActivity : ComponentActivity() {
                 LocalChineseConversionRepository provides chineseConversionRepository,
                 LocalDetailNoteRepository provides detailNoteRepository,
                 LocalBookMarkRepository provides bookMarkRepository,
+                LocalChapterStateRepository provides chapterStateRepository,
                 LocalFavoriteRepository provides favoriteRepository,
                 LocalRemoteFavoriteRepository provides remoteFavoriteRepository,
                 LocalFavoriteSyncRepository provides favoriteSyncRepository,
                 LocalFavoriteSyncRunner provides favoriteSyncRunner,
                 LocalFavoriteUpdateRepository provides favoriteUpdateRepository,
                 LocalFavoriteUpdateRunner provides favoriteUpdateRunner,
+                LocalFontRepository provides fontRepository,
                 LocalBackgroundAccessRepository provides backgroundAccessRepository,
                 LocalNovelThreadCacheRepository provides novelCacheRepository,
                 LocalReadHistoryRepository provides readHistoryRepository,
@@ -217,33 +230,25 @@ class MainActivity : ComponentActivity() {
                 LocalNovelReaderSettingsRepository provides novelReaderSettingsRepository,
                 LocalMangaReaderSettingsRepository provides mangaReaderSettingsRepository,
             ) {
-                /** Color system bars to match active theme */
-                val scheme = LocalThemeRepository.current.getColorScheme()
                 val favoriteUpdateInterval = appSettingsRepository.favoriteUpdateInterval.state()
                 val backupInterval = appSettingsRepository.backupInterval.state()
-                SideEffect {
-                    @Suppress("DEPRECATION")
-                    window.statusBarColor = scheme.brownDeep.toInt()
-                    @Suppress("DEPRECATION")
-                    window.navigationBarColor = scheme.brownDeep.toInt()
-                    WindowInsetsControllerCompat(window, window.decorView).apply {
-                        isAppearanceLightStatusBars = false
-                        isAppearanceLightNavigationBars = false
-                    }
-                }
                 
                 LaunchedEffect(Unit) {
                     if (appSettingsRepository.clearCacheOnAppLaunch.getValue()) {
+                        delay(1_200)
                         diskCacheFactory.clearAllCache()
                     }
                 }
                 LaunchedEffect(favoriteUpdateInterval) {
+                    delay(1_200)
                     favoriteUpdateRunner.schedulePeriodicUpdate(favoriteUpdateInterval)
                 }
                 LaunchedEffect(backupInterval) {
+                    delay(1_200)
                     backupScheduler.schedule(backupInterval)
                 }
                 LaunchedEffect(Unit) {
+                    delay(1_200)
                     if (
                         android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU &&
                         ContextCompat.checkSelfPermission(

@@ -10,6 +10,8 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import coil3.compose.SubcomposeAsyncImage
 import androidx.compose.material3.*
@@ -44,6 +46,7 @@ import me.thenano.yamibo.yamibo_app.event.events.LoginSuccessEvent
 import me.thenano.yamibo.yamibo_app.forum.IForumScreen
 import me.thenano.yamibo.yamibo_app.forum.search.ISearchScreen
 import me.thenano.yamibo.yamibo_app.i18n.i18n
+import me.thenano.yamibo.yamibo_app.components.navigation.YamiboHomeTopBar
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.thread.reader.IThreadReaderScreen
 import me.thenano.yamibo.yamibo_app.theme.YamiboSnackbarHost
@@ -53,6 +56,7 @@ import me.thenano.yamibo.yamibo_app.util.state
 import org.jetbrains.compose.resources.painterResource
 import yamibo_app.composeapp.generated.resources.Res
 import yamibo_app.composeapp.generated.resources.logo_homepage
+import kotlin.time.Duration.Companion.milliseconds
 
 /** Sealed state for the home page */
 private sealed interface HomeState {
@@ -194,14 +198,19 @@ private fun HomeContent(homePage: HomePage, onSearch: () -> Unit) {
 private fun HomeSwiper(images: List<SwiperImages>) {
     val colors = YamiboTheme.colors
     val navigator = LocalNavigator.current
-    var page by remember(images) { mutableStateOf(0) }
-    val current = images.getOrNull(page.coerceIn(0, images.lastIndex)) ?: return
+    val scope = rememberCoroutineScope()
+    val pagerState = rememberPagerState(pageCount = { images.size })
+    val page = pagerState.currentPage.coerceIn(0, images.lastIndex)
+    val current = images.getOrNull(page) ?: return
 
-    LaunchedEffect(images) {
+    LaunchedEffect(images, pagerState) {
         if (images.size <= 1) return@LaunchedEffect
         while (true) {
-            kotlinx.coroutines.delay(5_000)
-            page = (page + 1) % images.size
+            kotlinx.coroutines.delay(3_000.milliseconds)
+            if (!pagerState.isScrollInProgress) {
+                val nextPage = (pagerState.currentPage + 1) % images.size
+                pagerState.animateScrollToPage(nextPage)
+            }
         }
     }
 
@@ -227,24 +236,11 @@ private fun HomeSwiper(images: List<SwiperImages>) {
                     }
                 },
         ) {
-            AnimatedContent(
-                targetState = page,
-                transitionSpec = {
-                    (slideInHorizontally(
-                        animationSpec = tween(durationMillis = 360, easing = FastOutSlowInEasing),
-                        initialOffsetX = { fullWidth -> fullWidth },
-                    ) + fadeIn(animationSpec = tween(180)))
-                        .togetherWith(
-                            slideOutHorizontally(
-                                animationSpec = tween(durationMillis = 360, easing = FastOutSlowInEasing),
-                                targetOffsetX = { fullWidth -> -fullWidth },
-                            ) + fadeOut(animationSpec = tween(180))
-                        )
-                },
-                label = "home_swiper_transition",
+            HorizontalPager(
+                state = pagerState,
                 modifier = Modifier.fillMaxSize(),
-            ) { targetPage ->
-                val target = images.getOrNull(targetPage.coerceIn(0, images.lastIndex)) ?: current
+            ) { index ->
+                val target = images.getOrNull(index) ?: current
                 key(target.imageUrl) {
                     SubcomposeAsyncImage(
                         model = rememberImageRequest(target.imageUrl),
@@ -295,7 +291,11 @@ private fun HomeSwiper(images: List<SwiperImages>) {
                                 .clickable(
                                     interactionSource = remember { MutableInteractionSource() },
                                     indication = null,
-                                ) { page = index },
+                                ) {
+                                    scope.launch {
+                                        pagerState.animateScrollToPage(index)
+                                    }
+                                },
                         )
                     }
                 }
@@ -307,31 +307,16 @@ private fun HomeSwiper(images: List<SwiperImages>) {
 /** Header Banner */
 @Composable
 private fun HomeHeader(onSearch: () -> Unit) {
-    val colors = YamiboTheme.colors
-    Row(
-        modifier =
-            Modifier.fillMaxWidth()
-                .statusBarsPadding()
-                .background(
-                    Brush.verticalGradient(
-                        colors =
-                            listOf(
-                                colors.brownDeep,
-                                colors.brownPrimary,
-                                colors.creamBackground,
-                            )
-                    )
-                )
-                .padding(horizontal = 16.dp, vertical = 20.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+    YamiboHomeTopBar(
+        logo = {
+            Image(
+                painter = painterResource(Res.drawable.logo_homepage),
+                contentDescription = "logo_homepage",
+                contentScale = ContentScale.FillHeight,
+                modifier = Modifier.height(36.dp).offset(y = 2.dp)
+            )
+        },
     ) {
-        Image(
-            painter = painterResource(Res.drawable.logo_homepage),
-            contentDescription = "logo_homepage",
-            contentScale = ContentScale.FillHeight,
-            modifier = Modifier.height(36.dp).offset(y = 2.dp)
-        )
         IconButton(onClick = onSearch, modifier = Modifier.offset(y = 11.dp)) {
             Icon(
                 imageVector = YamiboIcons.Search,

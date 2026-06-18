@@ -40,6 +40,8 @@ import me.thenano.yamibo.yamibo_app.LocalAuthRepository
 import me.thenano.yamibo.yamibo_app.LocalForumRepository
 import me.thenano.yamibo.yamibo_app.MainTab
 import me.thenano.yamibo.yamibo_app.components.controls.YamiboSingleSelectDialog
+import me.thenano.yamibo.yamibo_app.components.navigation.YamiboTopBar
+import me.thenano.yamibo.yamibo_app.components.navigation.YamiboTopBarIconAction
 import me.thenano.yamibo.yamibo_app.forum.components.*
 import me.thenano.yamibo.yamibo_app.forum.search.ISearchScreen
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
@@ -325,28 +327,12 @@ private fun ForumTopBar(
     val colors = YamiboTheme.colors
     var showMenu by remember { mutableStateOf(false) }
 
-    TopAppBar(
-        title = {
-            Text(
-                text = title,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White,
-                maxLines = 1
-            )
-        },
-        navigationIcon = {
-            IconButton(onClick = onBack) { Text(YamiboIcons.Back, color = Color.White, fontSize = 20.sp) }
-        },
-        actions = {
-            IconButton(onClick = onSearch, modifier = Modifier.offset(y = 5.dp)) {
-                Icon(
-                    imageVector = YamiboIcons.Search,
-                    contentDescription = i18n("搜尋"),
-                    tint = Color.White,
-                    modifier = Modifier.size(34.dp)
-                )
-            }
+    YamiboTopBar(
+        title = title,
+        titleFontSize = 18,
+        onBack = onBack,
+    ) {
+            YamiboTopBarIconAction(YamiboIcons.Search, i18n("搜尋"), onSearch, iconSize = 28)
             Box(modifier = Modifier.offset(y = 0.dp)) {
                 IconButton(onClick = { showMenu = true }) {
                     Icon(
@@ -419,13 +405,7 @@ private fun ForumTopBar(
                     )
                 }
             }
-        },
-        colors =
-            TopAppBarDefaults.topAppBarColors(
-                containerColor = colors.brownDeep,
-                scrolledContainerColor = colors.brownDeep
-            )
-    )
+    }
 }
 
 /** Forum Content (scrollable body below sticky top bar) */
@@ -653,4 +633,3 @@ private fun ForumErrorContent(message: String, onRetry: () -> Unit) {
         }
     }
 }
-

@@ -141,6 +141,12 @@ class AppSettingsRepository(store: SettingsStore) : SettingsRegistry(store, pref
         default = true,
     )
 
+    /** App 字體 */
+    val appFontId by stringSetting(
+        name = "app_font_id",
+        default = "",
+    )
+
     /** 略過刪除確認 */
     val skipFavoriteRemovalConfirm by boolSetting(
         name = "skip_favorite_removal_confirm",

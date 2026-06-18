@@ -25,12 +25,9 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -50,6 +47,7 @@ import io.github.littlesurvival.YamiboRoute
 import io.github.littlesurvival.core.YamiboResult
 import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.LocalSignRepository
+import me.thenano.yamibo.yamibo_app.components.navigation.YamiboTopBar
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.navigation.Navigatable
 import me.thenano.yamibo.yamibo_app.repository.SignRepository
@@ -108,26 +106,10 @@ private fun SignInfoScreen(onInfoLoaded: () -> Unit) {
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = i18n("簽到資訊"),
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = { navigator.pop() }) {
-                        Text(YamiboIcons.Back, color = Color.White, fontSize = 20.sp)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = colors.brownDeep,
-                    scrolledContainerColor = colors.brownDeep,
-                ),
+            YamiboTopBar(
+                title = i18n("簽到資訊"),
+                titleFontSize = 18,
+                onBack = { navigator.pop() },
             )
         },
         containerColor = colors.creamBackground,

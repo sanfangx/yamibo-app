@@ -16,17 +16,20 @@ import kotlinx.coroutines.flow.asStateFlow
 import me.thenano.yamibo.yamibo_app.Database
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.repository.FavoriteUpdateRepository
+import me.thenano.yamibo.yamibo_app.repository.FavoriteUpdateRepository.CategoryFilter
 import me.thenano.yamibo.yamibo_app.repository.FavoriteUpdateRepository.FidFilter
 import me.thenano.yamibo.yamibo_app.repository.FavoriteUpdateRepository.RunPhase
 import me.thenano.yamibo.yamibo_app.repository.FavoriteUpdateRepository.RunSnapshot
 import me.thenano.yamibo.yamibo_app.repository.FavoriteUpdateRepository.RunState
 import me.thenano.yamibo.yamibo_app.repository.FavoriteUpdateRepository.RunStatus
+import me.thenano.yamibo.yamibo_app.repository.FavoriteUpdateRepository.ScopeTarget
 import me.thenano.yamibo.yamibo_app.repository.FavoriteUpdateRepository.TargetMode
 import me.thenano.yamibo.yamibo_app.repository.FavoriteUpdateRepository.UpdateEvent
 import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository
 import me.thenano.yamibo.yamibo_app.repository.TagRepository
 import me.thenano.yamibo.yamibo_app.repository.ThreadRepository
 import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
+import me.thenano.yamibo.yamiboapp.FavoriteUpdateCategoryFilter
 import me.thenano.yamibo.yamiboapp.FavoriteUpdateEvent
 import me.thenano.yamibo.yamiboapp.FavoriteUpdateFidFilter
 import me.thenano.yamibo.yamiboapp.FavoriteUpdateRun
@@ -44,6 +47,7 @@ class FavoriteUpdateRepositoryImpl(
     private val eventQueries = db.favoriteUpdateEventQueries
     private val runQueries = db.favoriteUpdateRunQueries
     private val filterQueries = db.favoriteUpdateFidFilterQueries
+    private val categoryFilterQueries = db.favoriteUpdateCategoryFilterQueries
     private val interruptRequestedRunIds = linkedSetOf<String>()
     private val stateFlow = MutableStateFlow<RunState>(RunState.Idle)
 
@@ -146,13 +150,22 @@ class FavoriteUpdateRepositoryImpl(
             return
         }
 
-        val favorites = localFavoriteRepository.getAllFavoriteItems()
-            .filter { it.targetType != LocalFavoriteRepository.FavoriteTargetType.ThreadNormal || it.targetId > 0L }
+        val favorites = getFavoriteUpdateCandidates()
         refreshFidFilters(favorites)
-        val enabledFids = filterQueries.getEnabled().executeAsList().map { it.fid.toInt() }.toSet()
+        refreshCategoryFilters(favorites)
+        val enabledFids = activeFidRestriction()
+        val enabledCategories = activeCategoryRestriction()
+        val categoryIdsByItem = if (enabledCategories.isEmpty()) {
+            emptyMap()
+        } else {
+            favorites.associate { item -> item.id to localFavoriteRepository.getCategoryIdsForItem(item.id) }
+        }
         val targets = favorites.filter { item ->
-            val fid = item.forumId?.value
-            fid == null || enabledFids.isEmpty() || fid in enabledFids
+            val fid = item.scopeFid()
+            val fidMatches = fid == null || enabledFids.isEmpty() || fid in enabledFids
+            val categoryMatches = enabledCategories.isEmpty() ||
+                categoryIdsByItem[item.id].orEmpty().any { it in enabledCategories }
+            fidMatches && categoryMatches
         }
         val resumeFrom = current.completedCount.coerceIn(0, targets.size)
         current = updateSnapshot(
@@ -222,6 +235,40 @@ class FavoriteUpdateRepositoryImpl(
     override suspend fun getActiveEvents(): List<UpdateEvent> =
         eventQueries.getActive().executeAsList().map { it.toModel() }
 
+    override suspend fun getActiveEventsFiltered(): List<UpdateEvent> {
+        val events = getActiveEvents()
+        val enabledFids = activeFidRestriction()
+        val enabledCategories = activeCategoryRestriction()
+        if (enabledFids.isEmpty() && enabledCategories.isEmpty()) return events
+
+        val favoritesByKey = if (enabledCategories.isEmpty()) {
+            emptyMap()
+        } else {
+            localFavoriteRepository.getAllFavoriteItems().associateBy { it.targetKey() }
+        }
+        val categoryIdsByItem = mutableMapOf<Long, Set<Long>>()
+        if (enabledCategories.isNotEmpty()) {
+            favoritesByKey.values.forEach { item ->
+                categoryIdsByItem[item.id] = localFavoriteRepository.getCategoryIdsForItem(item.id)
+            }
+        }
+        return events.filter { event ->
+            val eventFid = if (event.targetType == LocalFavoriteRepository.FavoriteTargetType.TagManga) {
+                TAG_MANGA_SCOPE_FID
+            } else {
+                event.fid
+            }
+            val fidMatches = eventFid == null || enabledFids.isEmpty() || eventFid in enabledFids
+            val categoryMatches = if (enabledCategories.isEmpty()) {
+                true
+            } else {
+                val item = favoritesByKey[event.targetKey()] ?: return@filter false
+                categoryIdsByItem[item.id].orEmpty().any { it in enabledCategories }
+            }
+            fidMatches && categoryMatches
+        }
+    }
+
     override suspend fun markEventRead(eventId: Long) {
         eventQueries.markRead(currentTimeMillis(), eventId)
     }
@@ -231,11 +278,28 @@ class FavoriteUpdateRepositoryImpl(
     }
 
     override suspend fun getFidFilters(): List<FidFilter> =
-        filterQueries.getAll().executeAsList().map { it.toModel() }
+        refreshAndGetFidFilters()
 
     override suspend fun setFidEnabled(fid: Int, enabled: Boolean) {
         filterQueries.setEnabled(if (enabled) 1L else 0L, currentTimeMillis(), fid.toLong())
     }
+
+    override suspend fun getCategoryFilters(): List<CategoryFilter> {
+        refreshCategoryFilters(getFavoriteUpdateCandidates())
+        return categoryFilterQueries.getAll().executeAsList().map { it.toModel() }
+    }
+
+    override suspend fun setCategoryEnabled(categoryId: Long, enabled: Boolean) {
+        categoryFilterQueries.setEnabled(if (enabled) 1L else 0L, currentTimeMillis(), categoryId)
+    }
+
+    override suspend fun getScopeTargets(): List<ScopeTarget> =
+        getFavoriteUpdateCandidates().map { item ->
+            ScopeTarget(
+                fid = item.scopeFid(),
+                categoryIds = localFavoriteRepository.getCategoryIdsForItem(item.id),
+            )
+        }
 
     private suspend fun checkItem(item: LocalFavoriteRepository.FavoriteItem): CheckResult {
         return when (item.targetType) {
@@ -588,8 +652,8 @@ class FavoriteUpdateRepositoryImpl(
     private suspend fun refreshFidFilters(favorites: List<LocalFavoriteRepository.FavoriteItem>) {
         val now = currentTimeMillis()
         val counts = favorites.mapNotNull { item ->
-            val fid = item.forumId?.value ?: return@mapNotNull null
-            val name = item.forumName ?: YamiboForum.toForumName(item.forumId) ?: "Forum $fid"
+            val fid = item.scopeFid() ?: return@mapNotNull null
+            val name = item.scopeForumName(fid)
             fid to name
         }.groupingBy { it }.eachCount()
         val existing = filterQueries.getAll().executeAsList().associateBy { it.fid.toInt() }
@@ -604,6 +668,55 @@ class FavoriteUpdateRepositoryImpl(
             )
         }
     }
+
+    private suspend fun refreshAndGetFidFilters(): List<FidFilter> {
+        refreshFidFilters(getFavoriteUpdateCandidates())
+        return filterQueries.getAll().executeAsList().map { it.toModel() }
+    }
+
+    private suspend fun refreshCategoryFilters(favorites: List<LocalFavoriteRepository.FavoriteItem>) {
+        val now = currentTimeMillis()
+        val counts = mutableMapOf<Long, Int>()
+        favorites.forEach { item ->
+            localFavoriteRepository.getCategoryIdsForItem(item.id).forEach { categoryId ->
+                counts[categoryId] = (counts[categoryId] ?: 0) + 1
+            }
+        }
+        val existing = categoryFilterQueries.getAll().executeAsList().associateBy { it.categoryId }
+        localFavoriteRepository.getCategories().forEach { category ->
+            categoryFilterQueries.upsertFilter(
+                categoryId = category.id,
+                categoryName = category.name,
+                enabled = existing[category.id]?.enabled ?: 1L,
+                itemCount = (counts[category.id] ?: 0).toLong(),
+                updatedAt = now,
+            )
+        }
+    }
+
+    private fun activeFidRestriction(): Set<Int> {
+        val filters = filterQueries.getAll().executeAsList()
+        val enabled = filters.filter { it.enabled == 1L }
+        return if (filters.isEmpty() || enabled.size == filters.size) {
+            emptySet()
+        } else {
+            enabled.map { it.fid.toInt() }.toSet()
+        }
+    }
+
+    private fun activeCategoryRestriction(): Set<Long> {
+        val filters = categoryFilterQueries.getAll().executeAsList()
+        val enabled = filters.filter { it.enabled == 1L }
+        return if (filters.isEmpty() || enabled.size == filters.size) {
+            emptySet()
+        } else {
+            enabled.map { it.categoryId }.toSet()
+        }
+    }
+
+    private suspend fun getFavoriteUpdateCandidates(): List<LocalFavoriteRepository.FavoriteItem> =
+        localFavoriteRepository.getAllFavoriteItems()
+            .filter { it.targetType != LocalFavoriteRepository.FavoriteTargetType.ThreadNormal || it.targetId > 0L }
 
     private fun persistSnapshot(snapshot: RunSnapshot) {
         runQueries.upsertRun(
@@ -702,8 +815,29 @@ class FavoriteUpdateRepositoryImpl(
             itemCount = itemCount.toInt(),
         )
 
+    private fun FavoriteUpdateCategoryFilter.toModel(): CategoryFilter =
+        CategoryFilter(
+            categoryId = categoryId,
+            categoryName = categoryName,
+            enabled = enabled == 1L,
+            itemCount = itemCount.toInt(),
+        )
+
     private fun LocalFavoriteRepository.FavoriteItem.targetKey(): String =
         "${targetType.name}:$targetId:${authorId?.value?.toLong() ?: 0L}"
+
+    private fun LocalFavoriteRepository.FavoriteItem.scopeFid(): Int? =
+        forumId?.value ?: if (targetType == LocalFavoriteRepository.FavoriteTargetType.TagManga) TAG_MANGA_SCOPE_FID else null
+
+    private fun LocalFavoriteRepository.FavoriteItem.scopeForumName(fid: Int): String =
+        if (fid == TAG_MANGA_SCOPE_FID) {
+            i18n("標籤")
+        } else {
+            forumName ?: forumId?.let { YamiboForum.toForumName(it) } ?: i18n("版塊 {}", fid)
+        }
+
+    private fun UpdateEvent.targetKey(): String =
+        "${targetType.name}:$targetId:${authorId ?: 0L}"
 
     private fun String?.csvLongs(): List<Long> =
         this?.split(",")?.mapNotNull { it.trim().toLongOrNull() }.orEmpty()
@@ -726,6 +860,6 @@ class FavoriteUpdateRepositoryImpl(
     companion object {
         private const val MAX_TAG_SCAN_PAGES = 8
         private const val UPDATE_TIME_TOLERANCE_MILLIS = 60_000L
+        private const val TAG_MANGA_SCOPE_FID = -100_000
     }
 }
-

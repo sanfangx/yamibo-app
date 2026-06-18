@@ -9,6 +9,9 @@ permissions:
 env:
   MIRROR_OWNER: LittleSurvival
   MIRROR_REPO: ymb-apk-release
+  GITEA_BASE_URL: ${{ vars.GITEA_BASE_URL }}
+  GITEA_SSH_HOST: ${{ vars.GITEA_SSH_HOST }}
+  GITEA_SSH_PORT: ${{ vars.GITEA_SSH_PORT }}
 
 jobs:
   manual-ready:
@@ -99,11 +102,12 @@ jobs:
           set -euo pipefail
           bash .github/scripts/publish-gitee-release-asset.sh
 
-      - name: Publish GitCode release asset
-        id: gitcode_release
+      - name: Publish Gitea release asset
+        id: gitea_release
         shell: bash
         env:
-          GITCODE_TOKEN: ${{ secrets.GITCODE_TOKEN }}
+          GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
+          GITEA_BASE_URL: ${{ env.GITEA_BASE_URL }}
           TAG: ${{ steps.latest.outputs.version_code }}
           TITLE: ${{ steps.latest.outputs.channel }}-v${{ steps.latest.outputs.version_name }}
           CHANGELOG: update/changelogs/${{ steps.latest.outputs.version_code }}.changelog
@@ -111,7 +115,7 @@ jobs:
           APK_NAME: ${{ steps.latest.outputs.apk_name }}
         run: |
           set -euo pipefail
-          bash .github/scripts/publish-gitcode-release-asset.sh
+          bash .github/scripts/publish-gitea-release-asset.sh
 
       - name: Generate ready public feeds
         shell: bash
@@ -132,9 +136,9 @@ jobs:
           APK_SIZE="${{ steps.latest.outputs.size }}" \
             python3 .github/scripts/write-published-update-manifest.py
 
-          OUTPUT_DIR="$RUNNER_TEMP/published-update/gitcode/update" \
-          RELEASE_URL="${{ steps.gitcode_release.outputs.release_url }}" \
-          ASSET_URL="${{ steps.gitcode_release.outputs.asset_url }}" \
+          OUTPUT_DIR="$RUNNER_TEMP/published-update/gitea/update" \
+          RELEASE_URL="${{ steps.gitea_release.outputs.release_url }}" \
+          ASSET_URL="${{ steps.gitea_release.outputs.asset_url }}" \
           APK_SHA256="${{ steps.latest.outputs.sha256 }}" \
           APK_SIZE="${{ steps.latest.outputs.size }}" \
             python3 .github/scripts/write-published-update-manifest.py
@@ -145,7 +149,7 @@ jobs:
           set -euo pipefail
           ./gradlew validatePublishedUpdateManifest -PpublishedUpdateDir="$RUNNER_TEMP/published-update/github/update" --console=plain
           ./gradlew validatePublishedUpdateManifest -PpublishedUpdateDir="$RUNNER_TEMP/published-update/gitee/update" --console=plain
-          ./gradlew validatePublishedUpdateManifest -PpublishedUpdateDir="$RUNNER_TEMP/published-update/gitcode/update" --console=plain
+          ./gradlew validatePublishedUpdateManifest -PpublishedUpdateDir="$RUNNER_TEMP/published-update/gitea/update" --console=plain
 
       - name: Push update folder to GitHub update-release branch
         shell: bash
@@ -170,7 +174,7 @@ jobs:
         with:
           ssh-private-key: |
             ${{ secrets.GITEE_SSH_PRIVATE_KEY }}
-            ${{ secrets.GITCODE_SSH_PRIVATE_KEY }}
+            ${{ secrets.GITEA_SSH_PRIVATE_KEY }}
 
       - name: Trust mirror SSH hosts
         shell: bash
@@ -178,12 +182,24 @@ jobs:
           set -euo pipefail
           mkdir -p ~/.ssh
           ssh-keyscan gitee.com >> ~/.ssh/known_hosts
-          ssh-keyscan gitcode.com >> ~/.ssh/known_hosts
+          gitea_host="${GITEA_SSH_HOST:-gitea.com}"
+          gitea_port="${GITEA_SSH_PORT:-22}"
+          ssh-keyscan -p "$gitea_port" "$gitea_host" >> ~/.ssh/known_hosts
 
       - name: Push update folder to mirror repositories
         shell: bash
         run: |
           set -euo pipefail
+
+          gitea_remote() {
+            local host="${GITEA_SSH_HOST:-gitea.com}"
+            local port="${GITEA_SSH_PORT:-22}"
+            if [ "$port" = "22" ]; then
+              printf 'git@%s:%s/%s.git' "$host" "$MIRROR_OWNER" "$MIRROR_REPO"
+            else
+              printf 'ssh://git@%s:%s/%s/%s.git' "$host" "$port" "$MIRROR_OWNER" "$MIRROR_REPO"
+            fi
+          }
 
           push_mirror() {
             local name="$1"
@@ -205,4 +221,4 @@ jobs:
           }
 
           push_mirror "gitee" "git@gitee.com:${MIRROR_OWNER}/${MIRROR_REPO}.git"
-          push_mirror "gitcode" "git@gitcode.com:${MIRROR_OWNER}/${MIRROR_REPO}.git"
+          push_mirror "gitea" "$(gitea_remote)"

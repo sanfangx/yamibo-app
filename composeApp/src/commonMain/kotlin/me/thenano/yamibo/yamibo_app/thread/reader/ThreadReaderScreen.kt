@@ -7,10 +7,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListItemInfo
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -18,9 +19,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import coil3.SingletonImageLoader
 import coil3.compose.LocalPlatformContext
 import io.github.littlesurvival.YamiboForum
@@ -31,19 +35,18 @@ import io.github.littlesurvival.dto.page.ThreadInfo
 import io.github.littlesurvival.dto.page.ThreadPage
 import io.github.littlesurvival.dto.value.*
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import me.thenano.yamibo.yamibo_app.*
 import me.thenano.yamibo.yamibo_app.favorite.*
 import me.thenano.yamibo.yamibo_app.components.tracking.ReadingTimeTracker
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.inapplinknavigation.InAppLinkContext
 import me.thenano.yamibo.yamibo_app.repository.LocalBookMarkRepository as BookMarkRepository
+import me.thenano.yamibo.yamibo_app.repository.LocalChapterStateRepository as ChapterStateRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository.ThreadReadingHistory
+import me.thenano.yamibo.yamibo_app.systembars.SystemBarsEffect
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.components.ThreadErrorContent
@@ -164,7 +167,7 @@ private fun buildReaderBodySegments(post: Post, contentHtml: String): List<Reade
     return if (imageSegmentCount >= 6 && segments.size > 2) segments else null
 }
 
-@OptIn(ExperimentalMaterial3Api::class, FlowPreview::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun ThreadReaderScreen(
     tid: ThreadId,
@@ -183,10 +186,18 @@ internal fun ThreadReaderScreen(
     val favoriteSyncRepository = LocalFavoriteSyncRepository.current
     val readHistoryRepo = LocalReadHistoryRepository.current
     val bookMarkRepository = LocalBookMarkRepository.current
+    val chapterStateRepository = LocalChapterStateRepository.current
     ReadingTimeTracker()
     val navigator = LocalNavigator.current
     val platformContext = LocalPlatformContext.current
     val scope = rememberCoroutineScope()
+    val progressCoordinator = remember(tid, chapterStateRepository, scope) {
+        ReaderProgressCoordinator(
+            repository = chapterStateRepository,
+            parentId = tid.value.toLong(),
+            scope = scope,
+        )
+    }
     val listState = rememberLazyListState()
     val isNovelThread = threadType == ReadHistoryRepository.ThreadEntryType.Novel
     val keepSystemBarsBackground = novelSettingsRepository.keepSystemBarsBackground.state()
@@ -226,9 +237,19 @@ internal fun ThreadReaderScreen(
     val authRepo = LocalAuthRepository.current
     val snackbarHostState = remember { SnackbarHostState() }
 
+    val readerUsesBrownSystemBar = showMenu || showSettingsPanel || drawerState.isOpen
+    SystemBarsEffect(
+        statusBarColor = if (readerUsesBrownSystemBar) colors.brownDeep else colors.creamBackground,
+        navigationBarColor = colors.creamBackground,
+        priority = 20,
+        darkStatusBarIcons = !readerUsesBrownSystemBar,
+        darkNavigationBarIcons = true,
+    )
+
     var hasRestoredPosition by remember { mutableStateOf(false) }
     var pendingSavedPosition by remember(tid, targetPid) { mutableStateOf<ThreadReadingHistory?>(null) }
     var isRestoringSavedPosition by remember { mutableStateOf(false) }
+    var canPersistReadingState by remember(tid, targetPid) { mutableStateOf(false) }
     var pendingTargetPid by remember(tid, targetPid) { mutableStateOf(targetPid?.value?.toLong()) }
 
     /** Extract image URL for thread avatar based on forum type */
@@ -655,6 +676,30 @@ internal fun ThreadReaderScreen(
             }
         }
     }
+    val progressEntryRangeByPid = remember(readerEntries) {
+        readerEntries
+            .withIndex()
+            .filter { (_, entry) ->
+                when (entry.kind) {
+                    ReaderEntryKind.WholePost,
+                    ReaderEntryKind.SegmentedHeader,
+                    ReaderEntryKind.SegmentedBody,
+                    ReaderEntryKind.SegmentedFooter -> true
+                    else -> false
+                }
+            }
+            .groupBy { it.value.post.pid.value.toLong() }
+            .mapValues { (_, entries) -> entries.first().index..entries.last().index }
+    }
+    val contentPostEndingAtIndex = remember(readerEntries, progressEntryRangeByPid) {
+        buildMap {
+            progressEntryRangeByPid.forEach { (postId, range) ->
+                readerEntries.getOrNull(range.last)?.post?.let { post ->
+                    put(range.last, postId to post)
+                }
+            }
+        }
+    }
     val entryIndexByAnchorBlockId = remember(readerEntries) {
         buildMap {
             readerEntries.forEachIndexed { index, entry ->
@@ -755,17 +800,20 @@ internal fun ThreadReaderScreen(
         val viewportBottom = layoutInfo.viewportEndOffset
         val viewportCenter = (viewportTop + viewportBottom) / 2
 
-        val centerEntry = visibleItems
-            .mapNotNull { item ->
-                readerEntries.getOrNull(item.index)?.takeIf { it.isScrollAnchor }?.let { entry -> item to entry }
+        fun distanceFromViewportCenter(item: LazyListItemInfo): Int =
+            when {
+                viewportCenter < item.offset -> item.offset - viewportCenter
+                viewportCenter > item.offset + item.size -> viewportCenter - (item.offset + item.size)
+                else -> 0
             }
-            .minByOrNull { (item, _) ->
-                when {
-                    viewportCenter < item.offset -> item.offset - viewportCenter
-                    viewportCenter > item.offset + item.size -> viewportCenter - (item.offset + item.size)
-                    else -> 0
-                }
-            }
+
+        val visibleEntries = visibleItems.mapNotNull { item ->
+            readerEntries.getOrNull(item.index)?.let { entry -> item to entry }
+        }
+        val centerEntry = visibleEntries
+            .filter { (_, entry) -> entry.isScrollAnchor }
+            .minByOrNull { (item, _) -> distanceFromViewportCenter(item) }
+            ?: visibleEntries.minByOrNull { (item, _) -> distanceFromViewportCenter(item) }
             ?: return null
 
         val centerItemInfo = centerEntry.first
@@ -847,32 +895,98 @@ internal fun ThreadReaderScreen(
             ?.first
     }
 
-    fun currentReaderPageProgress(): ReaderPageProgress? {
-        val currentIndex = visibleAnchorEntryIndex() ?: return null
-        val currentEntry = readerEntries.getOrNull(currentIndex) ?: return null
-        val postPage = pageByPid[currentEntry.post.pid.value.toLong()] ?: initialPage
-        val postBounds = pageIndexBounds[postPage] ?: return ReaderPageProgress(
-            page = postPage,
-            totalPages = totalPages,
-            fraction = 0f,
-        )
-        val pagePostCount = (postBounds.last - postBounds.first + 1).coerceAtLeast(1)
-        val relativePostIndex = (currentEntry.postIndex - postBounds.first)
-            .coerceIn(0, pagePostCount - 1)
+    fun canWriteReadingState(): Boolean = canPersistReadingState
 
+    fun progressUpdateForVisiblePost(
+        postId: Long,
+        visibleItems: List<LazyListItemInfo>,
+        visibleByIndex: Map<Int, LazyListItemInfo>,
+        viewportTop: Int,
+        viewportBottom: Int,
+        allowPassedShortPost: Boolean,
+    ): ChapterStateRepository.ProgressUpdate? {
+        val range = progressEntryRangeByPid[postId] ?: return null
+        val visibleItem = visibleItems.firstOrNull { it.index in range } ?: return null
+        val knownHeights = range.mapNotNull { index ->
+            val entry = readerEntries.getOrNull(index) ?: return@mapNotNull null
+            progressCoordinator.itemHeight(entry.key) ?: visibleByIndex[index]?.size
+        }
+        val estimatedHeight = knownHeights.average().toInt().coerceAtLeast(1)
+        var totalHeight = 0
+        var heightBeforeVisibleItem = 0
+        for (index in range) {
+            val entry = readerEntries.getOrNull(index) ?: return null
+            val height = progressCoordinator.itemHeight(entry.key)
+                ?: visibleByIndex[index]?.size
+                ?: estimatedHeight
+            if (index < visibleItem.index) heightBeforeVisibleItem += height
+            totalHeight += height
+        }
+        val post = readerEntries[range.first].post
+        val geometry = ReaderProgressGeometry(
+            postId = postId,
+            title = post.title,
+            top = visibleItem.offset - heightBeforeVisibleItem,
+            bottom = visibleItem.offset - heightBeforeVisibleItem + totalHeight,
+        )
+        val result = calculateReaderProgress(
+            geometry = geometry,
+            viewportTop = viewportTop,
+            viewportBottom = viewportBottom,
+            allowPassedShortPost = allowPassedShortPost,
+        ) ?: return null
+        if (progressCoordinator.isRead(postId)) return null
+        return progressCoordinator.update(
+            postId = postId,
+            title = post.title.ifBlank { i18n("（無標題）") },
+            progressPercent = result.progressPercent,
+            read = result.read,
+        )
+    }
+
+    fun currentChapterUpdates(): List<ChapterStateRepository.ProgressUpdate> {
+        if (posts.isEmpty() || readerEntries.isEmpty()) return emptyList()
         val layoutInfo = listState.layoutInfo
-        val visibleItem = layoutInfo.visibleItemsInfo.firstOrNull { it.index == currentIndex }
-        val viewportCenter = (layoutInfo.viewportStartOffset + layoutInfo.viewportEndOffset) / 2
-        val itemRatio = visibleItem?.let { item ->
-            ((viewportCenter - item.offset).toFloat() / item.size.coerceAtLeast(1).toFloat())
-                .coerceIn(0f, 1f)
-        } ?: 0f
+        val visibleItems = layoutInfo.visibleItemsInfo
+        if (visibleItems.isEmpty()) return emptyList()
 
-        return ReaderPageProgress(
-            page = postPage,
-            totalPages = totalPages,
-            fraction = ((relativePostIndex + itemRatio) / pagePostCount.toFloat()).coerceIn(0f, 1f),
-        )
+        val viewportTop = layoutInfo.viewportStartOffset + layoutInfo.beforeContentPadding
+        val viewportBottom = layoutInfo.viewportEndOffset - layoutInfo.afterContentPadding
+        val visibleByIndex = visibleItems.associateBy { it.index }
+        val candidatePostIds = LinkedHashSet<Long>()
+        visibleItems.forEach { item ->
+            val entry = readerEntries.getOrNull(item.index) ?: return@forEach
+            val postId = entry.post.pid.value.toLong()
+            val range = progressEntryRangeByPid[postId] ?: return@forEach
+            if (item.index in range) candidatePostIds += postId
+        }
+
+        return candidatePostIds.mapNotNull { postId ->
+            progressUpdateForVisiblePost(
+                postId = postId,
+                visibleItems = visibleItems,
+                visibleByIndex = visibleByIndex,
+                viewportTop = viewportTop,
+                viewportBottom = viewportBottom,
+                allowPassedShortPost = false,
+            )
+        }
+    }
+
+    suspend fun persistCurrentReadingState() {
+        if (!canWriteReadingState()) return
+        val history = runCatching(::buildHistory).getOrNull()
+        val progressUpdates = runCatching(::currentChapterUpdates).getOrDefault(emptyList())
+        if (history != null) {
+            try {
+                readHistoryRepo.savePosition(history)
+            } catch (_: Exception) {
+            }
+        }
+        try {
+            progressCoordinator.applyProgress(progressUpdates)
+        } catch (_: Exception) {
+        }
     }
 
     fun currentVisiblePageForAction(): Int {
@@ -890,6 +1004,37 @@ internal fun ThreadReaderScreen(
             }
         }
         return foundIndex
+    }
+
+    suspend fun scrollToChapterTarget(index: Int, pid: Long) {
+        val progressPercent = progressCoordinator.chapterStates.value[pid]
+            ?.progressPercent
+            ?.takeIf { it in 1..99 }
+            ?: 0
+        if (progressPercent <= 0) {
+            listState.scrollToItem(index)
+            return
+        }
+
+        val range = progressEntryRangeByPid[pid]
+        if (range == null) {
+            listState.scrollToItem(index)
+            return
+        }
+        val entryCount = (range.last - range.first + 1).coerceAtLeast(1)
+        val targetProgress = (progressPercent / 100f) * entryCount
+        val targetEntryOffset = targetProgress.toInt().coerceIn(0, entryCount - 1)
+        val targetIndex = (range.first + targetEntryOffset).coerceIn(range.first, range.last)
+        val intraEntryProgress = (targetProgress - targetEntryOffset).coerceIn(0f, 0.95f)
+
+        listState.scrollToItem(targetIndex)
+        withFrameNanos { }
+        val itemHeight = listState.layoutInfo.visibleItemsInfo
+            .firstOrNull { it.index == targetIndex }
+            ?.size
+            ?: 0
+        val offset = (itemHeight * intraEntryProgress).toInt().coerceAtLeast(0)
+        listState.scrollToItem(targetIndex, offset)
     }
 
     fun pageEdgeAnchorIndex(currentEntry: ReaderListEntry, pointsDown: Boolean): Int? {
@@ -933,17 +1078,24 @@ internal fun ThreadReaderScreen(
         }
     }
 
-    fun saveCurrentHistoryBlocking() {
+    fun launchSaveCurrentHistory() {
+        if (!canWriteReadingState()) return
         val history = buildHistory() ?: return
-        runBlocking {
+        val progressUpdates = currentChapterUpdates()
+        scope.launch {
             try {
                 readHistoryRepo.savePosition(history)
+                progressCoordinator.applyProgress(progressUpdates)
             } catch (_: Exception) {
             }
         }
     }
 
     fun saveCurrentHistoryAndPop() {
+        if (!canWriteReadingState()) {
+            navigator.pop()
+            return
+        }
         val history = buildHistory()
         if (history == null) {
             navigator.pop()
@@ -952,6 +1104,7 @@ internal fun ThreadReaderScreen(
         scope.launch {
             try {
                 readHistoryRepo.savePosition(history)
+                progressCoordinator.applyProgress(currentChapterUpdates())
             } catch (_: Exception) {
             }
             navigator.pop()
@@ -963,10 +1116,13 @@ internal fun ThreadReaderScreen(
         manualCoverUrlOverride = resolvedCoverUrl
         coverUrl = resolvedCoverUrl
         scope.launch {
-            buildHistory()?.copy(threadCover = resolvedCoverUrl)?.let { history ->
-                try {
-                    readHistoryRepo.savePosition(history)
-                } catch (_: Exception) {
+            if (canPersistReadingState) {
+                buildHistory()?.copy(threadCover = resolvedCoverUrl)?.let { history ->
+                    try {
+                        readHistoryRepo.savePosition(history)
+                        progressCoordinator.applyProgress(currentChapterUpdates())
+                    } catch (_: Exception) {
+                    }
                 }
             }
             try {
@@ -1141,9 +1297,11 @@ internal fun ThreadReaderScreen(
                     pendingSavedPosition = savedPosition
                 } else {
                     hasRestoredPosition = true
+                    canPersistReadingState = true
                 }
             } catch (_: Exception) {
                 hasRestoredPosition = true
+                canPersistReadingState = true
             }
         }
     }
@@ -1158,6 +1316,7 @@ internal fun ThreadReaderScreen(
         } finally {
             pendingSavedPosition = null
             hasRestoredPosition = true
+            canPersistReadingState = true
             delay(300.milliseconds)
             isRestoringSavedPosition = false
         }
@@ -1171,27 +1330,86 @@ internal fun ThreadReaderScreen(
         if (targetIndex >= 0) {
             listState.scrollToItem(targetIndex)
             hasRestoredPosition = true
+            canPersistReadingState = true
             pendingTargetPid = null
         } else {
             fallbackNearestPost(targetPidLong, initialPage)
             hasRestoredPosition = true
+            canPersistReadingState = true
             pendingTargetPid = null
         }
     }
 
-    /** Scroll detection → debounced position save */
-    LaunchedEffect(listState, state) {
-        if (state != ReaderState.Success) return@LaunchedEffect
-        snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }
-            .debounce(2000.milliseconds)
-            .collect {
-                if (!hasRestoredPosition || pendingSavedPosition != null || isRestoringSavedPosition) return@collect
-                val history = buildHistory() ?: return@collect
-                try {
-                    readHistoryRepo.savePosition(history)
-                } catch (_: Exception) {
+    val latestContentPostEndingAtIndex = rememberUpdatedState(contentPostEndingAtIndex)
+    val latestPersistCurrentReadingState = rememberUpdatedState<suspend () -> Unit> {
+        persistCurrentReadingState()
+    }
+    val latestUntitledLabel = rememberUpdatedState(i18n("（無標題）"))
+    val readerScrollSession = remember(listState) { ReaderScrollSession() }
+    fun recordCrossedIndices(indices: IntRange?) {
+        indices ?: return
+        for (index in indices) {
+            latestContentPostEndingAtIndex.value[index]?.let { (postId, post) ->
+                progressCoordinator.recordCrossedPost(
+                    postId = postId,
+                    title = post.title.ifBlank { latestUntitledLabel.value },
+                )
+            }
+        }
+    }
+    val latestFinishScrollSession = rememberUpdatedState<suspend (Int) -> Unit> { generation ->
+        val crossedIndices = readerScrollSession.finish(
+            expectedGeneration = generation,
+            currentIndex = listState.firstVisibleItemIndex,
+        )
+        if (crossedIndices != null) {
+            recordCrossedIndices(crossedIndices)
+            val layoutInfo = listState.layoutInfo
+            val visibleItems = layoutInfo.visibleItemsInfo
+            val firstVisiblePostId = visibleItems.firstOrNull()
+                ?.let { item -> readerEntries.getOrNull(item.index) }
+                ?.post
+                ?.pid
+                ?.value
+                ?.toLong()
+            if (firstVisiblePostId != null) {
+                val passedShortPost = progressUpdateForVisiblePost(
+                    postId = firstVisiblePostId,
+                    visibleItems = visibleItems,
+                    visibleByIndex = visibleItems.associateBy { it.index },
+                    viewportTop = layoutInfo.viewportStartOffset + layoutInfo.beforeContentPadding,
+                    viewportBottom = layoutInfo.viewportEndOffset - layoutInfo.afterContentPadding,
+                    allowPassedShortPost = true,
+                )
+                if (passedShortPost?.read == true) {
+                    progressCoordinator.recordCrossedPost(
+                        postId = passedShortPost.targetId,
+                        title = passedShortPost.title,
+                    )
                 }
             }
+            latestPersistCurrentReadingState.value()
+        }
+    }
+    LaunchedEffect(listState) {
+        launch {
+            snapshotFlow { listState.firstVisibleItemIndex }
+                .distinctUntilChanged()
+                .collect { currentIndex ->
+                    if (readerScrollSession.activeGeneration() != null) {
+                        recordCrossedIndices(readerScrollSession.observe(currentIndex))
+                        progressCoordinator.noteScrollStarted()
+                    }
+                }
+        }
+    }
+
+    LaunchedEffect(drawerState.isOpen, state, readerEntries, canPersistReadingState) {
+        if (!drawerState.isOpen || state != ReaderState.Success || !canPersistReadingState) return@LaunchedEffect
+        try {
+            persistCurrentReadingState()
+        } catch (_: Exception) {
+        }
     }
 
     LaunchedEffect(listState, state, scrollButtonDisplayMode, scrollButtonDirectionThreshold) {
@@ -1317,18 +1535,20 @@ internal fun ThreadReaderScreen(
             }
     }
 
-    /** Save on leaving screen — use runBlocking since scope is already canceled */
+    /** Save on back before popping so the previous detail screen reads fresh progress. */
     DisposableEffect(tid, navigator) {
         val handler = {
             if (navigator.currentScreen is IThreadReaderScreen) {
-                saveCurrentHistoryBlocking()
+                scope.launch { saveCurrentHistoryAndPop() }
+                true
+            } else {
+                false
             }
-            false
         }
         navigator.backHandlers.add(handler)
         onDispose {
             navigator.backHandlers.remove(handler)
-            saveCurrentHistoryBlocking()
+            launchSaveCurrentHistory()
         }
     }
 
@@ -1356,11 +1576,16 @@ internal fun ThreadReaderScreen(
                         bookmarkedPostIds = postBookMarkEntries.values
                             .filter { it.bookmarked }
                             .mapTo(mutableSetOf()) { it.targetId },
-                        readPostIds = postBookMarkEntries.values
-                            .filter { it.read }
-                            .mapTo(mutableSetOf()) { it.targetId },
+                        readPostIds = emptySet(),
+                        chapterStates = progressCoordinator.chapterStates,
                         onPageOrPostClick = { page, post ->
                             scope.launch {
+                                val activeGeneration = readerScrollSession.activeGeneration()
+                                if (activeGeneration != null) {
+                                    latestFinishScrollSession.value(activeGeneration)
+                                } else {
+                                    persistCurrentReadingState()
+                                }
                                 if (post != null) {
                                     drawerState.close()
                                     if (page !in loadedPages) {
@@ -1368,7 +1593,7 @@ internal fun ThreadReaderScreen(
                                         delay(50.milliseconds) // Wait briefly for Compose to layout the new items
                                     }
                                     val targetIndex = entryIndexByPid[post.pid.value.toLong()] ?: -1
-                                    if (targetIndex >= 0) listState.scrollToItem(targetIndex)
+                                    if (targetIndex >= 0) scrollToChapterTarget(targetIndex, post.pid.value.toLong())
                                 } else {
                                     // User just clicked the page header to expand catalog, load the page, don't close drawer
                                     if (page !in loadedPages) {
@@ -1417,15 +1642,82 @@ internal fun ThreadReaderScreen(
                     .background(colors.creamBackground)
                     .pointerInput(Unit) {
                         awaitEachGesture {
-                            awaitFirstDown(requireUnconsumed = false)
-                            val up = waitForUpOrCancellation()
-                            if (up != null && !up.isConsumed) {
-                                val x = up.position.x
-                                val width = size.width
-                                if (x in (width / 3f)..(width * 2f / 3f)) {
-                                    showMenu = !showMenu
-                                    debugPerfLog("toggle_overlay|showMenu=$showMenu")
+                            val down = awaitFirstDown(
+                                requireUnconsumed = false,
+                                pass = PointerEventPass.Initial,
+                            )
+                            val gestureStartPosition =
+                                listState.firstVisibleItemIndex to
+                                    listState.firstVisibleItemScrollOffset
+                            val hadActiveSession = readerScrollSession.activeGeneration() != null
+                            val gestureGeneration =
+                                readerScrollSession.start(gestureStartPosition.first)
+                            var exceededTouchSlop = false
+                            var pointerEvent = awaitPointerEvent(PointerEventPass.Initial)
+                            while (pointerEvent.changes.any { it.pressed }) {
+                                val trackedChange = pointerEvent.changes.firstOrNull { it.id == down.id }
+                                if (
+                                    trackedChange != null &&
+                                    (trackedChange.position - down.position).getDistance() > viewConfiguration.touchSlop
+                                ) {
+                                    exceededTouchSlop = true
                                 }
+                                pointerEvent = awaitPointerEvent(PointerEventPass.Initial)
+                            }
+                            val finalChange = pointerEvent.changes.firstOrNull { it.id == down.id }
+                            if (
+                                finalChange != null &&
+                                (finalChange.position - down.position).getDistance() > viewConfiguration.touchSlop
+                            ) {
+                                exceededTouchSlop = true
+                            }
+                            readerScrollSession.scheduleIdle(scope) {
+                                if (!exceededTouchSlop) {
+                                    delay(100.milliseconds)
+                                    val delayedPosition =
+                                        listState.firstVisibleItemIndex to
+                                            listState.firstVisibleItemScrollOffset
+                                    if (delayedPosition == gestureStartPosition && !hadActiveSession) {
+                                        readerScrollSession.cancel(gestureGeneration)
+                                        return@scheduleIdle
+                                    }
+                                    if (delayedPosition != gestureStartPosition) {
+                                        progressCoordinator.noteScrollStarted()
+                                    }
+                                } else {
+                                    progressCoordinator.noteScrollStarted()
+                                }
+
+                                var stableSamples = 0
+                                var sampleCount = 0
+                                var lastPosition: Pair<Int, Int>? = null
+                                while (
+                                    readerScrollSession.isActive(gestureGeneration) &&
+                                    stableSamples < 3 &&
+                                    sampleCount < 40
+                                ) {
+                                    delay(50.milliseconds)
+                                    sampleCount += 1
+                                    val currentPosition =
+                                        listState.firstVisibleItemIndex to
+                                            listState.firstVisibleItemScrollOffset
+                                    recordCrossedIndices(readerScrollSession.observe(currentPosition.first))
+                                    stableSamples = if (currentPosition == lastPosition) {
+                                        stableSamples + 1
+                                    } else {
+                                        0
+                                    }
+                                    lastPosition = currentPosition
+                                }
+                                latestFinishScrollSession.value(gestureGeneration)
+                            }
+                        }
+                    }
+                    .pointerInput(Unit) {
+                        detectTapGestures { position ->
+                            if (position.x in (size.width / 3f)..(size.width * 2f / 3f)) {
+                                showMenu = !showMenu
+                                debugPerfLog("toggle_overlay|showMenu=$showMenu")
                             }
                         }
                     }
@@ -1477,6 +1769,9 @@ internal fun ThreadReaderScreen(
                                     ReaderEntryKind.WholePost -> {
                                         PostRenderer(
                                             post = post,
+                                            modifier = Modifier.onSizeChanged { size ->
+                                                progressCoordinator.updateItemHeight(entry.key, size.height)
+                                            },
                                             threadTitle = if (post.floor == 1) title else null,
                                             totalViews = threadInfo?.totalViews.takeIf { post.floor == 1 },
                                             totalReplies = threadInfo?.totalReplies.takeIf { post.floor == 1 },
@@ -1519,6 +1814,9 @@ internal fun ThreadReaderScreen(
                                     ReaderEntryKind.SegmentedHeader -> {
                                         PostRenderer(
                                             post = post,
+                                            modifier = Modifier.onSizeChanged { size ->
+                                                progressCoordinator.updateItemHeight(entry.key, size.height)
+                                            },
                                             threadTitle = if (post.floor == 1) title else null,
                                             totalViews = threadInfo?.totalViews.takeIf { post.floor == 1 },
                                             totalReplies = threadInfo?.totalReplies.takeIf { post.floor == 1 },
@@ -1552,6 +1850,9 @@ internal fun ThreadReaderScreen(
                                     ReaderEntryKind.SegmentedBody -> {
                                         PostRenderer(
                                             post = post,
+                                            modifier = Modifier.onSizeChanged { size ->
+                                                progressCoordinator.updateItemHeight(entry.key, size.height)
+                                            },
                                             bodyBlocks = entry.bodyBlocks,
                                             linkContext = htmlLinkContext,
                                             showHeader = false,
@@ -1584,6 +1885,9 @@ internal fun ThreadReaderScreen(
                                     ReaderEntryKind.SegmentedFooter -> {
                                         PostRenderer(
                                             post = post,
+                                            modifier = Modifier.onSizeChanged { size ->
+                                                progressCoordinator.updateItemHeight(entry.key, size.height)
+                                            },
                                             bodyBlocks = emptyList(),
                                             showHeader = false,
                                             showFooter = true,
@@ -1695,7 +1999,7 @@ internal fun ThreadReaderScreen(
                             .align(Alignment.TopCenter)
                             .fillMaxWidth()
                             .windowInsetsTopHeight(WindowInsets.statusBars)
-                            .background(colors.creamBackground)
+                            .background(if (readerUsesBrownSystemBar) colors.brownDeep else colors.creamBackground)
                     )
                     Spacer(
                         modifier = Modifier
@@ -1781,7 +2085,12 @@ internal fun ThreadReaderScreen(
                     title = threadInfo?.title ?: title,
                     isFavorited = isFavorited,
                     onBack = { saveCurrentHistoryAndPop() },
-                    onCatalog = { scope.launch { drawerState.open() } },
+                    onCatalog = {
+                        scope.launch {
+                            persistCurrentReadingState()
+                            drawerState.open()
+                        }
+                    },
                     onFavorite = { scope.launch { toggleFavoriteQuickWithFeedback() } },
                     onFavoriteLongPress = {
                         scope.launch {
@@ -1847,6 +2156,17 @@ internal fun ThreadReaderScreen(
             }
         }
         }
+        if (drawerState.isOpen) {
+            Spacer(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .windowInsetsTopHeight(WindowInsets.statusBars)
+                    .background(colors.brownDeep)
+                    .zIndex(2f)
+            )
+        }
+
         YamiboSnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier
@@ -1985,15 +2305,17 @@ internal fun ThreadReaderScreen(
     }
 
     catalogActionPost?.let { post ->
-        val entry = postBookMarkEntries[post.pid.value.toLong()]
+        val bookmarkEntry = postBookMarkEntries[post.pid.value.toLong()]
+        val chapterState = progressCoordinator.chapterStates.value[post.pid.value.toLong()]
         CatalogBookMarkActionDialog(
-            bookmarked = entry?.bookmarked == true,
-            read = entry?.read == true,
+            bookmarked = bookmarkEntry?.bookmarked == true,
+            read = chapterState?.read == true,
+            hasProgress = chapterState?.hasProgress == true,
             onDismiss = { catalogActionPost = null },
             onToggleBookMark = {
                 catalogActionPost = null
                 scope.launch {
-                    val next = entry?.bookmarked != true
+                    val next = bookmarkEntry?.bookmarked != true
                     bookMarkRepository.setBookmarked(
                         targetType = BookMarkRepository.TargetType.ThreadPost,
                         parentId = tid.value.toLong(),
@@ -2008,36 +2330,35 @@ internal fun ThreadReaderScreen(
                     )
                 }
             },
-            onToggleRead = {
+            onMarkRead = {
                 catalogActionPost = null
                 scope.launch {
-                    val next = entry?.read != true
-                    bookMarkRepository.setRead(
-                        targetType = BookMarkRepository.TargetType.ThreadPost,
-                        parentId = tid.value.toLong(),
-                        targetId = post.pid.value.toLong(),
+                    progressCoordinator.setRead(
+                        postId = post.pid.value.toLong(),
                         title = post.title.ifBlank { i18n("（無標題）") },
-                        read = next,
+                        read = true,
                     )
-                    reloadPostBookMarks()
-                    snackbarHostState.showSnackbar(
-                        if (next) i18n("已標為已讀") else i18n("已標為未讀"),
-                        duration = SnackbarDuration.Short,
+                    snackbarHostState.showSnackbar(i18n("已標為已讀"), duration = SnackbarDuration.Short)
+                }
+            },
+            onMarkUnread = {
+                catalogActionPost = null
+                scope.launch {
+                    progressCoordinator.setRead(
+                        postId = post.pid.value.toLong(),
+                        title = post.title.ifBlank { i18n("（無標題）") },
+                        read = false,
                     )
+                    snackbarHostState.showSnackbar(i18n("已標為未讀"), duration = SnackbarDuration.Short)
                 }
             },
             onClearHistory = {
                 catalogActionPost = null
                 scope.launch {
-                    bookMarkRepository.setRead(
-                        targetType = BookMarkRepository.TargetType.ThreadPost,
-                        parentId = tid.value.toLong(),
-                        targetId = post.pid.value.toLong(),
-                        title = post.title.ifBlank { i18n("（無標題）") },
-                        read = false,
-                    )
-                    reloadPostBookMarks()
-                    snackbarHostState.showSnackbar(i18n("已清除閱讀紀錄"), duration = SnackbarDuration.Short)
+                    progressCoordinator.clearAll {
+                        readHistoryRepo.deleteHistory(tid, threadType, authorId)
+                    }
+                    snackbarHostState.showSnackbar(i18n("已清除全部閱讀紀錄"), duration = SnackbarDuration.Short)
                 }
             },
         )
@@ -2054,15 +2375,18 @@ private fun ReaderCatalogPanelWithPosition(
     loadedPostsByPage: Map<Int, List<Post>>,
     bookmarkedPostIds: Set<Long>,
     readPostIds: Set<Long>,
+    chapterStates: kotlinx.coroutines.flow.StateFlow<Map<Long, ChapterStateRepository.Entry>>,
     onPageOrPostClick: (Int, Post?) -> Unit,
     onPostLongPress: (Post) -> Unit,
 ) {
+    val currentChapterStates by chapterStates.collectAsState()
     val currentPosition by remember(listState, readerEntries, pageByPid, initialPage) {
         derivedStateOf {
-            val currentEntry = readerEntries.getOrNull(listState.firstVisibleItemIndex)
-            ReaderCatalogCurrentPosition(
-                page = currentEntry?.let { pageByPid[it.post.pid.value.toLong()] } ?: initialPage,
-                pid = currentEntry?.post?.pid,
+            calculateReaderCatalogCurrentPosition(
+                listState = listState,
+                readerEntries = readerEntries,
+                pageByPid = pageByPid,
+                initialPage = initialPage,
             )
         }
     }
@@ -2074,8 +2398,47 @@ private fun ReaderCatalogPanelWithPosition(
         currentPid = currentPosition.pid,
         bookmarkedPostIds = bookmarkedPostIds,
         readPostIds = readPostIds,
+        chapterStates = currentChapterStates,
         onPageOrPostClick = onPageOrPostClick,
         onPostLongPress = onPostLongPress,
+    )
+}
+
+private fun calculateReaderCatalogCurrentPosition(
+    listState: LazyListState,
+    readerEntries: List<ReaderListEntry>,
+    pageByPid: Map<Long, Int>,
+    initialPage: Int,
+): ReaderCatalogCurrentPosition {
+    val layoutInfo = listState.layoutInfo
+    val visibleItems = layoutInfo.visibleItemsInfo
+    val viewportCenter = (layoutInfo.viewportStartOffset + layoutInfo.viewportEndOffset) / 2
+    val centeredEntry = visibleItems
+        .mapNotNull { item ->
+            readerEntries.getOrNull(item.index)
+                ?.takeIf { it.isScrollAnchor }
+                ?.let { item to it }
+        }
+        .minByOrNull { (item, _) ->
+            when {
+                viewportCenter < item.offset -> item.offset - viewportCenter
+                viewportCenter > item.offset + item.size -> viewportCenter - (item.offset + item.size)
+                else -> 0
+            }
+        }
+        ?: visibleItems
+            .mapNotNull { item -> readerEntries.getOrNull(item.index)?.let { item to it } }
+            .minByOrNull { (item, _) ->
+                when {
+                    viewportCenter < item.offset -> item.offset - viewportCenter
+                    viewportCenter > item.offset + item.size -> viewportCenter - (item.offset + item.size)
+                    else -> 0
+                }
+            }
+    val entry = centeredEntry?.second
+    return ReaderCatalogCurrentPosition(
+        page = entry?.let { pageByPid[it.post.pid.value.toLong()] } ?: initialPage,
+        pid = entry?.post?.pid,
     )
 }
 
@@ -2179,9 +2542,11 @@ private fun calculateReaderPageProgress(
 private fun CatalogBookMarkActionDialog(
     bookmarked: Boolean,
     read: Boolean,
+    hasProgress: Boolean,
     onDismiss: () -> Unit,
     onToggleBookMark: () -> Unit,
-    onToggleRead: () -> Unit,
+    onMarkRead: () -> Unit,
+    onMarkUnread: () -> Unit,
     onClearHistory: () -> Unit,
 ) {
     val colors = YamiboTheme.colors
@@ -2191,8 +2556,16 @@ private fun CatalogBookMarkActionDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 CatalogActionRow(if (bookmarked) i18n("移除書籤") else i18n("新增書籤"), onToggleBookMark)
-                CatalogActionRow(if (read) i18n("標為未讀") else i18n("標為已讀"), onToggleRead)
-                CatalogActionRow(i18n("清除閱讀紀錄"), onClearHistory)
+                if (hasProgress) {
+                    CatalogActionRow(i18n("標為已讀"), onMarkRead)
+                    CatalogActionRow(i18n("標為未讀"), onMarkUnread)
+                } else {
+                    CatalogActionRow(
+                        if (read) i18n("標為未讀") else i18n("標為已讀"),
+                        if (read) onMarkUnread else onMarkRead,
+                    )
+                }
+                CatalogActionRow(i18n("清除全部閱讀紀錄"), onClearHistory)
             }
         },
         confirmButton = {},

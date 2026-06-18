@@ -23,6 +23,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import me.thenano.yamibo.yamibo_app.components.navigation.YamiboTopBar
+import me.thenano.yamibo.yamibo_app.components.navigation.YamiboTopBarIconAction
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 
 /**
@@ -74,54 +76,25 @@ fun MangaReaderOverlay(
             exit = slideOutVertically(animationSpec = tween(150), targetOffsetY = { -it }),
             modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth()
         ) {
-            Surface(
-                color = colors.brownDeep,
-                shadowElevation = 4.dp,
-                modifier = Modifier.fillMaxWidth()
+            YamiboTopBar(
+                title = title,
+                subtitle = subtitle,
+                titleFontSize = 16,
+                onBack = onBack,
+                systemBarsPriority = 30,
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .statusBarsPadding()
-                        .padding(horizontal = 4.dp, vertical = 8.dp)
-                ) {
-                    IconButton(onClick = onBack) {
-                    Text(YamiboIcons.Back, color = Color.White, fontSize = 20.sp)
+                if (onCatalog != null) {
+                    IconButton(onClick = onCatalog, modifier = Modifier.size(36.dp)) {
+                        Text("☰", color = Color.White, fontSize = 22.sp)
                     }
-
-                    // Title area: support subtitle (two-line mode)
-                    if (subtitle != null) {
-                        Column(
-                            modifier = Modifier.weight(1f).padding(horizontal = 8.dp)
-                        ) {
-                            Text(
-                                text = title,
-                                color = Color.White,
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                maxLines = 1,
-                                overflow = TextOverflow.StartEllipsis,
-                                //modifier = Modifier.basicMarquee()
-                            )
-                            Text(
-                                text = subtitle,
-                                color = Color.White.copy(alpha = 0.6f),
-                                fontSize = 12.sp,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    } else {
-                        Text(
-                            text = title,
-                            color = Color.White,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f).padding(horizontal = 8.dp)
-                        )
+                }
+                YamiboTopBarIconAction(YamiboIcons.Setting, i18n("設定"), onSettings, iconSize = 22)
+                if (onShare != null) {
+                    YamiboTopBarIconAction(YamiboIcons.Share, i18n("分享"), onShare, iconSize = 22)
+                }
+                if (onNavigateToThread != null) {
+                    IconButton(onClick = onNavigateToThread, modifier = Modifier.size(36.dp)) {
+                        Text("📖", fontSize = 20.sp)
                     }
                 }
             }
@@ -273,4 +246,3 @@ fun MangaReaderOverlay(
         }
     }
 }
-

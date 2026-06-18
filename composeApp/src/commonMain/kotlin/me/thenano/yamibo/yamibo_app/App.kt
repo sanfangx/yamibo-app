@@ -1,34 +1,12 @@
 package me.thenano.yamibo.yamibo_app
 
-import me.thenano.yamibo.yamibo_app.i18n.i18n
-
 import androidx.compose.animation.*
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.*
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
@@ -42,12 +20,14 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.zIndex
 import coil3.ImageLoader
+import coil3.PlatformContext
 import coil3.compose.setSingletonImageLoaderFactory
 import coil3.memory.MemoryCache
 import coil3.network.ktor3.KtorNetworkFetcherFactory
 import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.home.HomePageScreen
 import me.thenano.yamibo.yamibo_app.i18n.AppLocaleProvider
+import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.navigation.NavAction
 import me.thenano.yamibo.yamibo_app.repository.appupdate.AppUpdateCheckResult
@@ -73,25 +53,31 @@ fun HomeScreenContent(
 
 @Composable
 fun App() {
-    setSingletonImageLoaderFactory { context ->
-        ImageLoader.Builder(context)
-            .memoryCache {
-                MemoryCache.Builder()
-                    .maxSizePercent(context, 0.35)
-                    .build()
+    val imageLoaderFactory = remember {
+        { context: PlatformContext ->
+            ImageLoader.Builder(context)
+                .memoryCache {
+                    MemoryCache.Builder()
+                        .maxSizePercent(context, 0.35)
+                        .build()
+                }
+                .components {
+                    add(KtorNetworkFetcherFactory())
+                }
+                .build()
             }
-            .components {
-                add(KtorNetworkFetcherFactory())
-            }
-            .build()
     }
+    setSingletonImageLoaderFactory(imageLoaderFactory)
 
     val navigator = LocalNavigator.current
     val appSettingsRepository = LocalAppSettingsRepository.current
     val authRepository = LocalAuthRepository.current
     val signRepository = LocalSignRepository.current
     val appUpdateRepository = LocalAppUpdateRepository.current
+    val fontRepository = LocalFontRepository.current
     val appLanguage = appSettingsRepository.language.state()
+    val appFontId = appSettingsRepository.appFontId.state()
+    val appFontFamily = remember(appFontId) { fontRepository.getFontFamily(appFontId) }
     val signLaunchReminderEnabled = appSettingsRepository.signInLaunchReminderEnabled.state()
     val holder = rememberSaveableStateHolder()
     navigator.stateHolder = holder
@@ -119,10 +105,14 @@ fun App() {
     }
 
     AppLocaleProvider(appLanguage) {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = YamiboTheme.colors.creamBackground
+        val rootTextStyle = LocalTextStyle.current
+        CompositionLocalProvider(
+            LocalTextStyle provides rootTextStyle.copy(fontFamily = appFontFamily),
         ) {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = YamiboTheme.colors.creamBackground
+            ) {
             Box(modifier = Modifier.fillMaxSize()) {
                 val topIndex = stack.lastIndex
                 val topId = stack.lastOrNull()?.id
@@ -133,7 +123,12 @@ fun App() {
                 stack.forEachIndexed { index, navigatable ->
                     val isPopping = index == poppingIdx
                     val isTop = index == stack.lastIndex
-                    val isNewPush = navigator.lastAction == NavAction.Push && isTop && !isPopping
+                    val isNewPush =
+                        navigator.lastAction == NavAction.Push &&
+                            isTop &&
+                            !isPopping &&
+                            topIndex > 0 &&
+                            completedPushTopId != navigatable.id
                     val shouldDraw =
                         isTop ||
                             isPopping ||
@@ -214,6 +209,7 @@ fun App() {
                     appUpdateRepository.openReleasePage(release)
                 },
             )
+            }
         }
     }
 

@@ -69,6 +69,11 @@ internal fun MessageCenterMainContent(
     favoriteUpdateHiddenRunId: String,
     onHideFavoriteUpdateStatus: (String) -> Unit,
     onToggleFavoriteUpdateFid: (Int, Boolean) -> Unit,
+    onToggleFavoriteUpdateCategory: (Long, Boolean) -> Unit,
+    resultFilterActive: Boolean,
+    resultFilterLabel: String,
+    onShowResultFilter: () -> Unit,
+    onShowUpdateScopeFilter: () -> Unit,
     onUserClick: (User) -> Unit,
     onNoticeUserClick: (UserId) -> Unit,
     onOpenPrivateMessage: (User) -> Unit,
@@ -83,6 +88,7 @@ internal fun MessageCenterMainContent(
                 item {
                     FavoriteUpdateHeader(
                         filters = content.filters,
+                        categoryFilters = content.categoryFilters,
                         runState = content.runState,
                         onGlobalFavoriteUpdate = onGlobalFavoriteUpdate,
                         onCancelFavoriteUpdate = onCancelFavoriteUpdate,
@@ -93,6 +99,11 @@ internal fun MessageCenterMainContent(
                         favoriteUpdateHiddenRunId = favoriteUpdateHiddenRunId,
                         onHideFavoriteUpdateStatus = onHideFavoriteUpdateStatus,
                         onToggleFavoriteUpdateFid = onToggleFavoriteUpdateFid,
+                        onToggleFavoriteUpdateCategory = onToggleFavoriteUpdateCategory,
+                        resultFilterActive = resultFilterActive,
+                        resultFilterLabel = resultFilterLabel,
+                        onShowResultFilter = onShowResultFilter,
+                        onShowUpdateScopeFilter = onShowUpdateScopeFilter,
                     )
                 }
                 if (content.events.isEmpty()) item { MessageCenterEmptyListMessage(i18n("沒有偵測到更新")) }
@@ -134,6 +145,7 @@ private fun MessageCenterEmptyListMessage(message: String) {
 @Composable
 private fun FavoriteUpdateHeader(
     filters: List<FavoriteUpdateRepository.FidFilter>,
+    categoryFilters: List<FavoriteUpdateRepository.CategoryFilter>,
     runState: FavoriteUpdateRepository.RunState,
     onGlobalFavoriteUpdate: () -> Unit,
     onCancelFavoriteUpdate: (String) -> Unit,
@@ -144,8 +156,12 @@ private fun FavoriteUpdateHeader(
     favoriteUpdateHiddenRunId: String,
     onHideFavoriteUpdateStatus: (String) -> Unit,
     onToggleFavoriteUpdateFid: (Int, Boolean) -> Unit,
+    onToggleFavoriteUpdateCategory: (Long, Boolean) -> Unit,
+    resultFilterActive: Boolean,
+    resultFilterLabel: String,
+    onShowResultFilter: () -> Unit,
+    onShowUpdateScopeFilter: () -> Unit,
 ) {
-    var showFilterDialog by remember { mutableStateOf(false) }
     var showIntervalDialog by remember { mutableStateOf(false) }
     val running = (runState as? FavoriteUpdateRepository.RunState.Running)?.snapshot
     val interrupted = (runState as? FavoriteUpdateRepository.RunState.Interrupted)?.snapshot
@@ -166,8 +182,12 @@ private fun FavoriteUpdateHeader(
         ) {
             Text(i18n("收藏更新"), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                YamiboActionChip(
+                    i18n("結果: {}", resultFilterLabel),
+                    onClick = onShowResultFilter,
+                    selected = resultFilterActive,
+                )
                 YamiboActionChip(i18n("刷新週期: {}", favoriteUpdateInterval.localizedLabel()), onClick = { showIntervalDialog = true })
-                YamiboActionChip(i18n("篩選"), onClick = { showFilterDialog = true })
                 when {
                     interrupted != null -> YamiboActionChip(i18n("繼續"), onClick = onResumeFavoriteUpdate)
                     running == null -> YamiboActionChip(i18n("全域刷新"), onClick = onGlobalFavoriteUpdate)
@@ -187,13 +207,6 @@ private fun FavoriteUpdateHeader(
         }
     }
 
-    if (showFilterDialog) {
-        FavoriteUpdateFidFilterDialog(
-            filters = filters,
-            onDismiss = { showFilterDialog = false },
-            onToggle = onToggleFavoriteUpdateFid,
-        )
-    }
     if (showIntervalDialog) {
         FavoriteUpdateIntervalDialog(
             selected = favoriteUpdateInterval,
@@ -354,6 +367,12 @@ private fun emptyMessage(tab: MessageCenterTab): String = when (tab) {
     MessageCenterTab.Updates -> i18n("沒有偵測到更新")
     MessageCenterTab.PrivateMessages -> i18n("沒有找到消息")
     MessageCenterTab.Notices -> i18n("沒有找到提醒")
+}
+
+private inline fun <T> List<T>.isFilterRestricted(isEnabled: (T) -> Boolean): Boolean {
+    if (isEmpty()) return false
+    val enabledCount = count(isEnabled)
+    return enabledCount in 1 until size
 }
 
 @Composable

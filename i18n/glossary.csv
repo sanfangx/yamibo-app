@@ -793,7 +793,7 @@ TODO: 回覆定位跳轉尚未接入,TODO: The reply positioning jump has not be
 已忽略版本 {},Version {} is ignored,已忽略版本 {},已忽略版本 {}
 需要允許此 app 安裝未知來源應用，完成授權後請重新點擊下載。,"Allow this app to install unknown apps, then tap download again.",需要允許此 app 安裝未知來源應用，完成授權後請重新點擊下載。,需要允许此 app 安装未知来源应用，完成授权后请重新点击下载。
 下載完成，已打開系統安裝流程。,Download complete. System installation has been opened.,下載完成，已打開系統安裝流程。,下载完成，已打开系统安装流程。
-更新資訊來自 manifest；牆內使用者可優先使用 Gitee/GitCode 鏡像源。,Update info comes from a manifest. Mainland users can prefer Gitee/GitCode mirrors.,更新資訊來自 manifest；牆內使用者可優先使用 Gitee/GitCode 鏡像源。,更新信息来自 manifest；墙内用户可优先使用 Gitee/GitCode 镜像源。
+更新資訊來自 manifest；牆內使用者可優先使用 Gitee/Gitea 鏡像源。,Update info comes from a manifest. Mainland users can prefer Gitee/Gitea mirrors.,更新資訊來自 manifest；牆內使用者可優先使用 Gitee/Gitea 鏡像源。,更新信息来自 manifest；墙内用户可优先使用 Gitee/Gitea 镜像源。
 尚未檢查更新,Updates have not been checked,尚未檢查更新,尚未检查更新
 來源：{},Source: {},來源：{},来源：{}
 目前已是最新版本：{},You are on the latest version: {},目前已是最新版本：{},目前已是最新版本：{}

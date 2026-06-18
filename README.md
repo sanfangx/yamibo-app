@@ -129,9 +129,9 @@ source repo 內必須保持：
 }
 ```
 
-不要手動加入 `releaseUrl` 或 APK asset。正式可更新的 manifest 由 GitHub Actions 在 APK build/sign/upload 完成後生成，並推送到 GitHub `update-release` branch 與 Gitee / GitCode mirror。
+不要手動加入 `releaseUrl` 或 APK asset。正式可更新的 manifest 由 GitHub Actions 在 APK build/sign/upload 完成後生成，並推送到 GitHub `update-release` branch 與 Gitee / Gitea mirror。
 
-Gitee / GitCode mirror 的 ready manifest 必須指向各自 mirror release 的 APK asset，不可回指 GitHub release APK。
+Gitee / Gitea mirror 的 ready manifest 必須指向各自 mirror release 的 APK asset，不可回指 GitHub release APK。
 
 更多細節見：
 

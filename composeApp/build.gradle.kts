@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -12,6 +13,29 @@ plugins {
 
 val yamiboAppVersionCode = 2
 val yamiboAppVersionName = "0.0.1"
+val yamiboAppApplicationId = "me.thenano.yamibo.yamibo_app"
+val localProperties = Properties().apply {
+    val file = rootProject.layout.projectDirectory.file("local.properties").asFile
+    if (file.isFile) {
+        file.inputStream().use(::load)
+    }
+}
+
+fun localProperty(name: String): String? =
+    localProperties.getProperty(name)?.takeIf { it.isNotBlank() }
+
+val releaseRunSigningValues = listOf(
+    localProperty("yamibo.releaseRun.storeFile"),
+    localProperty("yamibo.releaseRun.storePassword"),
+    localProperty("yamibo.releaseRun.keyAlias"),
+    localProperty("yamibo.releaseRun.keyPassword"),
+)
+val hasReleaseRunSigning = releaseRunSigningValues.all { it != null }
+require(releaseRunSigningValues.all { it == null } || hasReleaseRunSigning) {
+    "releaseRun signing requires all local.properties keys: " +
+        "yamibo.releaseRun.storeFile, yamibo.releaseRun.storePassword, " +
+        "yamibo.releaseRun.keyAlias, yamibo.releaseRun.keyPassword"
+}
 
 kotlin {
     androidTarget { compilerOptions { jvmTarget.set(JvmTarget.JVM_11) } }
@@ -106,14 +130,33 @@ android {
     compileSdk = libs.versions.android.compileSdk.get().toInt()
 
     defaultConfig {
-        applicationId = "me.thenano.yamibo.yamibo_app"
+        applicationId = yamiboAppApplicationId
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = yamiboAppVersionCode
         versionName = yamiboAppVersionName
     }
     packaging { resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" } }
-    buildTypes { getByName("release") { isMinifyEnabled = false } }
+    signingConfigs {
+        if (hasReleaseRunSigning) {
+            create("releaseRunLocal") {
+                storeFile = rootProject.file(requireNotNull(localProperty("yamibo.releaseRun.storeFile")))
+                storePassword = requireNotNull(localProperty("yamibo.releaseRun.storePassword"))
+                keyAlias = requireNotNull(localProperty("yamibo.releaseRun.keyAlias"))
+                keyPassword = requireNotNull(localProperty("yamibo.releaseRun.keyPassword"))
+            }
+        }
+    }
+    buildTypes {
+        getByName("release") { isMinifyEnabled = false }
+        create("releaseRun") {
+            initWith(getByName("release"))
+            matchingFallbacks += listOf("release")
+            signingConfig = signingConfigs.getByName(if (hasReleaseRunSigning) "releaseRunLocal" else "debug")
+            isDebuggable = false
+            isMinifyEnabled = false
+        }
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -121,6 +164,40 @@ android {
 }
 
 dependencies { debugImplementation(compose.uiTooling) }
+
+fun localSdkDir(): String? {
+    return localProperty("sdk.dir")
+}
+
+fun adbExecutablePath(): String {
+    val adbName = if (isWindowsHost) "adb.exe" else "adb"
+    val sdkDir = localSdkDir()
+    if (!sdkDir.isNullOrBlank()) {
+        val adb = File(sdkDir, "platform-tools/$adbName")
+        if (adb.isFile) return adb.absolutePath
+    }
+    return adbName
+}
+
+tasks.register<Exec>("runReleaseOnDevice") {
+    group = "run"
+    description = "Installs the non-debuggable releaseRun APK, then launches the app on the selected adb device."
+    notCompatibleWithConfigurationCache("Launches the app through the local adb executable after installReleaseRun.")
+    dependsOn("installReleaseRun")
+    isIgnoreExitValue = false
+    doFirst {
+        commandLine(
+            adbExecutablePath(),
+            "shell",
+            "monkey",
+            "-p",
+            yamiboAppApplicationId,
+            "-c",
+            "android.intent.category.LAUNCHER",
+            "1",
+        )
+    }
+}
 
 val syncStableManifest by tasks.registering(SyncStableManifestTask::class) {
     group = "release"

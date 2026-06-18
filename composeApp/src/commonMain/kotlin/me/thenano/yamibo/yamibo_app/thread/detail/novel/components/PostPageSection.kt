@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.littlesurvival.dto.page.Post
 import me.thenano.yamibo.yamibo_app.components.text.rememberConvertedText
+import me.thenano.yamibo.yamibo_app.repository.LocalChapterStateRepository
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 
 /** Expandable page section with post titles */
@@ -40,6 +41,7 @@ internal fun PostPageSection(
     posts: List<Post>?,
     bookmarkedPostIds: Set<Long>,
     readPostIds: Set<Long>,
+    chapterStates: Map<Long, LocalChapterStateRepository.Entry> = emptyMap(),
     isFirstPage: Boolean,
     onToggle: () -> Unit,
     onPostClick: (Post) -> Unit,
@@ -113,10 +115,14 @@ internal fun PostPageSection(
                     }
                 } else {
                     posts.forEach { post ->
+                        val postId = post.pid.value.toLong()
+                        val chapterState = chapterStates[postId]
+                        val isRead = postId in readPostIds || chapterState?.read == true
                         PostTitleRow(
                             post = post,
-                            bookmarked = post.pid.value.toLong() in bookmarkedPostIds,
-                            read = post.pid.value.toLong() in readPostIds,
+                            bookmarked = postId in bookmarkedPostIds,
+                            read = isRead,
+                            progressText = chapterState?.progressLabel(),
                             onClick = { onPostClick(post) },
                             onLongPress = { onPostLongPress(post) },
                         )
@@ -133,6 +139,7 @@ private fun PostTitleRow(
     post: Post,
     bookmarked: Boolean,
     read: Boolean,
+    progressText: String?,
     onClick: () -> Unit,
     onLongPress: () -> Unit,
 ) {
@@ -188,7 +195,20 @@ private fun PostTitleRow(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+            if (!read && progressText != null) {
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = progressText,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = colors.orangeAccent,
+                )
+            }
         }
     }
 }
 
+private fun LocalChapterStateRepository.Entry.progressLabel(): String? {
+    if (read || progressPercent <= 0) return null
+    return i18n("已讀 {}%", progressPercent)
+}

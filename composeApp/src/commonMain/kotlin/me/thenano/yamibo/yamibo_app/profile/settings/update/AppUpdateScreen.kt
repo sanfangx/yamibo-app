@@ -1,4 +1,4 @@
-﻿package me.thenano.yamibo.yamibo_app.profile.settings.update
+package me.thenano.yamibo.yamibo_app.profile.settings.update
 
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 
@@ -9,6 +9,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -25,6 +27,7 @@ import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.AppVersion
 import me.thenano.yamibo.yamibo_app.LocalAppSettingsRepository
 import me.thenano.yamibo.yamibo_app.LocalAppUpdateRepository
+import me.thenano.yamibo.yamibo_app.components.navigation.YamiboTopBar
 import me.thenano.yamibo.yamibo_app.components.controls.YamiboSingleSelectDialog
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.appupdate.AppUpdateAsset
@@ -63,26 +66,10 @@ internal fun AppUpdateScreen() {
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = i18n("App 更新"),
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = { navigator.pop() }) {
-                        Text(YamiboIcons.Back, color = Color.White, fontSize = 20.sp)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = colors.brownDeep,
-                    scrolledContainerColor = colors.brownDeep,
-                ),
+            YamiboTopBar(
+                title = i18n("App 更新"),
+                titleFontSize = 18,
+                onBack = { navigator.pop() },
             )
         },
         containerColor = colors.creamBackground,
@@ -232,13 +219,20 @@ private fun PreviewUpdatePromptDialog(onDismiss: () -> Unit) {
                         .height(76.dp),
                     contentScale = ContentScale.Fit,
                 )
-                Text(
-                    text = release.changelogContent(),
-                    color = colors.textDark.copy(alpha = 0.78f),
-                    fontSize = 14.sp,
-                    lineHeight = 20.sp,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 220.dp)
+                        .verticalScroll(rememberScrollState()),
+                ) {
+                    Text(
+                        text = release.changelogContent(),
+                        color = colors.textDark.copy(alpha = 0.78f),
+                        fontSize = 14.sp,
+                        lineHeight = 20.sp,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
                 Button(
                     onClick = onDismiss,
                     modifier = Modifier.fillMaxWidth(),
@@ -338,12 +332,19 @@ private fun AppUpdateStatusCard(
                 )
                 val changelog = it.changelogContent()
                 if (changelog.isNotBlank()) {
-                    Text(
-                        text = changelog,
-                        color = colors.textDark.copy(alpha = 0.78f),
-                        fontSize = 13.sp,
-                        lineHeight = 18.sp,
-                    )
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 180.dp)
+                            .verticalScroll(rememberScrollState())
+                    ) {
+                        Text(
+                            text = changelog,
+                            color = colors.textDark.copy(alpha = 0.78f),
+                            fontSize = 13.sp,
+                            lineHeight = 18.sp,
+                        )
+                    }
                 }
             }
             DownloadProgress(downloadState)

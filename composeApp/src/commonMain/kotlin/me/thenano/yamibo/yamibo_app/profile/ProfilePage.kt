@@ -7,6 +7,7 @@ import YamiboIcons
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
@@ -25,6 +26,8 @@ import me.thenano.yamibo.yamibo_app.LocalAuthRepository
 import me.thenano.yamibo.yamibo_app.LocalSignRepository
 import me.thenano.yamibo.yamibo_app.event.AppEventBus
 import me.thenano.yamibo.yamibo_app.event.events.LoginSuccessEvent
+import me.thenano.yamibo.yamibo_app.message.IMessageCenterScreen
+import me.thenano.yamibo.yamibo_app.message.MessageCenterTab
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.profile.about.IAboutScreen
 import me.thenano.yamibo.yamibo_app.profile.settings.ISettingsScreen
@@ -37,7 +40,10 @@ import me.thenano.yamibo.yamibo_app.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme.colors
 
 @Composable
-fun ProfilePage() {
+fun ProfilePage(
+    hasNewMessage: Boolean = false,
+    onNewMessageStatusChange: (Boolean) -> Unit = {},
+) {
     val authRepository = LocalAuthRepository.current
     val signRepository = LocalSignRepository.current
     val appSettingsRepository = LocalAppSettingsRepository.current
@@ -48,7 +54,7 @@ fun ProfilePage() {
 
     var userInfo by remember { mutableStateOf(authRepository.currentUser()) }
     var isLoading by remember { mutableStateOf(false) }
-    var signButtonTitle by remember { mutableStateOf(i18n("每日簽到")) }
+    var signButtonTitle by remember { mutableStateOf(i18n("點擊簽到")) }
     var signRefreshKey by remember { mutableIntStateOf(0) }
     var isSigning by remember { mutableStateOf(false) }
 
@@ -59,22 +65,22 @@ fun ProfilePage() {
                 return@launch
             }
             signButtonTitle = when {
-                userInfo == null -> i18n("每日簽到")
+                userInfo == null -> i18n("點擊簽到")
                 signRepository.getCachedPageInfo()?.hasSignedToday == true -> i18n("今日已簽到")
                 signRepository.isSignedToday() -> i18n("今日已簽到")
-                signRepository.getCachedPageInfo()?.hasSignedToday == false -> i18n("每日簽到")
+                signRepository.getCachedPageInfo()?.hasSignedToday == false -> i18n("點擊簽到")
                 else -> {
                     when (val result = signRepository.fetchPageInfo()) {
                         is YamiboResult.Success -> {
-                            if (result.value.hasSignedToday) i18n("今日已簽到") else i18n("每日簽到")
+                            if (result.value.hasSignedToday) i18n("今日已簽到") else i18n("點擊簽到")
                         }
                         is YamiboResult.Failure -> {
                             when {
                                 signRepository.getCachedPageInfo()?.hasSignedToday == true -> i18n("今日已簽到")
-                                else -> i18n("每日簽到")
+                                else -> i18n("點擊簽到")
                             }
                         }
-                        else -> i18n("每日簽到")
+                        else -> i18n("點擊簽到")
                     }
                 }
             }
@@ -239,6 +245,22 @@ fun ProfilePage() {
             )
 
             EntryCard(
+                title = i18n("我的消息"),
+                icon = YamiboIcons.Message,
+                showBadge = hasNewMessage,
+                onClick = {
+                    navigator.navigate(
+                        IMessageCenterScreen(
+                            initialTab = MessageCenterTab.PrivateMessages,
+                            onPrivateMessageUnreadChange = onNewMessageStatusChange,
+                        )
+                    )
+                },
+            )
+
+            EntryDivider()
+
+            EntryCard(
                 title = i18n("設定"),
                 icon = YamiboIcons.Setting,
                 onClick = { navigator.navigate(ISettingsScreen()) }
@@ -350,11 +372,11 @@ private fun SignEntryCard(
                     color = colors.brownLight.copy(alpha = 0.35f),
                     thickness = 1.dp,
                 )
-                Text(
-                    text = "!",
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = colors.brownPrimary,
+                Icon(
+                    imageVector = YamiboIcons.SignStatistics,
+                    contentDescription = i18n("簽到資訊"),
+                    tint = colors.brownPrimary,
+                    modifier = Modifier.size(24.dp),
                 )
             }
         }
@@ -373,6 +395,7 @@ private fun EntryDivider() {
 private fun EntryCard(
     title: String,
     icon: ImageVector,
+    showBadge: Boolean = false,
     onClick: () -> Unit = {},
 ) {
     Card(
@@ -390,19 +413,32 @@ private fun EntryCard(
                 .padding(horizontal = 20.dp, vertical = 18.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = title,
-                tint = colors.brownPrimary,
-                modifier = Modifier.size(24.dp)
-            )
+            Box(modifier = Modifier.size(24.dp)) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = title,
+                    tint = colors.brownPrimary,
+                    modifier = Modifier.fillMaxSize(),
+                )
+                if (showBadge) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .offset(x = 3.dp, y = (-3).dp)
+                            .size(8.dp)
+                            .background(colors.redAccent, CircleShape),
+                    )
+                }
+            }
             Spacer(Modifier.size(16.dp))
-            Text(
-                text = title,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Medium,
-                color = colors.textDark
-            )
+            Box(Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = colors.textDark,
+                )
+            }
         }
     }
 }

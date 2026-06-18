@@ -27,6 +27,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.thenano.yamibo.yamibo_app.LocalFavoriteRepository
 import me.thenano.yamibo.yamibo_app.LocalFavoriteSyncRunner
+import me.thenano.yamibo.yamibo_app.components.navigation.YamiboTopBar
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.navigation.RestorableNavigatable
 import me.thenano.yamibo.yamibo_app.navigation.RestorableScreenEntry
@@ -83,24 +84,10 @@ fun FavoriteSyncProgressScreen(runId: String) {
 
         Scaffold(
             topBar = {
-                TopAppBar(
-                    title = {
-                        Text(
-                            text = i18n("同步百合會收藏"),
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp,
-                        )
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = { navigator.pop() }) {
-                            Text(YamiboIcons.Back, color = Color.White, fontSize = 20.sp)
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = colors.brownDeep,
-                        scrolledContainerColor = colors.brownDeep,
-                    ),
+                YamiboTopBar(
+                    title = i18n("同步百合會收藏"),
+                    titleFontSize = 18,
+                    onBack = { navigator.pop() },
                 )
             },
             containerColor = colors.creamBackground,
@@ -477,4 +464,3 @@ private fun formatSyncDuration(durationMs: Long): String {
 private fun isLeapYear(year: Int): Boolean {
     return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)
 }
-
