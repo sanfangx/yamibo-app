@@ -12,6 +12,7 @@ import me.thenano.yamibo.yamibo_app.repository.appupdate.AppUpdateDownloadState
 import me.thenano.yamibo.yamibo_app.repository.appupdate.AppUpdatePlatform
 import me.thenano.yamibo.yamibo_app.repository.appupdate.AppUpdateRelease
 import java.io.File
+import java.net.HttpURLConnection
 import java.net.URL
 import java.security.MessageDigest
 
@@ -41,24 +42,39 @@ class AndroidAppUpdatePlatform(
         val apkFile = File(updatesDir, "yamibo-${release.versionName}.apk")
 
         runCatching {
-            URL(asset.url).openConnection().apply {
+            if (apkFile.exists()) apkFile.delete()
+            val connection = (URL(asset.url).openConnection() as HttpURLConnection).apply {
                 connectTimeout = 30_000
                 readTimeout = 60_000
-            }.getInputStream().use { input ->
-                apkFile.outputStream().use { output ->
-                    val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-                    var downloaded = 0L
-                    val total = asset.size
-                    while (true) {
-                        if (canceled) throw CancellationException()
-                        val read = input.read(buffer)
-                        if (read < 0) break
-                        output.write(buffer, 0, read)
-                        downloaded += read
-                        onProgress(downloaded, total)
+                instanceFollowRedirects = true
+                setRequestProperty("Accept", "application/vnd.android.package-archive, application/octet-stream")
+            }
+            try {
+                val status = connection.responseCode
+                if (status !in 200..299) error("APK download failed: HTTP $status")
+                val contentType = connection.contentType.orEmpty().lowercase()
+                if (contentType.contains("text/html")) {
+                    error("APK download returned HTML instead of an APK")
+                }
+                connection.inputStream.use { input ->
+                    apkFile.outputStream().use { output ->
+                        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                        var downloaded = 0L
+                        val total = asset.size ?: connection.contentLengthLong.takeIf { it >= 0L }
+                        while (true) {
+                            if (canceled) throw CancellationException()
+                            val read = input.read(buffer)
+                            if (read < 0) break
+                            output.write(buffer, 0, read)
+                            downloaded += read
+                            onProgress(downloaded, total)
+                        }
                     }
                 }
+            } finally {
+                connection.disconnect()
             }
+            if (!apkFile.hasApkZipSignature()) error("Downloaded file is not a valid APK/ZIP payload")
             asset.sha256?.takeIf { it.isNotBlank() }?.let { expected ->
                 val actual = apkFile.sha256()
                 if (!actual.equals(expected, ignoreCase = true)) {
@@ -67,6 +83,7 @@ class AndroidAppUpdatePlatform(
             }
             requestInstall(apkFile, release)
         }.getOrElse { error ->
+            apkFile.delete()
             if (error is CancellationException) {
                 AppUpdateDownloadState.Failed(release, "Download canceled")
             } else {
@@ -124,4 +141,13 @@ private fun File.sha256(): String {
         }
     }
     return digest.digest().joinToString("") { byte -> "%02x".format(byte) }
+}
+
+private fun File.hasApkZipSignature(): Boolean {
+    if (length() < 4L) return false
+    return inputStream().use { input ->
+        val header = ByteArray(4)
+        input.read(header) == header.size &&
+            header.contentEquals(byteArrayOf(0x50, 0x4B, 0x03, 0x04))
+    }
 }
