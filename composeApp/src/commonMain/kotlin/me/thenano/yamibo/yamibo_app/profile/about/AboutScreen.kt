@@ -15,9 +15,12 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import me.thenano.yamibo.yamibo_app.AppVersion
 import me.thenano.yamibo.yamibo_app.components.navigation.YamiboTopBar
+import me.thenano.yamibo.yamibo_app.components.controls.YamiboVerticalScrollbar
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.profile.settings.update.IAppUpdateScreen
@@ -264,12 +267,28 @@ private fun AboutDivider() {
 private fun ChangelogDialog(onDismiss: () -> Unit) {
     val colors = YamiboTheme.colors
     var changelog by remember { mutableStateOf<String?>(null) }
+    var hasScrolledToBottom by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         changelog = loadCurrentChangelog()
     }
 
-    Dialog(onDismissRequest = onDismiss) {
+    val scrollState = rememberScrollState()
+    LaunchedEffect(scrollState.value, scrollState.maxValue, scrollState.viewportSize) {
+        if (scrollState.viewportSize > 0) {
+            if (scrollState.maxValue == 0 || scrollState.value >= scrollState.maxValue) {
+                hasScrolledToBottom = true
+            }
+        }
+    }
+
+    Dialog(
+        onDismissRequest = { if (hasScrolledToBottom) onDismiss() },
+        properties = DialogProperties(
+            dismissOnBackPress = hasScrolledToBottom,
+            dismissOnClickOutside = hasScrolledToBottom
+        )
+    ) {
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(10.dp),
@@ -287,34 +306,47 @@ private fun ChangelogDialog(onDismiss: () -> Unit) {
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                 )
-                Column(
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .heightIn(max = 420.dp)
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    val content = changelog
-                    if (content == null) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            CircularProgressIndicator(
-                                color = colors.brownPrimary,
-                                modifier = Modifier.size(18.dp),
-                                strokeWidth = 2.dp,
-                            )
-                            Text(
-                                text = i18n("正在載入更新日誌..."),
-                                color = colors.textDark.copy(alpha = 0.68f),
-                                fontSize = 13.sp,
-                                modifier = Modifier.padding(start = 10.dp),
-                            )
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(scrollState)
+                            .padding(end = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        val content = changelog
+                        if (content == null) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                CircularProgressIndicator(
+                                    color = colors.brownPrimary,
+                                    modifier = Modifier.size(18.dp),
+                                    strokeWidth = 2.dp,
+                                )
+                                Text(
+                                    text = i18n("正在載入更新日誌..."),
+                                    color = colors.textDark.copy(alpha = 0.68f),
+                                    fontSize = 13.sp,
+                                    modifier = Modifier.padding(start = 10.dp),
+                                )
+                            }
+                        } else {
+                            ChangelogContent(content)
                         }
-                    } else {
-                        ChangelogContent(content)
                     }
+                    YamiboVerticalScrollbar(
+                        scrollState = scrollState,
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .fillMaxHeight()
+                    )
                 }
                 Button(
                     onClick = onDismiss,
+                    enabled = hasScrolledToBottom,
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = colors.brownDeep,

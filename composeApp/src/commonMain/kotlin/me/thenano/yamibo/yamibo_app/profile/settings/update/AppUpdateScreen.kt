@@ -10,6 +10,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -19,7 +20,10 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import me.thenano.yamibo.yamibo_app.components.controls.YamiboVerticalScrollbar
 import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.AppVersion
 import me.thenano.yamibo.yamibo_app.LocalAppSettingsRepository
@@ -184,9 +188,27 @@ private fun PreviewUpdatePromptDialog(onDismiss: () -> Unit) {
             - 顯示新版本完整名稱。
             - changelog 會直接顯示在 app 內，而不是只提供超連結。
             - 下載完成後沿用 Android 系統安裝流程。
+            - 測試長文以觸發捲軸：
+              這是一段為了測試更新日誌彈窗所加入的較長文字。我們需要確保當更新日誌的內容長度超過限制時，視窗會自動顯示自訂捲軸，並且限制使用者必須完全滑動到底部後，才能點擊「立即更新」、「手動更新」或「稍後」等按鈕。這樣的設計能夠有效提醒使用者在升級前詳閱新版說明，避免遺漏重要事項。
         """.trimIndent(),
     )
-    Dialog(onDismissRequest = onDismiss) {
+    var hasScrolledToBottom by remember { mutableStateOf(false) }
+    val scrollState = rememberScrollState()
+    LaunchedEffect(scrollState.value, scrollState.maxValue, scrollState.viewportSize) {
+        if (scrollState.viewportSize > 0) {
+            if (scrollState.maxValue == 0 || scrollState.value >= scrollState.maxValue) {
+                hasScrolledToBottom = true
+            }
+        }
+    }
+
+    Dialog(
+        onDismissRequest = { if (hasScrolledToBottom) onDismiss() },
+        properties = DialogProperties(
+            dismissOnBackPress = hasScrolledToBottom,
+            dismissOnClickOutside = hasScrolledToBottom
+        )
+    ) {
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(8.dp),
@@ -220,22 +242,35 @@ private fun PreviewUpdatePromptDialog(onDismiss: () -> Unit) {
                         .height(76.dp),
                     contentScale = ContentScale.Fit,
                 )
-                Column(
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .heightIn(max = 220.dp)
-                        .verticalScroll(rememberScrollState()),
                 ) {
-                    Text(
-                        text = release.changelogContent(),
-                        color = colors.textDark.copy(alpha = 0.78f),
-                        fontSize = 14.sp,
-                        lineHeight = 20.sp,
-                        modifier = Modifier.fillMaxWidth(),
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(scrollState)
+                            .padding(end = 8.dp),
+                    ) {
+                        Text(
+                            text = release.changelogContent(),
+                            color = colors.textDark.copy(alpha = 0.78f),
+                            fontSize = 14.sp,
+                            lineHeight = 20.sp,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                    YamiboVerticalScrollbar(
+                        scrollState = scrollState,
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .fillMaxHeight()
                     )
                 }
                 Button(
                     onClick = onDismiss,
+                    enabled = hasScrolledToBottom,
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = colors.brownDeep,
@@ -251,6 +286,7 @@ private fun PreviewUpdatePromptDialog(onDismiss: () -> Unit) {
                 ) {
                     OutlinedButton(
                         onClick = onDismiss,
+                        enabled = hasScrolledToBottom,
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.outlinedButtonColors(
                             containerColor = colors.creamBackground,
@@ -263,6 +299,7 @@ private fun PreviewUpdatePromptDialog(onDismiss: () -> Unit) {
                     }
                     OutlinedButton(
                         onClick = onDismiss,
+                        enabled = hasScrolledToBottom,
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.outlinedButtonColors(
                             containerColor = colors.creamBackground,

@@ -17,7 +17,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.zIndex
 import coil3.ImageLoader
 import coil3.PlatformContext
@@ -53,6 +55,7 @@ import me.thenano.yamibo.yamibo_app.repository.appupdate.fullVersionName
 import me.thenano.yamibo.yamibo_app.repository.chineseconversion.ChineseConversionMode
 import me.thenano.yamibo.yamibo_app.repository.settings.ReaderChineseConversionOption
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.components.controls.YamiboVerticalScrollbar
 import me.thenano.yamibo.yamibo_app.components.font.getFontFamily
 import me.thenano.yamibo.yamibo_app.util.state
 import me.thenano.yamibo.yamibo_app.util.time.currentLocalDateKey
@@ -317,12 +320,21 @@ private fun LaunchUpdateAvailableDialog(
     onOpenReleasePage: (AppUpdateRelease) -> Unit,
 ) {
     if (release == null) return
-    Dialog(onDismissRequest = onDismiss) {
+    var hasScrolledToBottom by remember { mutableStateOf(false) }
+    Dialog(
+        onDismissRequest = { if (hasScrolledToBottom) onDismiss() },
+        properties = DialogProperties(
+            dismissOnBackPress = hasScrolledToBottom,
+            dismissOnClickOutside = hasScrolledToBottom
+        )
+    ) {
         LaunchUpdateAvailableContent(
             release = release,
             onDismiss = onDismiss,
             onDownload = onDownload,
             onOpenReleasePage = onOpenReleasePage,
+            hasScrolledToBottom = hasScrolledToBottom,
+            onScrolledToBottomChange = { hasScrolledToBottom = it }
         )
     }
 }
@@ -333,6 +345,8 @@ private fun LaunchUpdateAvailableContent(
     onDismiss: () -> Unit,
     onDownload: (AppUpdateRelease) -> Unit,
     onOpenReleasePage: (AppUpdateRelease) -> Unit,
+    hasScrolledToBottom: Boolean,
+    onScrolledToBottomChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = YamiboTheme.colors
@@ -369,20 +383,40 @@ private fun LaunchUpdateAvailableContent(
                     .height(76.dp),
                 contentScale = ContentScale.Fit,
             )
-            Column(
+            val scrollState = rememberScrollState()
+            LaunchedEffect(scrollState.value, scrollState.maxValue, scrollState.viewportSize) {
+                if (scrollState.viewportSize > 0) {
+                    if (scrollState.maxValue == 0 || scrollState.value >= scrollState.maxValue) {
+                        onScrolledToBottomChange(true)
+                    }
+                }
+            }
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(max = 220.dp)
-                    .verticalScroll(rememberScrollState()),
             ) {
-                Text(
-                    text = release.changelogContent().ifBlank {
-                        i18n("新版已可下載。你可以立即下載更新，或前往發布頁手動更新。")
-                    },
-                    color = colors.textDark.copy(alpha = 0.78f),
-                    fontSize = 14.sp,
-                    lineHeight = 20.sp,
-                    modifier = Modifier.fillMaxWidth(),
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(scrollState)
+                        .padding(end = 8.dp),
+                ) {
+                    Text(
+                        text = release.changelogContent().ifBlank {
+                            i18n("新版已可下載。你可以立即下載更新，或前往發布頁手動更新。")
+                        },
+                        color = colors.textDark.copy(alpha = 0.78f),
+                        fontSize = 14.sp,
+                        lineHeight = 20.sp,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                YamiboVerticalScrollbar(
+                    scrollState = scrollState,
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .fillMaxHeight()
                 )
             }
             Button(
@@ -393,6 +427,7 @@ private fun LaunchUpdateAvailableContent(
                         onDownload(release)
                     }
                 },
+                enabled = hasScrolledToBottom,
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = colors.brownDeep,
@@ -412,6 +447,7 @@ private fun LaunchUpdateAvailableContent(
             ) {
                 OutlinedButton(
                     onClick = { onOpenReleasePage(release) },
+                    enabled = hasScrolledToBottom,
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.outlinedButtonColors(
                         containerColor = colors.creamBackground,
@@ -428,6 +464,7 @@ private fun LaunchUpdateAvailableContent(
                 }
                 OutlinedButton(
                     onClick = onDismiss,
+                    enabled = hasScrolledToBottom,
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.outlinedButtonColors(
                         containerColor = colors.creamBackground,
