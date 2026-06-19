@@ -396,8 +396,16 @@ private fun DownloadProgress(state: AppUpdateDownloadState) {
                 color = colors.brownPrimary,
                 trackColor = colors.brownLight.copy(alpha = 0.25f),
             )
+            val downloadedMb = (state.downloadedBytes.toDouble() / (1024 * 1024) * 100).toLong().toDouble() / 100
+            val totalBytes = state.totalBytes
+            val progressText = if (totalBytes != null && totalBytes > 0L) {
+                val totalMb = (totalBytes.toDouble() / (1024 * 1024) * 100).toLong().toDouble() / 100
+                i18n("正在下載更新... ({} MB / {} MB)", downloadedMb.toString(), totalMb.toString())
+            } else {
+                i18n("正在下載更新... ({} MB / 未知)", downloadedMb.toString())
+            }
             Text(
-                text = i18n("正在下載更新..."),
+                text = progressText,
                 color = colors.textDark.copy(alpha = 0.7f),
                 fontSize = 12.sp,
             )
