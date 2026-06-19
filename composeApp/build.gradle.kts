@@ -118,11 +118,27 @@ val generateAppVersion by tasks.registering(GenerateAppVersionTask::class) {
     outputFile.set(layout.buildDirectory.file("generated/appVersion/commonMain/kotlin/me/thenano/yamibo/yamibo_app/AppVersion.kt"))
 }
 
+val copyChangelogs by tasks.registering(Copy::class) {
+    description = "Copies changelogs from update/changelogs to composeResources."
+    from(rootProject.layout.projectDirectory.dir("update/changelogs"))
+    into(layout.projectDirectory.dir("src/commonMain/composeResources/files/changelogs"))
+}
+
 tasks.matching { task ->
     task.name.startsWith("compile") && task.name.contains("Kotlin")
 }.configureEach {
     dependsOn(generateRestorableScreenRegistry)
     dependsOn(generateAppVersion)
+    dependsOn(copyChangelogs)
+}
+
+tasks.configureEach {
+    if (name.contains("ComposeResources", ignoreCase = true) ||
+        name.contains("ComposeResClass", ignoreCase = true) ||
+        name.contains("I18nResources", ignoreCase = true)
+    ) {
+        dependsOn(copyChangelogs)
+    }
 }
 
 android {
