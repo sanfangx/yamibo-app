@@ -480,42 +480,44 @@ private fun ForumContent(
     onThreadClick: (ThreadSummary) -> Unit,
     onAuthorClick: (User) -> Unit,
 ) {
-    LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
-        /** forum stats bar */
-        item {
-            ForumStatsBar(
-                forum = forumPage.forum,
-                selectedOrderType = selectedOrderType,
-                selectedFilterType = selectedFilterType,
-                showOrder = !forumPage.orderType.isNullOrEmpty(),
-                showFilter = !forumPage.filterTypes.isNullOrEmpty(),
-                onOrderClick = onShowOrderDialog,
-                onFilterClick = onShowFilterDialog,
-            )
-        }
+    key(forumPage.pageNav?.currentPage ?: 1) {
+        LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
+            /** forum stats bar */
+            item {
+                ForumStatsBar(
+                    forum = forumPage.forum,
+                    selectedOrderType = selectedOrderType,
+                    selectedFilterType = selectedFilterType,
+                    showOrder = !forumPage.orderType.isNullOrEmpty(),
+                    showFilter = !forumPage.filterTypes.isNullOrEmpty(),
+                    onOrderClick = onShowOrderDialog,
+                    onFilterClick = onShowFilterDialog,
+                )
+            }
 
-        /** sub forums */
-        if (forumPage.subForums.isNotEmpty()) {
-            item { SubForumRow(subForums = forumPage.subForums, onClick = onSubForumClick) }
-        }
+            /** sub forums */
+            if (forumPage.subForums.isNotEmpty()) {
+                item { SubForumRow(subForums = forumPage.subForums, onClick = onSubForumClick) }
+            }
 
-        /** pinned items */
-        if (forumPage.pinnedItems.isNotEmpty()) {
-            item { PinnedSection(items = forumPage.pinnedItems, onItemClick = onPinnedItemClick) }
-        }
+            /** pinned items */
+            if (forumPage.pinnedItems.isNotEmpty()) {
+                item { PinnedSection(items = forumPage.pinnedItems, onItemClick = onPinnedItemClick) }
+            }
 
-        /** thread list */
-        items(forumPage.threads, key = { it.tid.value }) { thread ->
-            ThreadCard(
-                thread = thread,
-                onClick = { onThreadClick(thread) },
-                onAuthorClick = onAuthorClick,
-            )
-        }
+            /** thread list */
+            items(forumPage.threads, key = { it.tid.value }) { thread ->
+                ThreadCard(
+                    thread = thread,
+                    onClick = { onThreadClick(thread) },
+                    onAuthorClick = onAuthorClick,
+                )
+            }
 
-        /** page navigation */
-        if (forumPage.pageNav != null) {
-            item { PageNavigation(pageNav = forumPage.pageNav!!, onPageChange = onPageChange) }
+            /** page navigation */
+            if (forumPage.pageNav != null) {
+                item { PageNavigation(pageNav = forumPage.pageNav!!, onPageChange = onPageChange) }
+            }
         }
     }
 }

@@ -22,7 +22,7 @@ class AndroidForumRepository(
 ) : ForumRepository {
 
     private val homeCache = diskCacheFactory.create<HomePage>("home_page", maxSize = 1, expiration = 12.hours)
-    private val forumCache = diskCacheFactory.create<ForumPage>("forum_page", maxSize = 60, expiration = 24.hours)
+    private val forumCache = diskCacheFactory.create<ForumPage>("forum_page", maxSize = 60, expiration = 1.hours)
 
     companion object {
         private const val HOME_CACHE_KEY = "main"
