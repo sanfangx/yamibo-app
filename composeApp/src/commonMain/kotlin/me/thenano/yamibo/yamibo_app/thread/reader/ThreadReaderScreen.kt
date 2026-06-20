@@ -25,6 +25,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil3.SingletonImageLoader
 import coil3.compose.LocalPlatformContext
 import io.github.littlesurvival.YamiboForum
@@ -34,6 +37,9 @@ import io.github.littlesurvival.dto.page.Post
 import io.github.littlesurvival.dto.page.ThreadInfo
 import io.github.littlesurvival.dto.page.ThreadPage
 import io.github.littlesurvival.dto.value.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
@@ -132,14 +138,98 @@ private data class ReaderCatalogCurrentPosition(
     val pid: PostId?,
 )
 
+private const val LONG_READER_HTML_THRESHOLD = 16_000
+internal const val MAX_READER_TEXT_SEGMENT_CHARS = 4_000
+
+internal fun splitLongReaderTextBlock(block: HtmlBlock.Text): List<HtmlBlock.Text> {
+    val text = block.annotatedString.text
+    if (text.length <= MAX_READER_TEXT_SEGMENT_CHARS) return listOf(block)
+
+    return buildList {
+        var start = 0
+        var chunkIndex = 0
+        while (start < text.length) {
+            val hardEnd = (start + MAX_READER_TEXT_SEGMENT_CHARS).coerceAtMost(text.length)
+            val preferredBreak = if (hardEnd < text.length) text.lastIndexOf('\n', hardEnd - 1) else -1
+            val end = preferredBreak
+                .takeIf { it > start + MAX_READER_TEXT_SEGMENT_CHARS / 2 }
+                ?.plus(1)
+                ?: hardEnd
+            add(
+                block.copy(
+                    annotatedString = block.annotatedString.subSequence(start, end),
+                    anchorId = "${block.anchorId}-$chunkIndex",
+                )
+            )
+            start = end
+            chunkIndex++
+        }
+    }
+}
+
+private fun HtmlBlock.readerTextLength(): Int = when (this) {
+    is HtmlBlock.Text -> annotatedString.length
+    is HtmlBlock.Code -> codeText.length
+    is HtmlBlock.Quote -> contentBlocks.sumOf { it.readerTextLength() }
+    is HtmlBlock.Collapse -> contentBlocks.sumOf { it.readerTextLength() }
+    is HtmlBlock.Locked -> contentBlocks.sumOf { it.readerTextLength() }
+    is HtmlBlock.Table -> rows.sumOf { row ->
+        row.cells.sumOf { cell -> cell.blocks.sumOf { it.readerTextLength() } }
+    }
+    else -> 0
+}
+
+private fun groupReaderBlocks(blocks: List<HtmlBlock>): List<List<HtmlBlock>> {
+    val groups = mutableListOf<List<HtmlBlock>>()
+    val current = mutableListOf<HtmlBlock>()
+    var currentLength = 0
+
+    fun flush() {
+        if (current.isEmpty()) return
+        groups += current.toList()
+        current.clear()
+        currentLength = 0
+    }
+
+    blocks.forEach { block ->
+        val blockLength = block.readerTextLength()
+        if (current.isNotEmpty() && currentLength + blockLength > MAX_READER_TEXT_SEGMENT_CHARS) flush()
+        current += block
+        currentLength += blockLength
+        if (currentLength >= MAX_READER_TEXT_SEGMENT_CHARS) flush()
+    }
+    flush()
+    return groups
+}
+
+internal fun splitLongReaderBlock(block: HtmlBlock): List<HtmlBlock> = when (block) {
+    is HtmlBlock.Text -> splitLongReaderTextBlock(block)
+    is HtmlBlock.Code -> block.codeText.chunked(MAX_READER_TEXT_SEGMENT_CHARS).mapIndexed { index, text ->
+        block.copy(codeText = text, anchorId = "${block.anchorId}-$index")
+    }
+    is HtmlBlock.Quote -> groupReaderBlocks(block.contentBlocks.flatMap(::splitLongReaderBlock)).mapIndexed { index, blocks ->
+        block.copy(contentBlocks = blocks, anchorId = "${block.anchorId}-$index")
+    }
+    is HtmlBlock.Collapse -> groupReaderBlocks(block.contentBlocks.flatMap(::splitLongReaderBlock)).mapIndexed { index, blocks ->
+        block.copy(contentBlocks = blocks, anchorId = "${block.anchorId}-$index")
+    }
+    is HtmlBlock.Locked -> groupReaderBlocks(block.contentBlocks.flatMap(::splitLongReaderBlock)).mapIndexed { index, blocks ->
+        block.copy(contentBlocks = blocks, anchorId = "${block.anchorId}-$index")
+    }
+    else -> listOf(block)
+}
+
 private fun buildReaderBodySegments(post: Post, contentHtml: String): List<ReaderBodySegment>? {
-    if (post.images.size < 6) return null
+    val shouldSegmentImages = post.images.size >= 6
+    val shouldSegmentLongText = contentHtml.length >= LONG_READER_HTML_THRESHOLD
+    if (!shouldSegmentImages && !shouldSegmentLongText) return null
 
     val blocks = normalizeHtmlBlocks(HtmlParser.parseHtml(contentHtml))
-    if (blocks.none { it is HtmlBlock.Image }) return null
+    if (blocks.isEmpty()) return null
 
     val segments = mutableListOf<ReaderBodySegment>()
     val currentBlocks = mutableListOf<HtmlBlock>()
+    var currentTextLength = 0
 
     fun flushCurrentBlocks() {
         if (currentBlocks.isEmpty()) return
@@ -150,10 +240,15 @@ private fun buildReaderBodySegments(post: Post, contentHtml: String): List<Reade
             anchorBlockType = if (currentBlocks.size == 1) firstBlock::class.simpleName else "Mixed",
         )
         currentBlocks.clear()
+        currentTextLength = 0
     }
 
-    blocks.forEach { block ->
-        if (block is HtmlBlock.Image) {
+    val segmentableBlocks = blocks.flatMap { block ->
+        if (shouldSegmentLongText) splitLongReaderBlock(block) else listOf(block)
+    }
+
+    segmentableBlocks.forEach { block ->
+        if (block is HtmlBlock.Image && shouldSegmentImages) {
             flushCurrentBlocks()
             segments += ReaderBodySegment(
                 blocks = listOf(block),
@@ -161,13 +256,23 @@ private fun buildReaderBodySegments(post: Post, contentHtml: String): List<Reade
                 anchorBlockType = "Image",
             )
         } else {
+            val blockTextLength = block.readerTextLength()
+            if (currentBlocks.isNotEmpty() && currentTextLength + blockTextLength > MAX_READER_TEXT_SEGMENT_CHARS) {
+                flushCurrentBlocks()
+            }
             currentBlocks += block
+            currentTextLength += blockTextLength
+            if (currentTextLength >= MAX_READER_TEXT_SEGMENT_CHARS) flushCurrentBlocks()
         }
     }
     flushCurrentBlocks()
 
     val imageSegmentCount = segments.count { it.anchorBlockType == "Image" }
-    return if (imageSegmentCount >= 6 && segments.size > 2) segments else null
+    return when {
+        shouldSegmentLongText && segments.size > 1 -> segments
+        shouldSegmentImages && imageSegmentCount >= 6 && segments.size > 2 -> segments
+        else -> null
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -255,6 +360,9 @@ internal fun ThreadReaderScreen(
     var isRestoringSavedPosition by remember { mutableStateOf(false) }
     var canPersistReadingState by remember(tid, targetPid) { mutableStateOf(false) }
     var pendingTargetPid by remember(tid, targetPid) { mutableStateOf(targetPid?.value?.toLong()) }
+    var lastReadingSnapshot by remember(tid) {
+        mutableStateOf<Pair<ThreadReadingHistory?, List<ChapterStateRepository.ProgressUpdate>>?>(null)
+    }
 
     /** Extract image URL for thread avatar based on forum type */
     var coverUrl by remember { mutableStateOf<String?>(null) }
@@ -980,20 +1088,32 @@ internal fun ThreadReaderScreen(
         }
     }
 
-    suspend fun persistCurrentReadingState() {
-        if (!canWriteReadingState()) return
-        val history = runCatching(::buildHistory).getOrNull()
-        val progressUpdates = runCatching(::currentChapterUpdates).getOrDefault(emptyList())
+    suspend fun persistReadingSnapshot(
+        history: ThreadReadingHistory?,
+        progressUpdates: List<ChapterStateRepository.ProgressUpdate>,
+    ) {
         if (history != null) {
             try {
                 readHistoryRepo.savePosition(history)
-            } catch (_: Exception) {
+            } catch (error: Exception) {
+                println("READER_PERSIST|history|${error::class.simpleName}|${error.message.orEmpty()}")
             }
         }
         try {
             progressCoordinator.applyProgress(progressUpdates)
-        } catch (_: Exception) {
+        } catch (error: Exception) {
+            println("READER_PERSIST|chapter|${error::class.simpleName}|${error.message.orEmpty()}")
         }
+    }
+
+    suspend fun persistCurrentReadingState() {
+        if (!canWriteReadingState()) return
+        val history = runCatching(::buildHistory).getOrNull()
+        val progressUpdates = runCatching(::currentChapterUpdates).getOrDefault(emptyList())
+        if (history != null || progressUpdates.isNotEmpty()) {
+            lastReadingSnapshot = history to progressUpdates
+        }
+        persistReadingSnapshot(history, progressUpdates)
     }
 
     fun currentVisiblePageForAction(): Int {
@@ -1085,35 +1205,13 @@ internal fun ThreadReaderScreen(
         }
     }
 
-    fun launchSaveCurrentHistory() {
-        if (!canWriteReadingState()) return
-        val history = buildHistory() ?: return
-        val progressUpdates = currentChapterUpdates()
-        scope.launch {
-            try {
-                readHistoryRepo.savePosition(history)
-                progressCoordinator.applyProgress(progressUpdates)
-            } catch (_: Exception) {
-            }
-        }
-    }
-
     fun saveCurrentHistoryAndPop() {
         if (!canWriteReadingState()) {
             navigator.pop()
             return
         }
-        val history = buildHistory()
-        if (history == null) {
-            navigator.pop()
-            return
-        }
         scope.launch {
-            try {
-                readHistoryRepo.savePosition(history)
-                progressCoordinator.applyProgress(currentChapterUpdates())
-            } catch (_: Exception) {
-            }
+            persistCurrentReadingState()
             navigator.pop()
         }
     }
@@ -1330,6 +1428,14 @@ internal fun ThreadReaderScreen(
         }
     }
 
+    LaunchedEffect(state, canPersistReadingState, readerEntries) {
+        if (state != ReaderState.Success || !canPersistReadingState || readerEntries.isEmpty()) {
+            return@LaunchedEffect
+        }
+        delay(300.milliseconds)
+        persistCurrentReadingState()
+    }
+
     LaunchedEffect(state, posts, readerEntries, pendingTargetPid) {
         val targetPidLong = pendingTargetPid ?: return@LaunchedEffect
         if (state != ReaderState.Success || posts.isEmpty() || readerEntries.isEmpty()) return@LaunchedEffect
@@ -1352,6 +1458,31 @@ internal fun ThreadReaderScreen(
     val latestPersistCurrentReadingState = rememberUpdatedState<suspend () -> Unit> {
         persistCurrentReadingState()
     }
+    val latestCaptureReadingSnapshot = rememberUpdatedState<
+        () -> Pair<ThreadReadingHistory?, List<ChapterStateRepository.ProgressUpdate>>?
+    >(
+        newValue = {
+            if (!canWriteReadingState()) {
+                null
+            } else {
+                val history = runCatching(::buildHistory)
+                    .onFailure { error ->
+                        println("READER_PERSIST|history_snapshot|${error::class.simpleName}|${error.message.orEmpty()}")
+                    }
+                    .getOrNull()
+                val progressUpdates = runCatching(::currentChapterUpdates)
+                        .onFailure { error ->
+                            println("READER_PERSIST|chapter_snapshot|${error::class.simpleName}|${error.message.orEmpty()}")
+                        }
+                        .getOrDefault(emptyList())
+                if (history != null || progressUpdates.isNotEmpty()) {
+                    history to progressUpdates
+                } else {
+                    lastReadingSnapshot
+                }
+            }
+        }
+    )
     val latestUntitledLabel = rememberUpdatedState(i18n("（無標題）"))
     val readerScrollSession = remember(listState) { ReaderScrollSession() }
     fun recordCrossedIndices(indices: IntRange?) {
@@ -1409,6 +1540,23 @@ internal fun ThreadReaderScreen(
                         progressCoordinator.noteScrollStarted()
                     }
                 }
+        }
+    }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_PAUSE) {
+                val (history, progressUpdates) = latestCaptureReadingSnapshot.value()
+                    ?: return@LifecycleEventObserver
+                CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
+                    persistReadingSnapshot(history, progressUpdates)
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
 
@@ -1547,7 +1695,7 @@ internal fun ThreadReaderScreen(
     DisposableEffect(tid, navigator) {
         val handler = {
             if (navigator.currentScreen is IThreadReaderScreen) {
-                scope.launch { saveCurrentHistoryAndPop() }
+                saveCurrentHistoryAndPop()
                 true
             } else {
                 false
@@ -1556,7 +1704,6 @@ internal fun ThreadReaderScreen(
         navigator.backHandlers.add(handler)
         onDispose {
             navigator.backHandlers.remove(handler)
-            launchSaveCurrentHistory()
         }
     }
 
@@ -1787,6 +1934,8 @@ internal fun ThreadReaderScreen(
                                             linkContext = htmlLinkContext,
                                             onVote = { optionIds -> handleVote(optionIds) },
                                             onLoadRateOptions = { threadRepository.fetchRatePopoutPage(tid, post.pid) },
+                                            onLoadRateResults = { threadRepository.fetchRateResults(tid, post.pid) },
+                                            onLoadVoters = { optionId, page -> threadRepository.fetchVoters(tid, optionId, page) },
                                             onRate = { score, reason, noticeAuthor -> handleRate(post.pid, score, reason, noticeAuthor) },
                                             onComment = { message -> handleComment(post.pid, message) },
                                             onReply = { handleReply(post.pid) },
@@ -1904,6 +2053,8 @@ internal fun ThreadReaderScreen(
                                             verticalPadding = 0.dp,
                                             onVote = { optionIds -> handleVote(optionIds) },
                                             onLoadRateOptions = { threadRepository.fetchRatePopoutPage(tid, post.pid) },
+                                            onLoadRateResults = { threadRepository.fetchRateResults(tid, post.pid) },
+                                            onLoadVoters = { optionId, page -> threadRepository.fetchVoters(tid, optionId, page) },
                                             onRate = { score, reason, noticeAuthor -> handleRate(post.pid, score, reason, noticeAuthor) },
                                             onComment = { message -> handleComment(post.pid, message) },
                                             onReply = { handleReply(post.pid) },

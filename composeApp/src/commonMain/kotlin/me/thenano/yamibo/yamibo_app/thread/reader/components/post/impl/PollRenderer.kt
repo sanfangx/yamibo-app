@@ -29,6 +29,8 @@ import androidx.compose.ui.unit.sp
 import io.github.littlesurvival.dto.page.Poll
 import io.github.littlesurvival.dto.page.PollStatus
 import io.github.littlesurvival.dto.page.PollType
+import io.github.littlesurvival.dto.page.VotersPopoutScreen
+import io.github.littlesurvival.core.YamiboResult
 import io.github.littlesurvival.dto.value.PollOptionId
 import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
@@ -37,12 +39,14 @@ import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
 fun PollRenderer(
     poll: Poll,
     modifier: Modifier = Modifier,
-    onVote: (suspend (List<PollOptionId>) -> Boolean)? = null
+    onVote: (suspend (List<PollOptionId>) -> Boolean)? = null,
+    onLoadVoters: (suspend (PollOptionId?, Int) -> YamiboResult<VotersPopoutScreen>)? = null,
 ) {
     val colors = YamiboTheme.colors
     val scope = rememberCoroutineScope()
     var selectedOptions by remember { mutableStateOf(setOf<PollOptionId>()) }
     var isSubmitting by remember { mutableStateOf(false) }
+    var showVoters by remember { mutableStateOf(false) }
     val isNotVoted = poll.status == PollStatus.NotVoted
     val isMultipleChoice = poll.type == PollType.MultipleChoice
     val showVoteStats = poll.option.any { it.percentage != null }
@@ -176,7 +180,29 @@ fun PollRenderer(
                     Text(text = if (isSubmitting) i18n("提交中...") else i18n("提交投票"), color = colors.creamBackground)
                 }
             }
+
+            if (shouldShowVotersButton(poll.status, onLoadVoters != null)) {
+                Spacer(modifier = Modifier.height(14.dp))
+                Button(
+                    onClick = { showVoters = true },
+                    modifier = Modifier.fillMaxWidth().height(44.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = colors.brownPrimary),
+                ) {
+                    Text(
+                        text = i18n("查看投票參與人"),
+                        color = colors.creamBackground,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+            }
         }
+    }
+
+    if (showVoters && onLoadVoters != null) {
+        VotersDialog(onLoad = onLoadVoters, onDismiss = { showVoters = false })
     }
 }
 
+internal fun shouldShowVotersButton(status: PollStatus, canLoadVoters: Boolean): Boolean =
+    status == PollStatus.Voted && canLoadVoters

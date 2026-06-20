@@ -8,6 +8,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -22,6 +23,7 @@ import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
 @Composable
 fun RateRenderer(
     rateBlock: RateBlock,
+    onShowAllRatings: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val colors = YamiboTheme.colors
@@ -88,8 +90,20 @@ fun RateRenderer(
                         )
                     }
                 }
+                if (rateBlock.rateParticipatePeople > 10 && onShowAllRatings != null) {
+                    TextButton(
+                        onClick = onShowAllRatings,
+                        contentPadding = PaddingValues(0.dp),
+                    ) {
+                        Text(
+                            text = i18n("查看全部評分"),
+                            color = colors.brownPrimary,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                        )
+                    }
+                }
             }
         }
     }
 }
-

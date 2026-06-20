@@ -19,7 +19,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import io.github.littlesurvival.YamiboForum
 import io.github.littlesurvival.dto.model.PageNav
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -124,35 +123,34 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
     }
 
     suspend fun refreshFilterCounts() {
-        filterCounts = withContext(Dispatchers.Default) {
+        val refreshedCounts = withContext(Dispatchers.Default) {
             val actualCounts = readHistoryRepo.getCombinedHistoryFilterCounts()
-            val countByFilter = actualCounts.associateBy { it.filter }
-            buildList {
-                add(countByFilter[ReadHistoryRepository.HistoryFilter.All]
-                    ?: ReadHistoryRepository.HistoryFilterCount(
-                        ReadHistoryRepository.HistoryFilter.All,
-                        allLabel,
-                        readHistoryRepo.getCombinedHistoryCount(),
-                    ))
-                val forumCounts = YamiboForum.entries.map { forum ->
-                    val filter = ReadHistoryRepository.HistoryFilter.Forum(forum.forumId)
+            actualCounts
+                .groupBy { it.filter }
+                .map { (filter, counts) ->
                     ReadHistoryRepository.HistoryFilterCount(
                         filter = filter,
-                        label = forum.forumName,
-                        count = countByFilter[filter]?.count ?: 0L,
+                        label = when (filter) {
+                            ReadHistoryRepository.HistoryFilter.All -> allLabel
+                            ReadHistoryRepository.HistoryFilter.Tag -> "Tag"
+                            is ReadHistoryRepository.HistoryFilter.Forum -> counts
+                                .maxBy { it.count }
+                                .label
+                        },
+                        count = counts.sumOf { it.count },
                     )
                 }
-                addAll(forumCounts.sortedByDescending { it.count })
-                add(
-                    countByFilter[ReadHistoryRepository.HistoryFilter.Tag]?.copy(label = "Tag")
-                        ?: ReadHistoryRepository.HistoryFilterCount(
-                            ReadHistoryRepository.HistoryFilter.Tag,
-                            "Tag",
-                            0L,
-                        )
+                .filter { it.count > 0L }
+                .sortedWith(
+                    compareByDescending<ReadHistoryRepository.HistoryFilterCount> {
+                        it.filter == ReadHistoryRepository.HistoryFilter.All
+                    }.thenByDescending { it.count }.thenBy { it.label }
                 )
-            }
         }
+        filterCounts = refreshedCounts
+        val availableFilters = refreshedCounts.mapTo(mutableSetOf()) { it.filter }
+        selectedFilters = normalizeHistoryFilters(selectedFilters)
+            .filterTo(mutableSetOf()) { it in availableFilters }
     }
 
     suspend fun loadPage(page: Int) {

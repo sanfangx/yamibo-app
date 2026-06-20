@@ -340,6 +340,8 @@ internal fun CommentReaderScreen(
                                     threadTitle = postTitle,
                                     linkContext = htmlLinkContext,
                                     onLoadRateOptions = { threadRepository.fetchRatePopoutPage(tid, post.pid) },
+                                    onLoadRateResults = { threadRepository.fetchRateResults(tid, post.pid) },
+                                    onLoadVoters = { optionId, page -> threadRepository.fetchVoters(tid, optionId, page) },
                                     onRate = { score, reason, noticeAuthor ->
                                         val formHash = getFormHash()
                                         if (formHash == null) {
@@ -523,4 +525,3 @@ internal fun CommentReaderScreen(
         }
     }
 }
-

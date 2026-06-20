@@ -3,7 +3,9 @@ package me.thenano.yamibo.yamibo_app.repository
 import io.github.littlesurvival.YamiboClient
 import io.github.littlesurvival.core.YamiboResult
 import io.github.littlesurvival.dto.page.RatePopoutPage
+import io.github.littlesurvival.dto.page.RateResultPopoutPage
 import io.github.littlesurvival.dto.page.ThreadPage
+import io.github.littlesurvival.dto.page.VotersPopoutScreen
 import io.github.littlesurvival.dto.value.FormHash
 import io.github.littlesurvival.dto.value.ForumId
 import io.github.littlesurvival.dto.value.PollOptionId
@@ -63,6 +65,16 @@ class AndroidThreadRepository(
     override suspend fun fetchRatePopoutPage(tId: ThreadId, pId: PostId): YamiboResult<RatePopoutPage> {
         yamiboClient.setCookie(cookieStore.load() ?: "")
         return yamiboClient.fetchRatePopoutPage(tId, pId)
+    }
+
+    override suspend fun fetchRateResults(tId: ThreadId, pId: PostId): YamiboResult<RateResultPopoutPage> {
+        yamiboClient.setCookie(cookieStore.load() ?: "")
+        return yamiboClient.fetchRateResultPopoutPage(tId, pId)
+    }
+
+    override suspend fun fetchVoters(tId: ThreadId, pollOptionId: PollOptionId?, page: Int): YamiboResult<VotersPopoutScreen> {
+        yamiboClient.setCookie(cookieStore.load() ?: "")
+        return yamiboClient.fetchViewVoters(tId, pollOptionId, page)
     }
 
     override suspend fun ratePost(tId: ThreadId, pId: PostId, score: Int, reason: String, formHash: FormHash, noticeAuthor: Boolean): YamiboResult<String> {

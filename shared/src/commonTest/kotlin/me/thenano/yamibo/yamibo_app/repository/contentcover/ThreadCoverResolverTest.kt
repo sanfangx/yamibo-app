@@ -11,6 +11,7 @@ import io.github.littlesurvival.dto.page.PostImage
 import io.github.littlesurvival.dto.page.RatePopoutPage
 import io.github.littlesurvival.dto.page.ThreadInfo
 import io.github.littlesurvival.dto.page.ThreadPage
+import io.github.littlesurvival.dto.page.VotersPopoutScreen
 import io.github.littlesurvival.dto.value.FormHash
 import io.github.littlesurvival.dto.value.ForumId
 import io.github.littlesurvival.dto.value.PollOptionId
@@ -100,7 +101,9 @@ class ThreadCoverResolverTest {
         override suspend fun fetchFindPost(tid: ThreadId, postId: PostId, authorId: UserId?) = error("unused")
         override suspend fun addFavorite(tid: ThreadId, formHash: FormHash) = error("unused")
         override suspend fun votePoll(fId: ForumId, tId: ThreadId, pollOptionIds: List<PollOptionId>, formHash: FormHash) = error("unused")
-        override suspend fun fetchRatePopoutPage(tId: ThreadId, pId: PostId): YamiboResult<RatePopoutPage> = error("unused")
+    override suspend fun fetchRatePopoutPage(tId: ThreadId, pId: PostId): YamiboResult<RatePopoutPage> = error("unused")
+    override suspend fun fetchRateResults(tId: ThreadId, pId: PostId) = error("unused")
+        override suspend fun fetchVoters(tId: ThreadId, pollOptionId: PollOptionId?, page: Int): YamiboResult<VotersPopoutScreen> = error("unused")
         override suspend fun ratePost(tId: ThreadId, pId: PostId, score: Int, reason: String, formHash: FormHash, noticeAuthor: Boolean) = error("unused")
         override suspend fun commentPost(tId: ThreadId, pId: PostId, message: String, formHash: FormHash) = error("unused")
     }

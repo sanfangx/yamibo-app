@@ -38,6 +38,9 @@ import coil3.compose.AsyncImage
 import io.github.littlesurvival.core.YamiboResult
 import io.github.littlesurvival.dto.page.Post
 import io.github.littlesurvival.dto.page.RatePopoutPage
+import io.github.littlesurvival.dto.page.RateResultPopoutPage
+import io.github.littlesurvival.dto.page.ManageButton
+import io.github.littlesurvival.dto.page.VotersPopoutScreen
 import io.github.littlesurvival.dto.value.PollOptionId
 import me.thenano.yamibo.yamibo_app.components.text.rememberConvertedText
 import me.thenano.yamibo.yamibo_app.LocalNovelReaderSettingsRepository
@@ -50,6 +53,7 @@ import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.*
 import me.thenano.yamibo.yamibo_app.util.rememberImageRequest
 import me.thenano.yamibo.yamibo_app.util.state
 import me.thenano.yamibo.yamibo_app.userspace.IUserSpaceScreen
+import me.thenano.yamibo.yamibo_app.webview.action.IActionWebView
 
 @Composable
 fun PostRenderer(
@@ -57,7 +61,9 @@ fun PostRenderer(
     modifier: Modifier = Modifier,
     threadTitle: String? = null,
     onVote: (suspend (List<PollOptionId>) -> Boolean)? = null,
+    onLoadVoters: (suspend (PollOptionId?, Int) -> YamiboResult<VotersPopoutScreen>)? = null,
     onLoadRateOptions: (suspend () -> YamiboResult<RatePopoutPage>)? = null,
+    onLoadRateResults: (suspend () -> YamiboResult<RateResultPopoutPage>)? = null,
     onRate: ((Int, String, Boolean) -> Unit)? = null,
     onComment: ((String) -> Unit)? = null,
     onReply: (() -> Unit)? = null,
@@ -83,8 +89,25 @@ fun PostRenderer(
     DebugRecomposeProbe("PostRenderer", "${post.pid.value}#${post.floor}")
 
     var showRateDialog by remember { mutableStateOf(false) }
+    var showRateResultsDialog by remember { mutableStateOf(false) }
     var showCommentDialog by remember { mutableStateOf(false) }
+    var showManageDialog by remember { mutableStateOf(false) }
     val navigator = LocalNavigator.current
+
+    fun openManageAction(button: ManageButton) {
+        val url = if (button.url.startsWith("http://") || button.url.startsWith("https://")) {
+            button.url
+        } else {
+            "https://bbs.yamibo.com/${button.url.removePrefix("/")}"
+        }
+        navigator.navigate(
+            IActionWebView(
+                title = button.name,
+                initialUrl = url,
+                successCondition = { target -> target.contains("mod=viewthread") && target.contains("tid=") },
+            )
+        )
+    }
     val novelSettingsRepo = LocalNovelReaderSettingsRepository.current
     val contentWidthFraction = novelSettingsRepo.contentWidthFraction.state()
     val density = LocalDensity.current
@@ -219,6 +242,32 @@ fun PostRenderer(
                         Text(post.timeCreate.text, fontSize = 12.sp, color = YamiboTheme.colors.textDark.copy(alpha = 0.5f))
                     }
 
+                    if (post.manageButtons.isNotEmpty()) {
+                        val singleAction = post.manageButtons.singleOrNull()
+                        TextButton(
+                            onClick = {
+                                if (singleAction != null) openManageAction(singleAction) else showManageDialog = true
+                            },
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                        ) {
+                            Text(
+                                text = manageButtonLabel(post.manageButtons)?.let { i18n(it) }.orEmpty(),
+                                color = YamiboTheme.colors.redAccent,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium,
+                            )
+                        }
+                    }
+
+                    if (post.isPinned) {
+                        Icon(
+                            imageVector = YamiboIcons.Pin,
+                            contentDescription = i18n("置頂帖"),
+                            modifier = Modifier.size(15.dp),
+                            tint = YamiboTheme.colors.textDark.copy(alpha = 0.55f),
+                        )
+                        Spacer(Modifier.width(3.dp))
+                    }
                     Text("${post.floor}#", fontSize = 12.sp, color = YamiboTheme.colors.textDark.copy(alpha = 0.5f))
                 }
             }
@@ -269,12 +318,15 @@ fun PostRenderer(
 
                 // Poll
                 post.poll?.let { poll ->
-                    PollRenderer(poll, onVote = onVote)
+                    PollRenderer(poll, onVote = onVote, onLoadVoters = onLoadVoters)
                 }
 
                 // Rates
                 if (post.rateBlock.rates.isNotEmpty()) {
-                    RateRenderer(post.rateBlock)
+                    RateRenderer(
+                        rateBlock = post.rateBlock,
+                        onShowAllRatings = onLoadRateResults?.let { { showRateResultsDialog = true } },
+                    )
                 }
 
                 // Comments
@@ -322,6 +374,13 @@ fun PostRenderer(
                 }
             }
         }
+    }
+
+    if (showRateResultsDialog && onLoadRateResults != null) {
+        RateResultsDialog(
+            onLoad = onLoadRateResults,
+            onDismiss = { showRateResultsDialog = false },
+        )
     }
 
     if (showRateDialog) {
@@ -498,6 +557,59 @@ fun PostRenderer(
             }
         }
     }
+
+    if (showManageDialog) {
+        ManageActionsDialog(
+            actions = post.manageButtons,
+            onSelect = { action ->
+                showManageDialog = false
+                openManageAction(action)
+            },
+            onDismiss = { showManageDialog = false },
+        )
+    }
+}
+
+internal fun manageButtonLabel(actions: List<ManageButton>): String? = when (actions.size) {
+    0 -> null
+    1 -> actions.single().name
+    else -> "管理"
+}
+
+@Composable
+private fun ManageActionsDialog(
+    actions: List<ManageButton>,
+    onSelect: (ManageButton) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val colors = YamiboTheme.colors
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(i18n("管理"), color = colors.textStrong, fontWeight = FontWeight.Bold) },
+        text = {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                items(actions) { action ->
+                    Surface(
+                        onClick = { onSelect(action) },
+                        shape = RoundedCornerShape(12.dp),
+                        color = colors.creamBackground,
+                    ) {
+                        Text(
+                            text = action.name,
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+                            color = colors.brownPrimary,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(i18n("關閉"), color = colors.brownPrimary) }
+        },
+        containerColor = colors.creamSurface,
+    )
 }
 
 @Composable
