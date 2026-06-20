@@ -40,6 +40,12 @@ abstract class ValidatePublishedUpdateManifestTask : DefaultTask() {
         if (!hasField(manifestText, "url") || !hasField(manifestText, "sha256") || !hasField(manifestText, "size")) {
             throw GradleException("Published update manifest assets must include url, sha256, and size.")
         }
+        val versionCode = extractLong(manifestText, "versionCode")
+            ?: throw GradleException("Published update manifest versionCode must be an integer.")
+        val changelog = publishedUpdateDir.resolve("changelogs/$versionCode.changelog")
+        if (!changelog.exists() || changelog.readText(Charsets.UTF_8).isBlank()) {
+            throw GradleException("Missing or empty published update/changelogs/$versionCode.changelog")
+        }
     }
 
     private fun extractString(json: String, field: String): String? =
@@ -54,6 +60,13 @@ abstract class ValidatePublishedUpdateManifestTask : DefaultTask() {
             ?.groupValues
             ?.get(1)
             ?.toBooleanStrictOrNull()
+
+    private fun extractLong(json: String, field: String): Long? =
+        Regex("\"${Regex.escape(field)}\"\\s*:\\s*(\\d+)")
+            .find(json)
+            ?.groupValues
+            ?.get(1)
+            ?.toLongOrNull()
 
     private fun hasField(json: String, field: String): Boolean =
         Regex(""""${Regex.escape(field)}"\s*:""").containsMatchIn(json)

@@ -20,7 +20,19 @@ def main():
     apk_size = int(required_env("APK_SIZE"))
 
     manifest = json.loads(source_manifest.read_text(encoding="utf-8"))
+    version_code = manifest["versionCode"]
+    source_changelog = Path(
+        os.environ.get(
+            "SOURCE_CHANGELOG",
+            source_manifest.parent / "changelogs" / f"{version_code}.changelog",
+        )
+    )
+    changelog_text = source_changelog.read_text(encoding="utf-8") if source_changelog.is_file() else ""
+    if not changelog_text.strip():
+        raise SystemExit(f"Missing or empty changelog: {source_changelog}")
+
     manifest["isReady"] = True
+    manifest["releaseNotes"] = changelog_text
     manifest["releaseUrl"] = release_url
     manifest["assets"] = [
         {
@@ -36,6 +48,11 @@ def main():
     text = json.dumps(manifest, ensure_ascii=False, indent=2) + "\n"
     (output_dir / "manifest.json").write_text(text, encoding="utf-8")
     (output_dir / "stable.json").write_text(text, encoding="utf-8")
+    published_changelog_dir = output_dir / "changelogs"
+    published_changelog_dir.mkdir(parents=True, exist_ok=True)
+    (published_changelog_dir / f"{version_code}.changelog").write_bytes(
+        changelog_text.encode("utf-8")
+    )
 
 
 if __name__ == "__main__":

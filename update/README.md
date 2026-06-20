@@ -64,6 +64,7 @@ Workflow steps:
    - `isReady=true`
    - `releaseUrl`
    - APK asset `url`, `sha256`, and `size`
+   - `releaseNotes` and `changelogs/{versionCode}.changelog` from the matching source changelog
    - identical `manifest.json` and `stable.json`
 11. Run `validatePublishedUpdateManifest` for each target folder.
 12. Force push the GitHub-targeted `update` folder to the GitHub `update-release` branch.
