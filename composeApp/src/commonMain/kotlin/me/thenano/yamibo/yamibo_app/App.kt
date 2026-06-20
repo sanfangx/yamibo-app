@@ -217,8 +217,14 @@ fun App() {
                         }
                     }
                 }
+                YamiboSnackbarHost(
+                    hostState = snackbarHostState,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .navigationBarsPadding()
+                        .padding(bottom = 72.dp)
+                )
             }
-            YamiboSnackbarHost(snackbarHostState)
             LaunchSignReminderDialog(
                 visible = showSignReminder,
                 dismissTodayChecked = appSettingsRepository.signInLaunchReminderDismissToday.state(),
