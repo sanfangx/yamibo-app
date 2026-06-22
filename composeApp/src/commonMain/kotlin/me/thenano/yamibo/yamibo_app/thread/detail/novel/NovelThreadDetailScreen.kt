@@ -25,6 +25,7 @@ import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.DetailNoteRepository
 import me.thenano.yamibo.yamibo_app.repository.ContentCoverRepository
+import me.thenano.yamibo.yamibo_app.repository.contentcover.findThreadCoverCandidate
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository.ThreadReadingHistory
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboSnackbarHost
@@ -144,13 +145,11 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
         }
     }
 
-    LaunchedEffect((state as? ThreadState.Success)?.page?.posts) {
-        val firstImage = (state as? ThreadState.Success)?.page?.posts
-            ?.firstOrNull { it.floor == 1 }
-            ?.images
-            ?.firstOrNull()
-            ?.url
-        firstImage?.let { contentCoverRepository.setAutomaticCover(coverKey, it) }
+    LaunchedEffect((state as? ThreadState.Success)?.page) {
+        val threadPage = (state as? ThreadState.Success)?.page
+        threadPage?.let(::findThreadCoverCandidate)?.let { coverUrl ->
+            contentCoverRepository.setAutomaticCover(coverKey, coverUrl)
+        }
         readHistory?.threadCover?.let { contentCoverRepository.setAutomaticCover(coverKey, it) }
     }
 

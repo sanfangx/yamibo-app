@@ -181,18 +181,18 @@ abstract class GenerateYamiboIconsTask : DefaultTask() {
         when (node) {
             is SvgPath -> {
                 appendLine("${indent}addPath(")
-                appendLine("${indent}    pathData = listOf(")
-                node.nodes.forEach { appendLine("${indent}        $it,") }
-                appendLine("${indent}    ),")
-                appendLine("${indent}    pathFillType = PathFillType.${node.fillType},")
-                appendLine("${indent}    fill = ${node.fill?.let { "SolidColor(${it.kotlinColor()})" } ?: "null"},")
-                appendLine("${indent}    fillAlpha = ${node.fillAlpha.kotlinFloat()},")
-                appendLine("${indent}    stroke = ${node.stroke?.let { "SolidColor(${it.kotlinColor()})" } ?: "null"},")
-                appendLine("${indent}    strokeAlpha = ${node.strokeAlpha.kotlinFloat()},")
-                appendLine("${indent}    strokeLineWidth = ${node.strokeWidth.kotlinFloat()},")
-                appendLine("${indent}    strokeLineCap = StrokeCap.${node.strokeCap},")
-                appendLine("${indent}    strokeLineJoin = StrokeJoin.${node.strokeJoin},")
-                appendLine("${indent}    strokeLineMiter = ${node.strokeMiter.kotlinFloat()},")
+                appendLine("$indent    pathData = listOf(")
+                node.nodes.forEach { appendLine("$indent        $it,") }
+                appendLine("$indent    ),")
+                appendLine("$indent    pathFillType = PathFillType.${node.fillType},")
+                appendLine("$indent    fill = ${node.fill?.let { "SolidColor(${it.kotlinColor()})" } ?: "null"},")
+                appendLine("$indent    fillAlpha = ${node.fillAlpha.kotlinFloat()},")
+                appendLine("$indent    stroke = ${node.stroke?.let { "SolidColor(${it.kotlinColor()})" } ?: "null"},")
+                appendLine("$indent    strokeAlpha = ${node.strokeAlpha.kotlinFloat()},")
+                appendLine("$indent    strokeLineWidth = ${node.strokeWidth.kotlinFloat()},")
+                appendLine("$indent    strokeLineCap = StrokeCap.${node.strokeCap},")
+                appendLine("$indent    strokeLineJoin = StrokeJoin.${node.strokeJoin},")
+                appendLine("$indent    strokeLineMiter = ${node.strokeMiter.kotlinFloat()},")
                 appendLine("${indent})")
             }
             is SvgGroup -> {
@@ -203,17 +203,17 @@ abstract class GenerateYamiboIconsTask : DefaultTask() {
                     appendLine("${indent}group(")
                     when (transform) {
                         is SvgTransform.Translate -> {
-                            appendLine("${indent}    translationX = ${transform.x.kotlinFloat()},")
-                            appendLine("${indent}    translationY = ${transform.y.kotlinFloat()},")
+                            appendLine("$indent    translationX = ${transform.x.kotlinFloat()},")
+                            appendLine("$indent    translationY = ${transform.y.kotlinFloat()},")
                         }
                         is SvgTransform.Scale -> {
-                            appendLine("${indent}    scaleX = ${transform.x.kotlinFloat()},")
-                            appendLine("${indent}    scaleY = ${transform.y.kotlinFloat()},")
+                            appendLine("$indent    scaleX = ${transform.x.kotlinFloat()},")
+                            appendLine("$indent    scaleY = ${transform.y.kotlinFloat()},")
                         }
                         is SvgTransform.Rotate -> {
-                            appendLine("${indent}    rotate = ${transform.degrees.kotlinFloat()},")
-                            appendLine("${indent}    pivotX = ${transform.pivotX.kotlinFloat()},")
-                            appendLine("${indent}    pivotY = ${transform.pivotY.kotlinFloat()},")
+                            appendLine("$indent    rotate = ${transform.degrees.kotlinFloat()},")
+                            appendLine("$indent    pivotX = ${transform.pivotX.kotlinFloat()},")
+                            appendLine("$indent    pivotY = ${transform.pivotY.kotlinFloat()},")
                         }
                     }
                     appendLine("${indent}) {")
@@ -386,7 +386,7 @@ abstract class GenerateYamiboIconsTask : DefaultTask() {
         }
     }
 
-    private class SvgPathParser(private val source: String) {
+    private class SvgPathParser(source: String) {
         private val tokens = tokenize(source)
         private var index = 0
 

@@ -31,7 +31,6 @@ import coil3.network.ktor3.KtorNetworkFetcherFactory
 import io.github.littlesurvival.core.YamiboResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.flow.collect
 import me.thenano.yamibo.yamibo_app.components.controls.YamiboVerticalScrollbar
 import me.thenano.yamibo.yamibo_app.components.font.getFontFamily
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboSnackbarHost
@@ -50,13 +49,14 @@ import me.thenano.yamibo.yamibo_app.repository.chineseconversion.ChineseConversi
 import me.thenano.yamibo.yamibo_app.repository.settings.AppSettingsRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.ReaderChineseConversionOption
 import me.thenano.yamibo.yamibo_app.repository.settings.SignInMode
-import me.thenano.yamibo.yamibo_app.util.SignReminderTrigger
 import me.thenano.yamibo.yamibo_app.util.state
 import me.thenano.yamibo.yamibo_app.util.time.currentLocalDateKey
 import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
 import org.jetbrains.compose.resources.painterResource
 import yamibo_app.composeapp.generated.resources.Res
 import yamibo_app.composeapp.generated.resources.logo_about
+
+internal val showSignWebViewTrigger = mutableStateOf(false)
 
 @Composable
 fun HomeScreenContent(
@@ -279,9 +279,9 @@ fun App() {
         }
     }
 
-    LaunchedEffect(SignReminderTrigger.showSignWebViewTrigger.value) {
-        if (SignReminderTrigger.showSignWebViewTrigger.value) {
-            SignReminderTrigger.showSignWebViewTrigger.value = false
+    LaunchedEffect(showSignWebViewTrigger.value) {
+        if (showSignWebViewTrigger.value) {
+            showSignWebViewTrigger.value = false
             navigateToSignWebViewOrProfile(
                 navigator = navigator,
                 appSettingsRepository = appSettingsRepository,

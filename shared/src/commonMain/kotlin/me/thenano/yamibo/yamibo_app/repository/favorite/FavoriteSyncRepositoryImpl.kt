@@ -1,7 +1,6 @@
 package me.thenano.yamibo.yamibo_app.repository.favorite
 
 import io.github.littlesurvival.YamiboForum
-import io.github.littlesurvival.YamiboRoute
 import io.github.littlesurvival.core.YamiboResult
 import io.github.littlesurvival.dto.page.FavoriteType
 import io.github.littlesurvival.dto.page.ThreadPage
@@ -27,6 +26,7 @@ import me.thenano.yamibo.yamibo_app.repository.FavoriteSyncRepository.FavoriteSy
 import me.thenano.yamibo.yamibo_app.repository.FavoriteSyncRepository.FavoriteSyncStatus
 import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository
 import me.thenano.yamibo.yamibo_app.repository.ThreadRepository
+import me.thenano.yamibo.yamibo_app.repository.contentcover.findThreadCoverCandidate
 import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
 import me.thenano.yamibo.yamibo_app.util.time.epochMillisOrNull
 import me.thenano.yamibo.yamiboapp.FavoriteSyncTask
@@ -644,7 +644,7 @@ class FavoriteSyncRepositoryImpl(
     private suspend fun persistRemoteThreadIntoLocal(threadPage: ThreadPage, categoryId: Long) {
         val isNovel = YamiboForum.isNovelForum(threadPage.thread.forum.fid)
         val authorId = threadPage.posts.firstOrNull()?.author?.uid
-        val coverUrl = extractCoverUrl(threadPage)
+        val coverUrl = findThreadCoverCandidate(threadPage)
         val lastUpdatedTime = extractLastUpdatedTime(threadPage)
         if (isNovel) {
             localFavoriteRepository.addNovelThreadFavorite(
@@ -695,33 +695,6 @@ class FavoriteSyncRepositoryImpl(
             is YamiboResult.NoPermission -> YamiboResult.NoPermission(authResult.reason)
             is YamiboResult.Maintenance -> YamiboResult.Maintenance
             is YamiboResult.Failure -> YamiboResult.Failure(authResult.reason, authResult.exception)
-        }
-    }
-
-    private fun extractCoverUrl(threadPage: ThreadPage): String? {
-        val firstPagePosts = threadPage.posts
-        val threadAuthorId = firstPagePosts.firstOrNull()?.author?.uid ?: return null
-        val authorPosts = firstPagePosts.filter { it.author.uid == threadAuthorId }
-        val isMangaThread = YamiboForum.isMangaForum(threadPage.thread.forum.fid)
-        val attachedImageUrl = if (isMangaThread) {
-            val candidateImages = authorPosts.take(2).flatMap { it.images }
-            candidateImages.getOrNull(1)?.url ?: candidateImages.getOrNull(0)?.url
-        } else {
-            authorPosts.firstOrNull()?.images?.firstOrNull()?.url
-        } ?: return null
-
-        if (
-            attachedImageUrl.contains("none.gif") ||
-            attachedImageUrl.contains("smiley/") ||
-            attachedImageUrl.contains("face")
-        ) {
-            return null
-        }
-
-        return if (attachedImageUrl.startsWith("http")) {
-            attachedImageUrl
-        } else {
-            "${YamiboRoute.Domain.build()}$attachedImageUrl"
         }
     }
 
@@ -958,4 +931,3 @@ class FavoriteSyncRepositoryImpl(
         val title: String,
     )
 }
-

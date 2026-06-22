@@ -34,7 +34,6 @@ import me.thenano.yamibo.yamibo_app.profile.settings.access.AndroidBackgroundAcc
 import me.thenano.yamibo.yamibo_app.profile.settings.backup.AndroidBackupScheduler
 import me.thenano.yamibo.yamibo_app.profile.settings.sign.AndroidSignReminderScheduler
 import me.thenano.yamibo.yamibo_app.profile.settings.sign.SignReminderScheduler
-import me.thenano.yamibo.yamibo_app.util.SignReminderTrigger
 import me.thenano.yamibo.yamibo_app.repository.*
 import me.thenano.yamibo.yamibo_app.repository.backup.BackupRepositoryImpl
 import me.thenano.yamibo.yamibo_app.repository.chineseconversion.createChineseConversionRepository
@@ -72,7 +71,7 @@ class MainActivity : ComponentActivity() {
 
     private fun handleIntent(intent: android.content.Intent?) {
         if (intent?.getBooleanExtra(EXTRA_FROM_NOTIFICATION_SIGN_IN, false) == true) {
-            SignReminderTrigger.showSignWebViewTrigger.value = true
+            showSignWebViewTrigger.value = true
             intent.putExtra(EXTRA_FROM_NOTIFICATION_SIGN_IN, false)
         }
     }

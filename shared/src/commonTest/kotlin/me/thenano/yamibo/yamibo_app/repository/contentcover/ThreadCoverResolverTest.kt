@@ -25,6 +25,25 @@ import me.thenano.yamibo.yamibo_app.repository.ThreadRepository
 
 class ThreadCoverResolverTest {
     @Test
+    fun includesSecondFloorWhenPostedByOwner() {
+        val tid = ThreadId(9)
+        val owner = User(UserId(7), "owner")
+        val threadPage = page(
+            tid,
+            posts = listOf(
+                post(1, owner),
+                post(2, owner, "data/attachment/forum/second-floor.jpg"),
+            ),
+            totalPages = 1,
+        )
+
+        assertEquals(
+            "https://bbs.yamibo.com/data/attachment/forum/second-floor.jpg",
+            findThreadCoverCandidate(threadPage),
+        )
+    }
+
+    @Test
     fun findsOwnersLaterPostAndIgnoresOtherAuthorsImage() = runBlocking {
         val tid = ThreadId(10)
         val owner = User(UserId(7), "owner")
