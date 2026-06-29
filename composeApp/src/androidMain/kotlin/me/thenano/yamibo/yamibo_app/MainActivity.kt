@@ -33,6 +33,11 @@ import me.thenano.yamibo.yamibo_app.navigation.rememberRestorableNavigator
 import me.thenano.yamibo.yamibo_app.profile.settings.access.AndroidBackgroundAccessRepository
 import me.thenano.yamibo.yamibo_app.profile.settings.backup.AndroidBackupScheduler
 import me.thenano.yamibo.yamibo_app.profile.settings.sign.AndroidSignReminderScheduler
+import me.thenano.yamibo.yamibo_app.repository.download.AndroidDownloadStorageProvider
+import me.thenano.yamibo.yamibo_app.repository.download.DownloadImageFetcher
+import me.thenano.yamibo.yamibo_app.repository.download.DownloadRepositoryImpl
+import me.thenano.yamibo.yamibo_app.download.AndroidDownloadBackgroundController
+import me.thenano.yamibo.yamibo_app.download.AndroidDownloadRuntime
 import me.thenano.yamibo.yamibo_app.profile.settings.sign.SignReminderScheduler
 import me.thenano.yamibo.yamibo_app.repository.*
 import me.thenano.yamibo.yamibo_app.repository.backup.BackupRepositoryImpl
@@ -187,6 +192,22 @@ class MainActivity : ComponentActivity() {
                     appVersionCode = AppVersion.VersionCode.toInt(),
                 )
             }
+            val downloadRepository = remember {
+                DownloadRepositoryImpl(
+                    threadRepository = threadRepository,
+                    storageProvider = AndroidDownloadStorageProvider(context, appSettingsRepository),
+                    imageFetcher = DownloadImageFetcher { cookieStore.load().orEmpty() },
+                    backgroundController = AndroidDownloadBackgroundController(context),
+                ).also { AndroidDownloadRuntime.repository = it }
+            }
+            DisposableEffect(downloadRepository) {
+                AndroidDownloadRuntime.repository = downloadRepository
+                onDispose {
+                    if (AndroidDownloadRuntime.repository === downloadRepository) {
+                        AndroidDownloadRuntime.repository = null
+                    }
+                }
+            }
             val backupScheduler = remember { AndroidBackupScheduler(context) }
             val signReminderScheduler = remember { AndroidSignReminderScheduler(context) }
             LaunchedEffect(backupRepository) {
@@ -229,6 +250,7 @@ class MainActivity : ComponentActivity() {
                 LocalBlogRepository provides blogRepository,
                 LocalBackupRepository provides backupRepository,
                 LocalBackupScheduler provides backupScheduler,
+                LocalDownloadRepository provides downloadRepository,
                 LocalChineseConversionRepository provides chineseConversionRepository,
                 LocalDetailNoteRepository provides detailNoteRepository,
                 LocalBookMarkRepository provides bookMarkRepository,

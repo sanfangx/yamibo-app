@@ -26,6 +26,10 @@
                 android:exported="false"
                 android:foregroundServiceType="dataSync" />
         <service
+                android:name=".download.DownloadForegroundService"
+                android:exported="false"
+                android:foregroundServiceType="dataSync" />
+        <service
                 android:name="androidx.work.impl.foreground.SystemForegroundService"
                 android:exported="false"
                 android:foregroundServiceType="dataSync"

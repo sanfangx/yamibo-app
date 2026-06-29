@@ -36,8 +36,11 @@ internal fun ReaderCatalogPanel(
     currentPid: PostId?,
     bookmarkedPostIds: Set<Long> = emptySet(),
     readPostIds: Set<Long> = emptySet(),
+    downloadedPages: Set<Int> = emptySet(),
+    updateAvailablePages: Set<Int> = emptySet(),
     chapterStates: Map<Long, LocalChapterStateRepository.Entry> = emptyMap(),
     onPageOrPostClick: (Int, Post?) -> Unit,
+    onDownload: () -> Unit,
     onPostLongPress: (Post) -> Unit = {},
     drawerOpen: Boolean = false,
 ) {
@@ -126,6 +129,16 @@ internal fun ReaderCatalogPanel(
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold
             )
+            IconButton(
+                onClick = onDownload,
+                modifier = Modifier.align(Alignment.CenterEnd),
+            ) {
+                Icon(
+                    imageVector = YamiboIcons.Download,
+                    contentDescription = i18n("下載"),
+                    tint = colors.textOnDeepHigh,
+                )
+            }
         }
 
         LazyColumn(
@@ -135,6 +148,8 @@ internal fun ReaderCatalogPanel(
             for (page in 1..totalPages) {
                 val isExpanded = expandedPages.contains(page)
                 val isLoaded = loadedPostsByPage.containsKey(page)
+                val isDownloaded = page in downloadedPages
+                val updateAvailable = page in updateAvailablePages
 
                 // 1. Page Header Item
                 item(key = "page_header_$page") {
@@ -157,12 +172,29 @@ internal fun ReaderCatalogPanel(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                text = i18n("第 {} 頁", page),
-                                color = colors.brownPrimary,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = i18n("第 {} 頁", page),
+                                    color = colors.brownPrimary,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 16.sp
+                                )
+                                if (isDownloaded || updateAvailable) {
+                                    Spacer(Modifier.width(8.dp))
+                                    Icon(
+                                        imageVector = YamiboIcons.Downloaded,
+                                        contentDescription = null,
+                                        tint = if (updateAvailable) colors.orangeAccent else colors.brownPrimary,
+                                        modifier = Modifier.size(16.dp),
+                                    )
+                                    Spacer(Modifier.width(4.dp))
+                                    Text(
+                                        text = if (updateAvailable) i18n("可刷新") else i18n("已下載"),
+                                        color = if (updateAvailable) colors.orangeAccent else colors.brownPrimary,
+                                        fontSize = 12.sp,
+                                    )
+                                }
+                            }
                             Text(
                                 text = "▲",
                                 modifier = Modifier.graphicsLayer { rotationZ = rotation },

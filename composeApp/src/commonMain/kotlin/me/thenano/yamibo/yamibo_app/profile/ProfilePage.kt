@@ -23,6 +23,7 @@ import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.AppVersion
 import me.thenano.yamibo.yamibo_app.LocalAppSettingsRepository
 import me.thenano.yamibo.yamibo_app.LocalAuthRepository
+import me.thenano.yamibo.yamibo_app.LocalDownloadRepository
 import me.thenano.yamibo.yamibo_app.LocalSignRepository
 import me.thenano.yamibo.yamibo_app.event.AppEventBus
 import me.thenano.yamibo.yamibo_app.event.events.LoginSuccessEvent
@@ -30,6 +31,7 @@ import me.thenano.yamibo.yamibo_app.message.IMessageCenterScreen
 import me.thenano.yamibo.yamibo_app.message.MessageCenterTab
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.profile.about.IAboutScreen
+import me.thenano.yamibo.yamibo_app.profile.download.IDownloadQueueScreen
 import me.thenano.yamibo.yamibo_app.profile.settings.ISettingsScreen
 import me.thenano.yamibo.yamibo_app.profile.settings.backup.IBackupSettingsScreen
 import me.thenano.yamibo.yamibo_app.profile.sign.ISignInfoScreen
@@ -38,6 +40,7 @@ import me.thenano.yamibo.yamibo_app.profile.support.ISupportAppDevelopmentScreen
 import me.thenano.yamibo.yamibo_app.repository.settings.SignInMode
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme.colors
+import me.thenano.yamibo.yamibo_app.repository.download.DownloadStatus
 
 @Composable
 fun ProfilePage(
@@ -45,12 +48,14 @@ fun ProfilePage(
     onNewMessageStatusChange: (Boolean) -> Unit = {},
 ) {
     val authRepository = LocalAuthRepository.current
+    val downloadRepository = LocalDownloadRepository.current
     val signRepository = LocalSignRepository.current
     val appSettingsRepository = LocalAppSettingsRepository.current
     val navigator = LocalNavigator.current
     val coroutineScope = rememberCoroutineScope()
     val colors = colors
     val snackbarHostState = remember { SnackbarHostState() }
+    val downloadQueue by downloadRepository.queue.collectAsState()
 
     var userInfo by remember { mutableStateOf(authRepository.currentUser()) }
     var isLoading by remember { mutableStateOf(false) }
@@ -299,6 +304,13 @@ fun ProfilePage(
                 onClick = { navigator.navigate(IBackupSettingsScreen()) }
             )
 
+            EntryCard(
+                title = i18n("下載佇列"),
+                icon = YamiboIcons.Download,
+                showBadge = downloadQueue.any { it.status == DownloadStatus.Failed || it.status == DownloadStatus.UpdateAvailable },
+                onClick = { navigator.navigate(IDownloadQueueScreen()) }
+            )
+
             EntryDivider()
 
             EntryCard(
@@ -416,6 +428,7 @@ private fun EntryDivider() {
 private fun EntryCard(
     title: String,
     icon: ImageVector,
+    subtitle: String? = null,
     showBadge: Boolean = false,
     onClick: () -> Unit = {},
 ) {
@@ -452,13 +465,21 @@ private fun EntryCard(
                 }
             }
             Spacer(Modifier.size(16.dp))
-            Box(Modifier.weight(1f)) {
+            Column(Modifier.weight(1f)) {
                 Text(
                     text = title,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Medium,
                     color = colors.textDark,
                 )
+                if (!subtitle.isNullOrBlank()) {
+                    Spacer(Modifier.height(3.dp))
+                    Text(
+                        text = subtitle,
+                        fontSize = 12.sp,
+                        color = colors.textDark.copy(alpha = 0.65f),
+                    )
+                }
             }
         }
     }

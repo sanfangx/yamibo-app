@@ -13,7 +13,10 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import io.github.littlesurvival.dto.value.ThreadId
+import io.github.littlesurvival.dto.value.UserId
 import me.thenano.yamibo.yamibo_app.LocalAppSettingsRepository
+import me.thenano.yamibo.yamibo_app.LocalDownloadRepository
 import me.thenano.yamibo.yamibo_app.LocalFavoriteUpdateRepository
 import me.thenano.yamibo.yamibo_app.LocalFavoriteUpdateRunner
 import me.thenano.yamibo.yamibo_app.components.controls.YamiboActionChip
@@ -32,6 +35,7 @@ import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.FavoriteUpdateRepository
 import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
+import me.thenano.yamibo.yamibo_app.repository.download.DownloadStatus
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.INovelThreadDetailScreen
 import me.thenano.yamibo.yamibo_app.thread.detail.tag.ITagDetailScreen
 import me.thenano.yamibo.yamibo_app.thread.reader.IThreadReaderScreen
@@ -55,6 +59,8 @@ fun UpdatesScreen() {
     val colors = YamiboTheme.colors
     val favoriteUpdateRepository = LocalFavoriteUpdateRepository.current
     val favoriteUpdateRunner = LocalFavoriteUpdateRunner.current
+    val downloadRepository = LocalDownloadRepository.current
+    val downloadQueue by downloadRepository.queue.collectAsState()
     val favoriteUpdateRunState by favoriteUpdateRunner.state.collectAsState()
     val favoriteUpdateRefreshKey = favoriteUpdateRunState.refreshKey()
     val appSettingsRepository = LocalAppSettingsRepository.current
@@ -97,6 +103,18 @@ fun UpdatesScreen() {
 
     LaunchedEffect(favoriteUpdateRefreshKey) {
         loadUpdates()
+    }
+
+    LaunchedEffect(updateContent?.events) {
+        updateContent?.events
+            ?.filter { it.targetType != LocalFavoriteRepository.FavoriteTargetType.TagManga }
+            ?.distinctBy { it.targetId to it.authorId }
+            ?.forEach { event ->
+                downloadRepository.markThreadUpdateAvailable(
+                    tid = ThreadId(event.targetId.toInt()),
+                    authorId = event.authorId?.toInt()?.let(::UserId),
+                )
+            }
     }
 
     DisposableEffect(isSelectMode, navigator) {
@@ -278,9 +296,22 @@ fun UpdatesScreen() {
                                 }
                             } else {
                                 items(filteredUpdateEvents, key = { it.id }) { event ->
+                                    val threadDownloadEntries = downloadQueue.filter {
+                                        it.key.tid.toLong() == event.targetId && it.key.authorId?.toLong() == event.authorId
+                                    }
+                                    val hasFailedDownload = threadDownloadEntries.any { it.status == DownloadStatus.Failed }
+                                    val hasUpdateAvailable = threadDownloadEntries.any { it.status == DownloadStatus.UpdateAvailable }
+                                    val hasDownloaded = threadDownloadEntries.any { it.status == DownloadStatus.Downloaded }
                                     FavoriteUpdateCard(
                                         event = event,
                                         isSelected = selectedEventIds.contains(event.id),
+                                        downloadHint = when {
+                                            hasFailedDownload -> i18n("下載狀態需處理")
+                                            hasUpdateAvailable -> i18n("離線頁可刷新")
+                                            hasDownloaded -> i18n("已下載")
+                                            else -> null
+                                        },
+                                        downloadHintIsError = hasFailedDownload,
                                         onClick = {
                                             if (isSelectMode) {
                                                 selectedEventIds = if (event.id in selectedEventIds) {

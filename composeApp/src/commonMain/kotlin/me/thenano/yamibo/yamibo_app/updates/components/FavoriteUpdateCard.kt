@@ -27,6 +27,8 @@ import me.thenano.yamibo.yamibo_app.util.time.formatRelativeTime
 internal fun FavoriteUpdateCard(
     event: FavoriteUpdateRepository.UpdateEvent,
     isSelected: Boolean = false,
+    downloadHint: String? = null,
+    downloadHintIsError: Boolean = false,
     onClick: () -> Unit,
 ) {
     val colors = YamiboTheme.colors
@@ -122,6 +124,20 @@ internal fun FavoriteUpdateCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+                downloadHint?.let {
+                    Surface(
+                        color = colors.brownLight.copy(alpha = 0.18f),
+                        shape = RoundedCornerShape(999.dp),
+                    ) {
+                        Text(
+                            text = it,
+                            color = if (downloadHintIsError) colors.redAccent else colors.brownPrimary,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
+                        )
+                    }
+                }
             }
         }
     }

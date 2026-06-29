@@ -18,6 +18,9 @@ import me.thenano.yamibo.yamibo_app.profile.settings.backup.IOSBackupScheduler
 import me.thenano.yamibo.yamibo_app.repository.*
 import me.thenano.yamibo.yamibo_app.repository.backup.BackupRepositoryImpl
 import me.thenano.yamibo.yamibo_app.repository.chineseconversion.createChineseConversionRepository
+import me.thenano.yamibo.yamibo_app.repository.download.DownloadImageFetcher
+import me.thenano.yamibo.yamibo_app.repository.download.DownloadRepositoryImpl
+import me.thenano.yamibo.yamibo_app.repository.download.IOSDownloadStorageProvider
 import me.thenano.yamibo.yamibo_app.repository.favorite.FavoriteSyncRepositoryImpl
 import me.thenano.yamibo.yamibo_app.repository.contentcover.ContentCoverRepositoryImpl
 import me.thenano.yamibo.yamibo_app.repository.favorite.FavoriteUpdateRepositoryImpl
@@ -112,6 +115,13 @@ fun MainViewController() = ComposeUIViewController {
             appVersionCode = AppVersion.VersionCode.toInt(),
         )
     }
+    val downloadRepository = remember {
+        DownloadRepositoryImpl(
+            threadRepository = threadRepository,
+            storageProvider = IOSDownloadStorageProvider(appSettingsRepository),
+            imageFetcher = DownloadImageFetcher { cookieStore.load().orEmpty() },
+        )
+    }
     val backupScheduler = remember { IOSBackupScheduler() }
     androidx.compose.runtime.LaunchedEffect(backupRepository) {
         diskCacheFactory.backupStorageUsageProvider = { backupRepository.getBackupStorageBytes() }
@@ -153,6 +163,7 @@ fun MainViewController() = ComposeUIViewController {
         LocalBlogRepository provides blogRepository,
         LocalBackupRepository provides backupRepository,
         LocalBackupScheduler provides backupScheduler,
+        LocalDownloadRepository provides downloadRepository,
         LocalChineseConversionRepository provides chineseConversionRepository,
         LocalDetailNoteRepository provides detailNoteRepository,
         LocalBookMarkRepository provides bookMarkRepository,

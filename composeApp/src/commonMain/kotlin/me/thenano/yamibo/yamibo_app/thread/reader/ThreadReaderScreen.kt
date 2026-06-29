@@ -3,12 +3,15 @@ package me.thenano.yamibo.yamibo_app.thread.reader
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 
 
+import YamiboIcons
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListItemInfo
@@ -55,11 +58,14 @@ import me.thenano.yamibo.yamibo_app.repository.LocalBookMarkRepository as BookMa
 import me.thenano.yamibo.yamibo_app.repository.LocalChapterStateRepository as ChapterStateRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository.ThreadReadingHistory
+import me.thenano.yamibo.yamibo_app.repository.download.DownloadStatus
+import me.thenano.yamibo.yamibo_app.repository.download.ThreadPageDownloadKey
 import me.thenano.yamibo.yamibo_app.components.systembars.SystemBarsEffect
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.components.ThreadErrorContent
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.components.ThreadLoadingSkeleton
+import me.thenano.yamibo.yamibo_app.profile.settings.backup.IBackupSettingsScreen
 import me.thenano.yamibo.yamibo_app.thread.image.LocalImageClickListener
 import me.thenano.yamibo.yamibo_app.thread.image.LocalImageDoubleClickListener
 import me.thenano.yamibo.yamibo_app.thread.image.LocalImageSetCoverListener
@@ -290,6 +296,8 @@ internal fun ThreadReaderScreen(
     val appSettingsRepository = LocalAppSettingsRepository.current
     val novelSettingsRepository = LocalNovelReaderSettingsRepository.current
     val threadRepository = LocalThreadRepository.current
+    val downloadRepository = LocalDownloadRepository.current
+    val downloadQueue by downloadRepository.queue.collectAsState()
     val favoriteRepository = LocalFavoriteRepository.current
     val favoriteSyncRepository = LocalFavoriteSyncRepository.current
     val readHistoryRepo = LocalReadHistoryRepository.current
@@ -339,6 +347,11 @@ internal fun ThreadReaderScreen(
 
     var showMenu by remember { mutableStateOf(false) }
     var showSettingsPanel by remember { mutableStateOf(false) }
+    var showDownloadSheet by remember { mutableStateOf(false) }
+    var downloadSheetPage by remember(tid, authorId) { mutableIntStateOf(initialPage) }
+    var showRefreshDownloadedDialog by remember { mutableStateOf(false) }
+    var showDownloadedLastPageWarning by remember { mutableStateOf(false) }
+    var dismissedUpdateWarningPages by remember(tid, authorId) { mutableStateOf(emptySet<Int>()) }
     var scrollJumpButtonPointsDown by remember { mutableStateOf(false) }
     var showScrollJumpButtonAfterSlide by remember { mutableStateOf(false) }
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -1122,6 +1135,20 @@ internal fun ThreadReaderScreen(
         return pageByPid[currentEntry.post.pid.value.toLong()] ?: initialPage
     }
 
+    LaunchedEffect(loadedPages, totalPages, tid, authorId, readerEntries, downloadQueue, dismissedUpdateWarningPages) {
+        snapshotFlow { currentVisiblePageForAction() }
+            .distinctUntilChanged()
+            .collect { currentPage ->
+                showDownloadedLastPageWarning =
+                    currentPage == totalPages &&
+                        currentPage !in dismissedUpdateWarningPages &&
+                        downloadQueue.any {
+                            it.key == ThreadPageDownloadKey(tid.value, currentPage, authorId?.value) &&
+                                it.status == DownloadStatus.UpdateAvailable
+                        }
+            }
+    }
+
     fun anchorIndexForPost(postId: Long, last: Boolean): Int? {
         var foundIndex: Int? = null
         readerEntries.forEachIndexed { index, entry ->
@@ -1244,6 +1271,20 @@ internal fun ThreadReaderScreen(
         isLoadingNextPage = true
         var loadSucceeded = false
 
+        suspend fun loadFromDownload(): Boolean {
+            val downloadKey = ThreadPageDownloadKey(tid.value, page, authorId?.value)
+            val downloaded = downloadRepository.getDownloadedPage(downloadKey)
+                ?: return false
+            loadedPostsByPage[page] = downloaded.posts
+            rebuildPosts()
+            threadInfo = downloaded.thread
+            totalPages = downloaded.pageNav?.totalPages ?: 1
+            loadedPages = loadedPages + page
+            failedAutoLoadPages.remove(page)
+            if (page == initialPage || page == 1) state = ReaderState.Success
+            return true
+        }
+
         fun loadFromCache(): Boolean {
             val cached = threadRepository.getCachedThread(tid, authorId, page)
             if (cached != null) {
@@ -1285,6 +1326,11 @@ internal fun ThreadReaderScreen(
                 }
             }
         } else {
+            if (loadFromDownload()) {
+                isLoadingNextPage = false
+                return true
+            }
+
             if (loadFromCache()) {
                 isLoadingNextPage = false
                 return true
@@ -1757,6 +1803,28 @@ internal fun ThreadReaderScreen(
                                 }
                             }
                         },
+                        onDownload = {
+                            scope.launch {
+                                downloadSheetPage = currentVisiblePageForAction()
+                                drawerState.close()
+                                withFrameNanos { }
+                                showDownloadSheet = true
+                            }
+                        },
+                        downloadedPages = downloadQueue
+                            .filter {
+                                it.key.tid == tid.value &&
+                                    it.key.authorId == authorId?.value &&
+                                    it.status in setOf(DownloadStatus.Downloaded, DownloadStatus.UpdateAvailable)
+                            }
+                            .mapTo(mutableSetOf()) { it.key.page },
+                        updateAvailablePages = downloadQueue
+                            .filter {
+                                it.key.tid == tid.value &&
+                                    it.key.authorId == authorId?.value &&
+                                    it.status == DownloadStatus.UpdateAvailable
+                            }
+                            .mapTo(mutableSetOf()) { it.key.page },
                         onPostLongPress = { post -> catalogActionPost = post },
                         drawerOpen = drawerState.isOpen,
                     )
@@ -2133,7 +2201,28 @@ internal fun ThreadReaderScreen(
                                 }
                             }
 
-                            if (loadedPages.size == totalPages && posts.isNotEmpty()) {
+                            if (totalPages in loadedPages && posts.isNotEmpty()) {
+                                item(key = "refresh_last_page_$totalPages") {
+                                    CommentBanner(
+                                        text = i18n("重新整理最後一頁"),
+                                        icon = "↻",
+                                        onClick = {
+                                            scope.launch {
+                                                val key = ThreadPageDownloadKey(tid.value, totalPages, authorId?.value)
+                                                if (downloadRepository.getStatus(key) in setOf(
+                                                        DownloadStatus.Downloaded,
+                                                        DownloadStatus.UpdateAvailable,
+                                                    )
+                                                ) {
+                                                    showRefreshDownloadedDialog = true
+                                                } else {
+                                                    state = ReaderState.Loading
+                                                    loadPage(totalPages, forceRefresh = true)
+                                                }
+                                            }
+                                        },
+                                    )
+                                }
                                 item {
                                     Box(
                                         modifier = Modifier
@@ -2283,8 +2372,18 @@ internal fun ThreadReaderScreen(
                     // Reload the current page
                     onRefresh = {
                         scope.launch {
-                            state = ReaderState.Loading
-                            loadPage(currentVisiblePageForAction(), forceRefresh = true)
+                            val page = currentVisiblePageForAction()
+                            val key = ThreadPageDownloadKey(tid.value, page, authorId?.value)
+                            if (downloadRepository.getStatus(key) in setOf(
+                                    DownloadStatus.Downloaded,
+                                    DownloadStatus.UpdateAvailable,
+                                )
+                            ) {
+                                showRefreshDownloadedDialog = true
+                            } else {
+                                state = ReaderState.Loading
+                                loadPage(page, forceRefresh = true)
+                            }
                         }
                     },
                     onSettings = {
@@ -2327,12 +2426,172 @@ internal fun ThreadReaderScreen(
             )
         }
 
+        if (showDownloadSheet) {
+            val threadDownloadEntries = downloadQueue.filter {
+                it.key.tid == tid.value && it.key.authorId == authorId?.value
+            }
+            val pageStatus = threadDownloadEntries
+                .firstOrNull { it.key.page == downloadSheetPage }
+                ?.status
+                ?: DownloadStatus.NotDownloaded
+            val completedOrActiveStatuses = setOf(
+                DownloadStatus.Queued,
+                DownloadStatus.Downloading,
+                DownloadStatus.Downloaded,
+                DownloadStatus.Paused,
+                DownloadStatus.UpdateAvailable,
+            )
+            val completedOrActivePages = threadDownloadEntries
+                .filter { it.status in completedOrActiveStatuses }
+                .mapTo(mutableSetOf()) { it.key.page }
+            ReaderDownloadSheet(
+                onDismiss = { showDownloadSheet = false },
+                showDownloadPage = pageStatus == DownloadStatus.NotDownloaded ||
+                    pageStatus == DownloadStatus.Failed,
+                showDownloadThread = (1..totalPages).any { it !in completedOrActivePages },
+                showDownloadThreadExceptLastPage = totalPages > 1 &&
+                    (1 until totalPages).any { it !in completedOrActivePages },
+                showClearPage = pageStatus != DownloadStatus.NotDownloaded,
+                showClearThread = threadDownloadEntries.isNotEmpty(),
+                onDownloadPage = {
+                    val page = downloadSheetPage
+                    showDownloadSheet = false
+                    scope.launch {
+                        downloadRepository.enqueuePage(tid, threadInfo?.title ?: title, authorId, page)
+                            .onSuccess { snackbarHostState.showSnackbar(i18n("已加入下載佇列")) }
+                            .onFailure {
+                                snackbarHostState.showSnackbar(it.message ?: i18n("下載失敗"))
+                                navigator.navigate(IBackupSettingsScreen())
+                            }
+                    }
+                },
+                onDownloadThread = {
+                    showDownloadSheet = false
+                    scope.launch {
+                        downloadRepository.enqueueThread(tid, threadInfo?.title ?: title, authorId)
+                            .onSuccess { snackbarHostState.showSnackbar(i18n("已加入完整 Thread 下載")) }
+                            .onFailure {
+                                snackbarHostState.showSnackbar(it.message ?: i18n("下載失敗"))
+                                if (!downloadRepository.isStorageReady()) {
+                                    navigator.navigate(IBackupSettingsScreen())
+                                }
+                            }
+                    }
+                },
+                onDownloadThreadExceptLastPage = {
+                    showDownloadSheet = false
+                    scope.launch {
+                        downloadRepository.enqueueThreadExceptLastPage(
+                            tid,
+                            threadInfo?.title ?: title,
+                            authorId,
+                        )
+                            .onSuccess { snackbarHostState.showSnackbar(i18n("已加入除最後一頁外的下載")) }
+                            .onFailure {
+                                snackbarHostState.showSnackbar(it.message ?: i18n("下載失敗"))
+                                if (!downloadRepository.isStorageReady()) {
+                                    navigator.navigate(IBackupSettingsScreen())
+                                }
+                            }
+                    }
+                },
+                onClearPage = {
+                    val page = downloadSheetPage
+                    showDownloadSheet = false
+                    scope.launch {
+                        downloadRepository.clearPage(ThreadPageDownloadKey(tid.value, page, authorId?.value))
+                        snackbarHostState.showSnackbar(i18n("已清除目前頁下載"))
+                    }
+                },
+                onClearThread = {
+                    val page = currentVisiblePageForAction()
+                    showDownloadSheet = false
+                    scope.launch {
+                        downloadRepository.clearThread(ThreadPageDownloadKey(tid.value, page, authorId?.value))
+                        snackbarHostState.showSnackbar(i18n("已清除整個 Thread 下載"))
+                    }
+                },
+            )
+        }
+
+        if (showDownloadedLastPageWarning) {
+            Card(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    .padding(horizontal = 18.dp, vertical = 132.dp)
+                    .fillMaxWidth(),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = colors.creamSurface),
+                elevation = CardDefaults.cardElevation(4.dp),
+                onClick = { showRefreshDownloadedDialog = true },
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(i18n("此頁可能有新回覆"), color = colors.textStrong, fontSize = 15.sp)
+                        Text(i18n("建議從網站刷新此下載頁"), color = colors.textDark.copy(alpha = 0.68f), fontSize = 12.sp)
+                    }
+                    Text(i18n("刷新"), color = colors.brownPrimary, fontSize = 14.sp)
+                    TextButton(
+                        onClick = {
+                            val page = currentVisiblePageForAction()
+                            dismissedUpdateWarningPages = dismissedUpdateWarningPages + page
+                            showDownloadedLastPageWarning = false
+                        },
+                    ) {
+                        Text("×", color = colors.textDark, fontSize = 20.sp)
+                    }
+                }
+            }
+        }
+
         YamiboSnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding()
                 .padding(bottom = 72.dp)
+        )
+    }
+
+    if (showRefreshDownloadedDialog) {
+        AlertDialog(
+            onDismissRequest = { showRefreshDownloadedDialog = false },
+            title = { Text(i18n("刷新已下載頁面"), color = colors.textStrong) },
+            text = { Text(i18n("將從網站重新抓取目前頁，成功後覆蓋舊的下載內容。失敗時會保留原下載。"), color = colors.textDark) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val page = currentVisiblePageForAction()
+                        showRefreshDownloadedDialog = false
+                        scope.launch {
+                            state = ReaderState.Loading
+                            when (val result = downloadRepository.refreshPage(tid, threadInfo?.title ?: title, authorId, page)) {
+                                is YamiboResult.Success -> {
+                                    loadedPages = loadedPages - page
+                                    loadPage(page)
+                                    snackbarHostState.showSnackbar(i18n("已刷新下載內容"))
+                                }
+                                else -> {
+                                    state = ReaderState.Success
+                                    snackbarHostState.showSnackbar(i18n("刷新失敗: {}", i18n(result.message())))
+                                }
+                            }
+                        }
+                    }
+                ) {
+                    Text(i18n("刷新"), color = colors.brownPrimary)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRefreshDownloadedDialog = false }) {
+                    Text(i18n("取消"), color = colors.textDark)
+                }
+            },
+            containerColor = colors.creamSurface,
         )
     }
 
@@ -2537,6 +2796,9 @@ private fun ReaderCatalogPanelWithPosition(
     readPostIds: Set<Long>,
     chapterStates: kotlinx.coroutines.flow.StateFlow<Map<Long, ChapterStateRepository.Entry>>,
     onPageOrPostClick: (Int, Post?) -> Unit,
+    onDownload: () -> Unit,
+    downloadedPages: Set<Int>,
+    updateAvailablePages: Set<Int>,
     onPostLongPress: (Post) -> Unit,
     drawerOpen: Boolean,
 ) {
@@ -2559,8 +2821,11 @@ private fun ReaderCatalogPanelWithPosition(
         currentPid = currentPosition.pid,
         bookmarkedPostIds = bookmarkedPostIds,
         readPostIds = readPostIds,
+        downloadedPages = downloadedPages,
+        updateAvailablePages = updateAvailablePages,
         chapterStates = currentChapterStates,
         onPageOrPostClick = onPageOrPostClick,
+        onDownload = onDownload,
         onPostLongPress = onPostLongPress,
         drawerOpen = drawerOpen,
     )
@@ -2698,6 +2963,110 @@ private fun calculateReaderPageProgress(
         totalPages = totalPages,
         fraction = ((relativePostIndex + itemRatio) / pagePostCount.toFloat()).coerceIn(0f, 1f),
     )
+}
+
+@Composable
+@OptIn(ExperimentalMaterial3Api::class)
+private fun ReaderDownloadSheet(
+    onDismiss: () -> Unit,
+    showDownloadPage: Boolean,
+    showDownloadThread: Boolean,
+    showDownloadThreadExceptLastPage: Boolean,
+    showClearPage: Boolean,
+    showClearThread: Boolean,
+    onDownloadPage: () -> Unit,
+    onDownloadThread: () -> Unit,
+    onDownloadThreadExceptLastPage: () -> Unit,
+    onClearPage: () -> Unit,
+    onClearThread: () -> Unit,
+) {
+    val colors = YamiboTheme.colors
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = colors.creamSurface,
+        sheetState = sheetState,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(i18n("下載"), color = colors.textStrong, fontSize = 22.sp)
+            Text(
+                text = i18n("下載會保存整頁帖子與原始圖片。"),
+                color = colors.textDark.copy(alpha = 0.68f),
+                fontSize = 13.sp,
+            )
+            if (showDownloadPage) {
+                DownloadSheetAction(i18n("下載目前頁"), i18n("保存此頁所有帖子與圖片"), false, onDownloadPage)
+            }
+            if (showDownloadThread) {
+                DownloadSheetAction(i18n("下載完整 Thread"), i18n("將全部頁面加入背景佇列"), false, onDownloadThread)
+            }
+            if (showDownloadThreadExceptLastPage) {
+                DownloadSheetAction(
+                    i18n("下載除最後一頁的所有頁面"),
+                    i18n("保留可能持續更新的最後一頁在線閱讀"),
+                    false,
+                    onDownloadThreadExceptLastPage,
+                )
+            }
+            if (showClearPage) {
+                DownloadSheetAction(i18n("清除目前頁下載"), i18n("只刪除此頁離線內容"), true, onClearPage)
+            }
+            if (showClearThread) {
+                DownloadSheetAction(i18n("清除整個 Thread 下載"), i18n("取消佇列並刪除所有已下載頁"), true, onClearThread)
+            }
+            TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) {
+                Text(i18n("關閉"), color = colors.brownPrimary)
+            }
+        }
+    }
+}
+
+@Composable
+private fun DownloadSheetAction(
+    title: String,
+    subtitle: String,
+    destructive: Boolean,
+    onClick: () -> Unit,
+) {
+    val colors = YamiboTheme.colors
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = colors.creamBackground),
+        onClick = onClick,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = YamiboIcons.Download,
+                contentDescription = null,
+                tint = if (destructive) colors.redAccent else colors.orangeAccent,
+                modifier = Modifier.size(22.dp),
+            )
+            Column(Modifier.padding(start = 12.dp)) {
+                Text(
+                    text = title,
+                    color = if (destructive) colors.redAccent else colors.textStrong,
+                    fontSize = 15.sp,
+                )
+                Text(
+                    text = subtitle,
+                    color = colors.textDark.copy(alpha = 0.65f),
+                    fontSize = 12.sp,
+                )
+            }
+        }
+    }
 }
 
 @Composable
