@@ -1,4 +1,4 @@
-﻿name: Build iOS IPA (Unsigned)
+name: Build iOS IPA (Unsigned)
 
 on:
   workflow_dispatch:
@@ -66,6 +66,9 @@ jobs:
       - name: Build iOS app (xcodebuild)
         shell: bash
         run: |
+          sed -i "" "/FRAMEWORK_SEARCH_PATHS/d" iosApp/iosApp.xcodeproj/project.pbxproj
+          echo "pbxproj cleaned"
+
           FW_PATH="$(pwd)/composeApp/build/bin/iosArm64/releaseFramework"
           OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED=YES \
           xcodebuild build \
