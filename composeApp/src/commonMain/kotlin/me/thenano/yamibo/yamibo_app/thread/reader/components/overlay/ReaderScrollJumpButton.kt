@@ -21,8 +21,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import me.thenano.yamibo.yamibo_app.components.theme.YamiboColors
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
+import kotlin.math.abs
+import kotlin.math.pow
 
 /** Floating reader jump button that mirrors Yamibo mobile's top/bottom scroll control. */
 @Composable
@@ -33,6 +36,7 @@ fun ReaderScrollJumpButton(
     modifier: Modifier = Modifier,
 ) {
     val colors = YamiboTheme.colors
+    val buttonColors = colors.readerScrollJumpButtonColors()
     val rotation by animateFloatAsState(
         targetValue = if (pointsDown) 180f else 0f,
         label = "reader_scroll_jump_button_rotation",
@@ -48,7 +52,7 @@ fun ReaderScrollJumpButton(
             modifier = Modifier
                 .size(40.dp)
                 .clip(RoundedCornerShape(4.dp))
-                .background(Color(0xFFFFE6B7).copy(alpha = 0.92f))
+                .background(buttonColors.background)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -59,11 +63,84 @@ fun ReaderScrollJumpButton(
             Icon(
                 imageVector = YamiboIcons.ChevronUp,
                 contentDescription = if (pointsDown) i18n("跳到底部") else i18n("跳到頂部"),
-                tint = colors.brownDeep.copy(alpha = 0.58f),
+                tint = buttonColors.icon,
                 modifier = Modifier
                     .size(24.dp)
                     .rotate(rotation),
             )
         }
     }
+}
+
+private data class ReaderScrollJumpButtonColors(
+    val background: Color,
+    val icon: Color,
+)
+
+private fun YamiboColors.readerScrollJumpButtonColors(): ReaderScrollJumpButtonColors {
+    if (creamBackground == Color(0xFFFFF3D6)) {
+        return ReaderScrollJumpButtonColors(
+            background = Color(0xFFFFE6B7).copy(alpha = 0.92f),
+            icon = brownDeep.copy(alpha = 0.58f),
+        )
+    }
+
+    val targetContrast = minOf(
+        Color(0xFFFFE6B7).contrastAgainst(Color(0xFFFFF3D6)),
+        Color(0xFFFFE6B7).contrastAgainst(Color(0xFFFFF7E0)),
+    )
+    val backgroundCandidates = listOf(
+        navBarBg,
+        brownLight,
+        announceBg,
+        pinnedBg,
+        brownPrimary,
+        orangeAccent,
+        creamSurface,
+    ).distinct()
+    val background = (backgroundCandidates.filter { color ->
+        color.readerBackgroundContrast(this) >= 1.08
+    }.ifEmpty {
+        backgroundCandidates
+    }).minBy { color ->
+        abs(color.readerBackgroundContrast(this) - targetContrast)
+    }.copy(alpha = 0.92f)
+
+    val icon = listOf(
+        textOnSurface,
+        textDark,
+        textStrong,
+        brownDeep,
+        Color.White,
+        Color.Black,
+    ).maxBy { it.contrastAgainst(background) }
+
+    return ReaderScrollJumpButtonColors(
+        background = background,
+        icon = icon.copy(alpha = 0.82f),
+    )
+}
+
+private fun Color.readerBackgroundContrast(colors: YamiboColors): Double =
+    minOf(
+        contrastAgainst(colors.creamBackground),
+        contrastAgainst(colors.creamSurface),
+    )
+
+private fun Color.contrastAgainst(other: Color): Double {
+    val lighter = maxOf(relativeLuminance(), other.relativeLuminance())
+    val darker = minOf(relativeLuminance(), other.relativeLuminance())
+    return (lighter + 0.05) / (darker + 0.05)
+}
+
+private fun Color.relativeLuminance(): Double {
+    fun channel(value: Float): Double {
+        val normalized = value.toDouble()
+        return if (normalized <= 0.03928) {
+            normalized / 12.92
+        } else {
+            ((normalized + 0.055) / 1.055).pow(2.4)
+        }
+    }
+    return 0.2126 * channel(red) + 0.7152 * channel(green) + 0.0722 * channel(blue)
 }

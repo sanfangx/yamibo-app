@@ -294,25 +294,40 @@ internal fun TagDetailScreen(
     fun handleContinueRead(threads: List<ThreadSummary>, pageNav: PageNav?) {
         val history = mangaTagHistory
         if (history != null && isMangaMode) {
-            val threadIndex = threads.indexOfFirst { it.tid == history.threadId }
-            val authorId = if (threadIndex >= 0) threads[threadIndex].author?.uid else null
-            navigator.navigate(
-                IImageReaderScreen(
-                    tid = history.threadId,
-                    postId = null,
-                    fid = null,
-                    threadTitle = history.threadTitle,
-                    authorId = authorId,
-                    imageList = emptyList(),
-                    initialPage = 1,
-                    loadHistory = true,
-                    tagId = tagId,
-                    tagName = currentTagName,
-                    tagThreads = threads,
-                    tagPage = history.tagPage,
-                    tagTotalPages = pageNav?.totalPages ?: 1
+            scope.launch {
+                val historyThreads = if (history.tagPage == currentPage && threads.any { it.tid == history.threadId }) {
+                    threads
+                } else {
+                    val cached = tagRepository.getCachedTagPage(tagId, history.tagPage)
+                    val page = cached ?: when (val result = tagRepository.fetchTagPage(tagId, history.tagPage)) {
+                        is YamiboResult.Success -> {
+                            tagRepository.setCachedTagPage(tagId, history.tagPage, result.value)
+                            result.value
+                        }
+                        else -> null
+                    }
+                    page?.threadSummaries.orEmpty().ifEmpty { threads }
+                }
+                val threadIndex = historyThreads.indexOfFirst { it.tid == history.threadId }
+                val authorId = if (threadIndex >= 0) historyThreads[threadIndex].author?.uid else null
+                navigator.navigate(
+                    IImageReaderScreen(
+                        tid = history.threadId,
+                        postId = null,
+                        fid = null,
+                        threadTitle = history.threadTitle,
+                        authorId = authorId,
+                        imageList = emptyList(),
+                        initialPage = 1,
+                        loadHistory = true,
+                        tagId = tagId,
+                        tagName = currentTagName,
+                        tagThreads = historyThreads,
+                        tagPage = history.tagPage,
+                        tagTotalPages = pageNav?.totalPages ?: 1
+                    )
                 )
-            )
+            }
         } else if (history != null) {
             navigator.navigate(
                 IThreadReaderScreen(
