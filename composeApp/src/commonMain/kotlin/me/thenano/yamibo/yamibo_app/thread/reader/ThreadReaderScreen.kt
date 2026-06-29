@@ -404,6 +404,7 @@ internal fun ThreadReaderScreen(
     var showFavoriteRemoveSyncConfirm by remember { mutableStateOf(false) }
     var postBookMarkEntries by remember { mutableStateOf<Map<Long, BookMarkRepository.Entry>>(emptyMap()) }
     var catalogActionPost by remember { mutableStateOf<Post?>(null) }
+    var observedDownloadedPages by remember { mutableStateOf<Set<Int>?>(null) }
 
     suspend fun reloadPostBookMarks() {
         postBookMarkEntries = bookMarkRepository
@@ -1149,6 +1150,25 @@ internal fun ThreadReaderScreen(
             }
     }
 
+    LaunchedEffect(downloadQueue, tid, authorId) {
+        val downloadedPages = downloadQueue.mapNotNull {
+            val key = it.key as? ThreadPageDownloadKey ?: return@mapNotNull null
+            if (key.tid == tid.value && key.authorId == authorId?.value && it.status == DownloadStatus.Downloaded) {
+                key.page
+            } else {
+                null
+            }
+        }.toSet()
+        val previous = observedDownloadedPages
+        if (previous != null) {
+            val newlyDownloaded = (downloadedPages - previous).minOrNull()
+            if (newlyDownloaded != null) {
+                snackbarHostState.showSnackbar(i18n("下載完成：第 {} 頁", newlyDownloaded))
+            }
+        }
+        observedDownloadedPages = downloadedPages
+    }
+
     fun anchorIndexForPost(postId: Long, last: Boolean): Int? {
         var foundIndex: Int? = null
         readerEntries.forEachIndexed { index, entry ->
@@ -1811,20 +1831,12 @@ internal fun ThreadReaderScreen(
                                 showDownloadSheet = true
                             }
                         },
-                        downloadedPages = downloadQueue
-                            .filter {
-                                it.key.tid == tid.value &&
-                                    it.key.authorId == authorId?.value &&
-                                    it.status in setOf(DownloadStatus.Downloaded, DownloadStatus.UpdateAvailable)
+                        downloadEntriesByPage = downloadQueue
+                            .mapNotNull {
+                                val key = it.key as? ThreadPageDownloadKey ?: return@mapNotNull null
+                                if (key.tid == tid.value && key.authorId == authorId?.value) key.page to it else null
                             }
-                            .mapTo(mutableSetOf()) { it.key.page },
-                        updateAvailablePages = downloadQueue
-                            .filter {
-                                it.key.tid == tid.value &&
-                                    it.key.authorId == authorId?.value &&
-                                    it.status == DownloadStatus.UpdateAvailable
-                            }
-                            .mapTo(mutableSetOf()) { it.key.page },
+                            .toMap(),
                         onPostLongPress = { post -> catalogActionPost = post },
                         drawerOpen = drawerState.isOpen,
                     )
@@ -2427,11 +2439,13 @@ internal fun ThreadReaderScreen(
         }
 
         if (showDownloadSheet) {
-            val threadDownloadEntries = downloadQueue.filter {
-                it.key.tid == tid.value && it.key.authorId == authorId?.value
+            val threadDownloadEntries = downloadQueue.mapNotNull {
+                val key = it.key as? ThreadPageDownloadKey ?: return@mapNotNull null
+                if (key.tid == tid.value && key.authorId == authorId?.value) key to it else null
             }
             val pageStatus = threadDownloadEntries
-                .firstOrNull { it.key.page == downloadSheetPage }
+                .firstOrNull { it.first.page == downloadSheetPage }
+                ?.second
                 ?.status
                 ?: DownloadStatus.NotDownloaded
             val completedOrActiveStatuses = setOf(
@@ -2442,8 +2456,8 @@ internal fun ThreadReaderScreen(
                 DownloadStatus.UpdateAvailable,
             )
             val completedOrActivePages = threadDownloadEntries
-                .filter { it.status in completedOrActiveStatuses }
-                .mapTo(mutableSetOf()) { it.key.page }
+                .filter { it.second.status in completedOrActiveStatuses }
+                .mapTo(mutableSetOf()) { it.first.page }
             ReaderDownloadSheet(
                 onDismiss = { showDownloadSheet = false },
                 showDownloadPage = pageStatus == DownloadStatus.NotDownloaded ||
@@ -2797,8 +2811,7 @@ private fun ReaderCatalogPanelWithPosition(
     chapterStates: kotlinx.coroutines.flow.StateFlow<Map<Long, ChapterStateRepository.Entry>>,
     onPageOrPostClick: (Int, Post?) -> Unit,
     onDownload: () -> Unit,
-    downloadedPages: Set<Int>,
-    updateAvailablePages: Set<Int>,
+    downloadEntriesByPage: Map<Int, me.thenano.yamibo.yamibo_app.repository.download.DownloadQueueEntry>,
     onPostLongPress: (Post) -> Unit,
     drawerOpen: Boolean,
 ) {
@@ -2821,8 +2834,7 @@ private fun ReaderCatalogPanelWithPosition(
         currentPid = currentPosition.pid,
         bookmarkedPostIds = bookmarkedPostIds,
         readPostIds = readPostIds,
-        downloadedPages = downloadedPages,
-        updateAvailablePages = updateAvailablePages,
+        downloadEntriesByPage = downloadEntriesByPage,
         chapterStates = currentChapterStates,
         onPageOrPostClick = onPageOrPostClick,
         onDownload = onDownload,

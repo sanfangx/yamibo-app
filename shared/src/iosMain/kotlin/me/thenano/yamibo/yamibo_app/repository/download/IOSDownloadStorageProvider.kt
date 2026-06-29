@@ -61,7 +61,42 @@ class IOSDownloadStorageProvider(
     override suspend fun listManifests(): List<ThreadPageDownloadManifest> {
         val root = rootDir()
         if (!fileSystem.exists(root)) return emptyList()
-        return fileSystem.list(root).mapNotNull(::readManifest)
+        return fileSystem.list(root)
+            .filter { it.name.startsWith("thread_") }
+            .mapNotNull(::readManifest)
+    }
+
+    override suspend fun writeTagMangaChapter(
+        key: TagMangaChapterDownloadKey,
+        manifestBytes: ByteArray,
+        images: List<PendingDownloadedImage>,
+    ) {
+        val tagDir = rootDir() / key.tagStableId
+        fileSystem.createDirectories(tagDir)
+        val final = tagDir / key.chapterStableId
+        val tmp = tagDir / "${key.chapterStableId}.tmp"
+        if (fileSystem.exists(tmp)) fileSystem.deleteRecursively(tmp)
+        fileSystem.createDirectories(tmp / "images")
+        write(tmp / "manifest.json", manifestBytes)
+        images.forEach { write(tmp / "images" / it.fileName, it.bytes) }
+        if (fileSystem.exists(final)) fileSystem.deleteRecursively(final)
+        fileSystem.atomicMove(tmp, final)
+    }
+
+    override suspend fun resolveTagMangaImageUri(key: TagMangaChapterDownloadKey, fileName: String): String? {
+        val path = rootDir() / key.tagStableId / key.chapterStableId / "images" / fileName
+        return path.takeIf(fileSystem::exists)?.let { "file://$it" }
+    }
+
+    override suspend fun readTagMangaManifest(key: TagMangaChapterDownloadKey): TagMangaChapterManifest? =
+        readTagMangaManifest(rootDir() / key.tagStableId / key.chapterStableId)
+
+    override suspend fun listTagMangaManifests(): List<TagMangaChapterManifest> {
+        val root = rootDir()
+        if (!fileSystem.exists(root)) return emptyList()
+        return fileSystem.list(root)
+            .filter { it.name.startsWith("tag_manga_") }
+            .flatMap { tagDir -> fileSystem.list(tagDir).mapNotNull(::readTagMangaManifest) }
     }
 
     override suspend fun readQueue(): List<DownloadQueueEntry> {
@@ -95,6 +130,16 @@ class IOSDownloadStorageProvider(
             .forEach { fileSystem.deleteRecursively(it) }
     }
 
+    override suspend fun deleteTagMangaChapter(key: TagMangaChapterDownloadKey) {
+        val path = rootDir() / key.tagStableId / key.chapterStableId
+        if (fileSystem.exists(path)) fileSystem.deleteRecursively(path)
+    }
+
+    override suspend fun deleteTagManga(tagId: Int) {
+        val path = rootDir() / "tag_manga_$tagId"
+        if (fileSystem.exists(path)) fileSystem.deleteRecursively(path)
+    }
+
     private fun write(path: Path, bytes: ByteArray) {
         fileSystem.sink(path).buffer().use { it.write(bytes) }
     }
@@ -104,6 +149,13 @@ class IOSDownloadStorageProvider(
         if (!fileSystem.exists(path)) return null
         val bytes = fileSystem.source(path).buffer().use { it.readByteArray() }
         return runCatching { json.decodeFromString<ThreadPageDownloadManifest>(bytes.decodeToString()) }.getOrNull()
+    }
+
+    private fun readTagMangaManifest(dir: Path): TagMangaChapterManifest? {
+        val path = dir / "manifest.json"
+        if (!fileSystem.exists(path)) return null
+        val bytes = fileSystem.source(path).buffer().use { it.readByteArray() }
+        return runCatching { json.decodeFromString<TagMangaChapterManifest>(bytes.decodeToString()) }.getOrNull()
     }
 
     private fun rootDir(): Path = selectedFolder() / "YamiboDownloads"

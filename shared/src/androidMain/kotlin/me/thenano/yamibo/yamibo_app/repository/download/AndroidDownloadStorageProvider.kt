@@ -4,6 +4,8 @@ import android.content.Context
 import android.net.Uri
 import android.provider.DocumentsContract
 import android.content.Intent
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.encodeToString
 import me.thenano.yamibo.yamibo_app.repository.settings.AppSettingsRepository
@@ -86,6 +88,69 @@ class AndroidDownloadStorageProvider(
             .mapNotNull { readManifestFromDir(treeUri, it.uri) }
     }
 
+    override suspend fun writeTagMangaChapter(
+        key: TagMangaChapterDownloadKey,
+        manifestBytes: ByteArray,
+        images: List<PendingDownloadedImage>,
+    ) {
+        val treeUri = selectedTreeUri() ?: error("尚未選擇備份資料夾")
+        val root = ensureDirectory(treeUri, rootDocumentUri(treeUri), ROOT_DIR)
+        val tagDir = ensureDirectory(treeUri, root, key.tagStableId)
+        val tmpName = "${key.chapterStableId}.tmp"
+        deleteChildByName(treeUri, tagDir, tmpName)
+        val tmp = ensureDirectory(treeUri, tagDir, tmpName)
+        val imagesDir = ensureDirectory(treeUri, tmp, IMAGES_DIR)
+        writeFile(treeUri, tmp, "manifest.json", "application/json", manifestBytes)
+        images.forEach { writeFile(treeUri, imagesDir, it.fileName, "application/octet-stream", it.bytes) }
+        val previousName = "${key.chapterStableId}.previous"
+        deleteChildByName(treeUri, tagDir, previousName)
+        val current = findChild(treeUri, tagDir, key.chapterStableId)
+        val previous = current?.let { DocumentsContract.renameDocument(resolver, it, previousName) }
+        try {
+            DocumentsContract.renameDocument(resolver, tmp, key.chapterStableId)
+                ?: error("儲存提供者不支援完成下載檔案")
+            previous?.let { runCatching { DocumentsContract.deleteDocument(resolver, it) } }
+        } catch (error: Throwable) {
+            runCatching { DocumentsContract.deleteDocument(resolver, tmp) }
+            previous?.let { runCatching { DocumentsContract.renameDocument(resolver, it, key.chapterStableId) } }
+            throw error
+        }
+    }
+
+    override suspend fun resolveTagMangaImageUri(key: TagMangaChapterDownloadKey, fileName: String): String? = withContext(Dispatchers.IO) {
+        val treeUri = selectedTreeUri() ?: return@withContext null
+        val chapterDir = findTagMangaChapterDir(treeUri, key) ?: return@withContext null
+        val imagesDir = findChild(treeUri, chapterDir, IMAGES_DIR) ?: return@withContext null
+        return@withContext findChild(treeUri, imagesDir, fileName)?.toString()
+    }
+
+    override suspend fun resolveTagMangaImageUris(
+        key: TagMangaChapterDownloadKey,
+        fileNames: List<String>,
+    ): List<String> = withContext(Dispatchers.IO) {
+        val treeUri = selectedTreeUri() ?: return@withContext emptyList()
+        val chapterDir = findTagMangaChapterDir(treeUri, key) ?: return@withContext emptyList()
+        val imagesDir = findChild(treeUri, chapterDir, IMAGES_DIR) ?: return@withContext emptyList()
+        val childrenByName = listChildren(treeUri, imagesDir).associateBy { it.name }
+        fileNames.mapNotNull { childrenByName[it]?.uri?.toString() }
+    }
+
+    override suspend fun readTagMangaManifest(key: TagMangaChapterDownloadKey): TagMangaChapterManifest? = withContext(Dispatchers.IO) {
+        val treeUri = selectedTreeUri() ?: return@withContext null
+        val chapterDir = findTagMangaChapterDir(treeUri, key) ?: return@withContext null
+        return@withContext readTagMangaManifestFromDir(treeUri, chapterDir)
+    }
+
+    override suspend fun listTagMangaManifests(): List<TagMangaChapterManifest> {
+        val treeUri = selectedTreeUri() ?: return emptyList()
+        val root = downloadsRoot(treeUri) ?: return emptyList()
+        return listChildren(treeUri, root)
+            .filter { it.name.startsWith("tag_manga_") }
+            .flatMap { tagDir ->
+                listChildren(treeUri, tagDir.uri).mapNotNull { readTagMangaManifestFromDir(treeUri, it.uri) }
+            }
+    }
+
     override suspend fun readQueue(): List<DownloadQueueEntry> {
         val treeUri = selectedTreeUri() ?: return emptyList()
         val root = downloadsRoot(treeUri) ?: return emptyList()
@@ -121,6 +186,18 @@ class AndroidDownloadStorageProvider(
             .forEach { runCatching { DocumentsContract.deleteDocument(resolver, it.uri) } }
     }
 
+    override suspend fun deleteTagMangaChapter(key: TagMangaChapterDownloadKey) {
+        val treeUri = selectedTreeUri() ?: return
+        val tagDir = findTagMangaDir(treeUri, key.tagId) ?: return
+        deleteChildByName(treeUri, tagDir, key.chapterStableId)
+    }
+
+    override suspend fun deleteTagManga(tagId: Int) {
+        val treeUri = selectedTreeUri() ?: return
+        val root = downloadsRoot(treeUri) ?: return
+        deleteChildByName(treeUri, root, "tag_manga_$tagId")
+    }
+
     private fun selectedTreeUri(): Uri? =
         appSettingsRepository.backupFolderUri.getValue().takeIf { it.isNotBlank() }?.let(Uri::parse)
 
@@ -129,6 +206,12 @@ class AndroidDownloadStorageProvider(
 
     private fun downloadsRoot(treeUri: Uri): Uri? =
         findChild(treeUri, rootDocumentUri(treeUri), ROOT_DIR)
+
+    private fun findTagMangaDir(treeUri: Uri, tagId: Int): Uri? =
+        findChild(treeUri, downloadsRoot(treeUri) ?: return null, "tag_manga_$tagId")
+
+    private fun findTagMangaChapterDir(treeUri: Uri, key: TagMangaChapterDownloadKey): Uri? =
+        findChild(treeUri, findTagMangaDir(treeUri, key.tagId) ?: return null, key.chapterStableId)
 
     private fun ensureDirectory(treeUri: Uri, parent: Uri, name: String): Uri =
         findChild(treeUri, parent, name)
@@ -147,6 +230,12 @@ class AndroidDownloadStorageProvider(
         val file = findChild(treeUri, dir, "manifest.json") ?: return null
         val bytes = resolver.openInputStream(file)?.use { it.readBytes() } ?: return null
         return runCatching { json.decodeFromString<ThreadPageDownloadManifest>(bytes.decodeToString()) }.getOrNull()
+    }
+
+    private fun readTagMangaManifestFromDir(treeUri: Uri, dir: Uri): TagMangaChapterManifest? {
+        val file = findChild(treeUri, dir, "manifest.json") ?: return null
+        val bytes = resolver.openInputStream(file)?.use { it.readBytes() } ?: return null
+        return runCatching { json.decodeFromString<TagMangaChapterManifest>(bytes.decodeToString()) }.getOrNull()
     }
 
     private fun deleteChildByName(treeUri: Uri, parent: Uri, name: String) {

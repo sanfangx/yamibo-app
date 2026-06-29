@@ -25,6 +25,10 @@ import io.github.littlesurvival.dto.model.ThreadSummary
 import me.thenano.yamibo.yamibo_app.forum.components.StatBadge
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.i18n.i18n
+import me.thenano.yamibo.yamibo_app.repository.download.DownloadQueueEntry
+import me.thenano.yamibo.yamibo_app.repository.download.DownloadStage
+import me.thenano.yamibo.yamibo_app.repository.download.DownloadStatus
 import me.thenano.yamibo.yamibo_app.userspace.IUserSpaceScreen
 
 /** Thread card for the Tag Detail page */
@@ -37,6 +41,7 @@ fun TagThreadCard(
     readingProgressText: String? = null,
     bookmarked: Boolean = false,
     read: Boolean = false,
+    downloadEntry: DownloadQueueEntry? = null,
     onLongPress: (() -> Unit)? = null,
 ) {
     val colors = YamiboTheme.colors
@@ -105,6 +110,15 @@ fun TagThreadCard(
                         fontWeight = FontWeight.Medium,
                     )
                 }
+                if (downloadEntry != null) {
+                    val prefix = if (hasLeadingMetadata || readingProgressText != null) " · " else ""
+                    Text(
+                        text = prefix + tagMangaDownloadLabel(downloadEntry),
+                        fontSize = 12.sp,
+                        color = if (downloadEntry.status == DownloadStatus.Failed) colors.redAccent else colors.orangeAccent,
+                        fontWeight = FontWeight.Medium,
+                    )
+                }
             }
             Spacer(modifier = Modifier.height(4.dp))
 
@@ -142,6 +156,16 @@ fun TagThreadCard(
                         contentDescription = null,
                         tint = colors.orangeAccent,
                         modifier = Modifier.size(12.dp).padding(end = 3.dp),
+                    )
+                    Spacer(Modifier.width(3.dp))
+                }
+
+                if (downloadEntry?.status == DownloadStatus.Downloaded) {
+                    Icon(
+                        imageVector = YamiboIcons.Downloaded,
+                        contentDescription = i18n("已下載"),
+                        tint = colors.brownPrimary,
+                        modifier = Modifier.size(13.dp).padding(end = 3.dp),
                     )
                     Spacer(Modifier.width(3.dp))
                 }
@@ -194,4 +218,35 @@ fun TagThreadCard(
             }
         }
     }
+}
+
+private fun tagMangaDownloadLabel(entry: DownloadQueueEntry): String = when {
+    entry.status == DownloadStatus.Downloading && entry.stage != null -> when (entry.stage) {
+        DownloadStage.Preparing -> i18n("準備中")
+        DownloadStage.FetchingContent -> i18n("正在取得內容")
+        DownloadStage.DownloadingImages -> if (entry.progressTotal > 0) {
+            i18n("下載圖片 {}/{}", entry.progressCurrent, entry.progressTotal)
+        } else {
+            i18n("下載圖片")
+        }
+        DownloadStage.Saving -> i18n("儲存中")
+        DownloadStage.DownloadingText -> i18n("正在取得內容")
+        null -> i18n("下載中")
+    }
+    entry.status == DownloadStatus.Queued -> i18n("等待中")
+    entry.status == DownloadStatus.Downloaded -> i18n("已下載")
+    entry.status == DownloadStatus.Failed -> i18n("下載失敗")
+    entry.status == DownloadStatus.Paused -> i18n("已暫停")
+    entry.status == DownloadStatus.UpdateAvailable -> i18n("可刷新")
+    else -> i18n("未下載")
+}
+
+private fun downloadStatusLabel(status: DownloadStatus): String = when (status) {
+    DownloadStatus.NotDownloaded -> i18n("未下載")
+    DownloadStatus.Queued -> i18n("等待中")
+    DownloadStatus.Downloading -> i18n("下載中")
+    DownloadStatus.Downloaded -> i18n("已下載")
+    DownloadStatus.Failed -> i18n("下載失敗")
+    DownloadStatus.Paused -> i18n("已暫停")
+    DownloadStatus.UpdateAvailable -> i18n("可刷新")
 }

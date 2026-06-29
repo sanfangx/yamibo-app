@@ -26,6 +26,9 @@ import me.thenano.yamibo.yamibo_app.components.text.rememberConvertedText
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.repository.LocalChapterStateRepository
+import me.thenano.yamibo.yamibo_app.repository.download.DownloadQueueEntry
+import me.thenano.yamibo.yamibo_app.repository.download.DownloadStage
+import me.thenano.yamibo.yamibo_app.repository.download.DownloadStatus
 
 /** Catalog drawer panel showing pages and post-entries */
 @Composable
@@ -36,8 +39,7 @@ internal fun ReaderCatalogPanel(
     currentPid: PostId?,
     bookmarkedPostIds: Set<Long> = emptySet(),
     readPostIds: Set<Long> = emptySet(),
-    downloadedPages: Set<Int> = emptySet(),
-    updateAvailablePages: Set<Int> = emptySet(),
+    downloadEntriesByPage: Map<Int, DownloadQueueEntry> = emptyMap(),
     chapterStates: Map<Long, LocalChapterStateRepository.Entry> = emptyMap(),
     onPageOrPostClick: (Int, Post?) -> Unit,
     onDownload: () -> Unit,
@@ -148,8 +150,7 @@ internal fun ReaderCatalogPanel(
             for (page in 1..totalPages) {
                 val isExpanded = expandedPages.contains(page)
                 val isLoaded = loadedPostsByPage.containsKey(page)
-                val isDownloaded = page in downloadedPages
-                val updateAvailable = page in updateAvailablePages
+                val downloadEntry = downloadEntriesByPage[page]
 
                 // 1. Page Header Item
                 item(key = "page_header_$page") {
@@ -179,18 +180,18 @@ internal fun ReaderCatalogPanel(
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 16.sp
                                 )
-                                if (isDownloaded || updateAvailable) {
+                                if (downloadEntry != null && downloadEntry.status != DownloadStatus.NotDownloaded) {
                                     Spacer(Modifier.width(8.dp))
                                     Icon(
                                         imageVector = YamiboIcons.Downloaded,
                                         contentDescription = null,
-                                        tint = if (updateAvailable) colors.orangeAccent else colors.brownPrimary,
+                                        tint = if (downloadEntry.status == DownloadStatus.Failed) colors.redAccent else colors.orangeAccent,
                                         modifier = Modifier.size(16.dp),
                                     )
                                     Spacer(Modifier.width(4.dp))
                                     Text(
-                                        text = if (updateAvailable) i18n("可刷新") else i18n("已下載"),
-                                        color = if (updateAvailable) colors.orangeAccent else colors.brownPrimary,
+                                        text = catalogDownloadLabel(downloadEntry),
+                                        color = if (downloadEntry.status == DownloadStatus.Failed) colors.redAccent else colors.orangeAccent,
                                         fontSize = 12.sp,
                                     )
                                 }
@@ -313,4 +314,25 @@ private fun LocalChapterStateRepository.Entry.progressLabel(): String? {
     if (read) return null
     if (progressPercent <= 0) return null
     return i18n("已讀 {}%", progressPercent)
+}
+
+private fun catalogDownloadLabel(entry: DownloadQueueEntry): String = when {
+    entry.status == DownloadStatus.Downloading && entry.stage != null -> when (entry.stage) {
+        DownloadStage.Preparing -> i18n("準備中")
+        DownloadStage.FetchingContent -> i18n("正在取得內容")
+        DownloadStage.DownloadingText -> i18n("下載文字")
+        DownloadStage.DownloadingImages -> if (entry.progressTotal > 0) {
+            i18n("下載圖片 {}/{}", entry.progressCurrent, entry.progressTotal)
+        } else {
+            i18n("下載圖片")
+        }
+        DownloadStage.Saving -> i18n("儲存中")
+        null -> i18n("下載中")
+    }
+    entry.status == DownloadStatus.Queued -> i18n("等待中")
+    entry.status == DownloadStatus.Downloaded -> i18n("已下載")
+    entry.status == DownloadStatus.Failed -> i18n("下載失敗")
+    entry.status == DownloadStatus.Paused -> i18n("已暫停")
+    entry.status == DownloadStatus.UpdateAvailable -> i18n("可刷新")
+    else -> i18n("未下載")
 }

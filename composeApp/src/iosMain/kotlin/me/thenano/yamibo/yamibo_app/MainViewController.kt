@@ -118,6 +118,7 @@ fun MainViewController() = ComposeUIViewController {
     val downloadRepository = remember {
         DownloadRepositoryImpl(
             threadRepository = threadRepository,
+            tagRepository = tagRepository,
             storageProvider = IOSDownloadStorageProvider(appSettingsRepository),
             imageFetcher = DownloadImageFetcher { cookieStore.load().orEmpty() },
         )

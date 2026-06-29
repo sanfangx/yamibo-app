@@ -36,6 +36,7 @@ import me.thenano.yamibo.yamibo_app.repository.FavoriteUpdateRepository
 import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.repository.download.DownloadStatus
+import me.thenano.yamibo.yamibo_app.repository.download.ThreadPageDownloadKey
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.INovelThreadDetailScreen
 import me.thenano.yamibo.yamibo_app.thread.detail.tag.ITagDetailScreen
 import me.thenano.yamibo.yamibo_app.thread.reader.IThreadReaderScreen
@@ -297,7 +298,8 @@ fun UpdatesScreen() {
                             } else {
                                 items(filteredUpdateEvents, key = { it.id }) { event ->
                                     val threadDownloadEntries = downloadQueue.filter {
-                                        it.key.tid.toLong() == event.targetId && it.key.authorId?.toLong() == event.authorId
+                                        val key = it.key as? ThreadPageDownloadKey ?: return@filter false
+                                        key.tid.toLong() == event.targetId && key.authorId?.toLong() == event.authorId
                                     }
                                     val hasFailedDownload = threadDownloadEntries.any { it.status == DownloadStatus.Failed }
                                     val hasUpdateAvailable = threadDownloadEntries.any { it.status == DownloadStatus.UpdateAvailable }

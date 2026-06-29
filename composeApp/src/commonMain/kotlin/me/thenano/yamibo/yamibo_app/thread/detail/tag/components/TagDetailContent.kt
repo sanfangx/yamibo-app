@@ -13,6 +13,7 @@ import io.github.littlesurvival.dto.page.TagPage
 import me.thenano.yamibo.yamibo_app.forum.components.PageNavigation
 import me.thenano.yamibo.yamibo_app.repository.LocalChapterStateRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
+import me.thenano.yamibo.yamibo_app.repository.download.DownloadQueueEntry
 import me.thenano.yamibo.yamibo_app.thread.detail.components.DetailNoteCard
 
 /** Tag Detail Content (scrollable body) */
@@ -32,12 +33,15 @@ fun TagDetailContent(
     onFavorite: () -> Unit,
     onFavoriteLongPress: (() -> Unit)? = null,
     onShare: () -> Unit,
+    showDownloadAction: Boolean = false,
+    onDownload: () -> Unit = {},
     noteContent: String,
     onNoteClick: () -> Unit,
     onPageChange: (Int) -> Unit,
     onThreadClick: (ThreadSummary) -> Unit,
     bookmarkedThreadIds: Set<Long> = emptySet(),
     readThreadIds: Set<Long> = emptySet(),
+    downloadEntries: Map<Long, DownloadQueueEntry> = emptyMap(),
     chapterStates: Map<Long, LocalChapterStateRepository.Entry> = emptyMap(),
     tagMangaHistory: ReadHistoryRepository.TagMangaReadingHistory? = null,
     onThreadLongPress: (ThreadSummary) -> Unit = {},
@@ -65,6 +69,8 @@ fun TagDetailContent(
                 onFavorite = onFavorite,
                 onFavoriteLongPress = onFavoriteLongPress,
                 onShare = onShare,
+                showDownloadAction = showDownloadAction,
+                onDownload = onDownload,
                 noteContent = noteContent,
                 onNoteClick = onNoteClick,
             )
@@ -111,6 +117,7 @@ fun TagDetailContent(
                 bookmarked = threadId in bookmarkedThreadIds,
                 read = read,
                 readingProgressText = threadProgressText,
+                downloadEntry = downloadEntries[threadId],
                 onLongPress = { onThreadLongPress(thread) },
             )
         }

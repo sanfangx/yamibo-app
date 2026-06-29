@@ -54,6 +54,7 @@ import me.thenano.yamibo.yamibo_app.LocalChapterStateRepository
 import me.thenano.yamibo.yamibo_app.LocalContentCoverRepository
 import me.thenano.yamibo.yamibo_app.LocalReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.LocalMangaReaderSettingsRepository
+import me.thenano.yamibo.yamibo_app.LocalDownloadRepository
 import me.thenano.yamibo.yamibo_app.LocalTagRepository
 import me.thenano.yamibo.yamibo_app.LocalThreadRepository
 import me.thenano.yamibo.yamibo_app.components.tracking.ReadingTimeTracker
@@ -61,6 +62,8 @@ import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.LocalChapterStateRepository as ChapterStateRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.repository.ContentCoverRepository
+import me.thenano.yamibo.yamibo_app.repository.download.DownloadStatus
+import me.thenano.yamibo.yamibo_app.repository.download.TagMangaChapterDownloadKey
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.thread.image.ImageContextMenu
@@ -120,6 +123,8 @@ fun ImagesReaderScreen(
     val historyRepo = LocalReadHistoryRepository.current
     val contentCoverRepository = LocalContentCoverRepository.current
     val threadRepository = LocalThreadRepository.current
+    val downloadRepository = LocalDownloadRepository.current
+    val downloadQueue by downloadRepository.queue.collectAsState()
     val chapterStateRepository = LocalChapterStateRepository.current
     val platformContext = LocalPlatformContext.current
     ReadingTimeTracker()
@@ -208,6 +213,9 @@ fun ImagesReaderScreen(
     var showSettings by remember { mutableStateOf(false) }
     var showTouchZonePreview by remember { mutableStateOf(false) }
     var showContextMenu by remember { mutableStateOf(false) }
+    var showDownloadedRefreshConfirm by remember { mutableStateOf(false) }
+    var isDownloadedTagChapter by remember { mutableStateOf(false) }
+    var observedDownloadedTagChapter by remember { mutableStateOf<Boolean?>(null) }
     var contextMenuImageUrl by remember { mutableStateOf("") }
     // Tag Catalog State
     var showCatalog by remember { mutableStateOf(false) }
@@ -280,6 +288,7 @@ fun ImagesReaderScreen(
     var currentPage by remember { mutableIntStateOf(initialPage - 1) }
 
     var retryTrigger by remember { mutableIntStateOf(0) }
+    var forceNetworkLoadTrigger by remember { mutableIntStateOf(0) }
 
     var snapNextTransition by remember { mutableStateOf(false) }
 
@@ -294,9 +303,51 @@ fun ImagesReaderScreen(
         }
     }
 
-    LaunchedEffect(activeTid, retryTrigger) {
+    fun activeTagMangaDownloadKey(): TagMangaChapterDownloadKey? {
+        val currentTagId = tagId ?: return null
+        return TagMangaChapterDownloadKey(
+            tagId = currentTagId.value,
+            tid = activeTid.value,
+            authorId = activeAuthorId?.value,
+        )
+    }
+
+    LaunchedEffect(downloadQueue, activeTid, activeAuthorId, tagId) {
+        val key = activeTagMangaDownloadKey()
+        val downloaded = key != null && downloadQueue.any {
+            it.key == key && it.status == DownloadStatus.Downloaded
+        }
+        val previous = observedDownloadedTagChapter
+        if (previous == false && downloaded) {
+            snackbarHostState.showSnackbar(i18n("下載完成"))
+        }
+        observedDownloadedTagChapter = downloaded
+    }
+
+    LaunchedEffect(activeTid, retryTrigger, forceNetworkLoadTrigger) {
         if (actualImageList.isEmpty()) {
             isLoadingImages = true
+
+            val downloadKey = activeTagMangaDownloadKey()
+            if (downloadKey != null && forceNetworkLoadTrigger == 0) {
+                val localImages = downloadRepository.getTagMangaChapterImages(downloadKey)
+                if (!localImages.isNullOrEmpty()) {
+                    actualPostId = null
+                    actualImageList = localImages
+                    isDownloadedTagChapter = true
+                    currentPage = currentPage.coerceIn(minPage(), maxPage())
+                    if (loadHistory && restoreHistoryForActiveThread) {
+                        val history = historyRepo.getTagMangaReaderModeHistoryPosition(TagId(downloadKey.tagId))
+                        if (history != null && history.threadId == activeTid) {
+                            snapNextTransition = true
+                            currentPage = history.threadImagePageIndex.coerceIn(0, (localImages.size - 1).coerceAtLeast(0))
+                        }
+                    }
+                    restoreHistoryForActiveThread = false
+                    isLoadingImages = false
+                    return@LaunchedEffect
+                }
+            }
             
             suspend fun processThreadResult(result: YamiboResult<ThreadPage>? = null, cached: ThreadPage? = null) {
                 val threadPage = cached ?: (result as? YamiboResult.Success)?.value
@@ -307,6 +358,7 @@ fun ImagesReaderScreen(
                         val targetAuthorId = activeAuthorId ?: p.author.uid
                         val authorPosts = threadPage.posts.filter { it.author.uid == targetAuthorId }.take(2)
                         actualImageList = authorPosts.flatMap { it.images }.map { it.url }
+                        isDownloadedTagChapter = false
                         
                         // Coerce the initial page against the actual loaded bounds now
                         currentPage = currentPage.coerceIn(minPage(), maxPage())
@@ -384,12 +436,13 @@ fun ImagesReaderScreen(
                 }
             }
 
-            val cachedPage = threadRepository.getCachedThread(activeTid, null, 1)
+            val cachedPage = if (forceNetworkLoadTrigger == 0) threadRepository.getCachedThread(activeTid, null, 1) else null
             if (cachedPage != null) {
                 processThreadResult(cached = cachedPage)
             } else {
                 processThreadResult(result = threadRepository.fetchThread(activeTid, null, 1))
             }
+            forceNetworkLoadTrigger = 0
         }
     }
 
@@ -1145,8 +1198,55 @@ fun ImagesReaderScreen(
             onShare = {
                 val url = YamiboRoute.Thread(activeTid).build()
                 shareText(platformContext, url, activeTitle)
-            }
+            },
+            onRefresh = if (tagId != null && isDownloadedTagChapter) { { showDownloadedRefreshConfirm = true } } else null,
         )
+
+        if (showDownloadedRefreshConfirm) {
+            AlertDialog(
+                onDismissRequest = { showDownloadedRefreshConfirm = false },
+                title = { Text(i18n("重新整理下載內容"), color = YamiboTheme.colors.textStrong) },
+                text = {
+                    Text(
+                        i18n("將從網站重新抓取此章圖片，成功後覆蓋本地下載；失敗會保留舊內容。"),
+                        color = YamiboTheme.colors.textDark,
+                    )
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            showDownloadedRefreshConfirm = false
+                            val key = activeTagMangaDownloadKey()
+                            if (key != null) {
+                                scope.launch {
+                                    isLoadingImages = true
+                                    when (val result = downloadRepository.refreshTagMangaChapter(key)) {
+                                        is YamiboResult.Success -> {
+                                            actualImageList = result.value
+                                            isDownloadedTagChapter = true
+                                            currentPage = currentPage.coerceIn(0, (actualImageList.size - 1).coerceAtLeast(0))
+                                            snackbarHostState.showSnackbar(i18n("已重新整理下載"))
+                                        }
+                                        else -> {
+                                            snackbarHostState.showSnackbar(i18n("重新整理下載失敗：{}", i18n(result.message())))
+                                        }
+                                    }
+                                    isLoadingImages = false
+                                }
+                            }
+                        },
+                    ) {
+                        Text(i18n("重新整理"), color = YamiboTheme.colors.brownPrimary)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDownloadedRefreshConfirm = false }) {
+                        Text(i18n("取消"), color = YamiboTheme.colors.textDark)
+                    }
+                },
+                containerColor = YamiboTheme.colors.creamSurface,
+            )
+        }
 
         // Catalog Panel
         if (tagId != null) {

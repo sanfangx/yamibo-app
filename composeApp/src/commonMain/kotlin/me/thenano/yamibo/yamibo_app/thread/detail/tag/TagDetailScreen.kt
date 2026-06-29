@@ -26,8 +26,12 @@ import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.DetailNoteRepository
 import me.thenano.yamibo.yamibo_app.repository.ContentCoverRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
+import me.thenano.yamibo.yamibo_app.repository.download.DownloadQueueEntry
+import me.thenano.yamibo.yamibo_app.repository.download.DownloadStatus
+import me.thenano.yamibo.yamibo_app.repository.download.TagMangaChapterDownloadKey
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.profile.settings.backup.IBackupSettingsScreen
 import me.thenano.yamibo.yamibo_app.thread.detail.components.DetailNoteEditorDialog
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.INovelThreadDetailScreen
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.components.ThreadErrorContent
@@ -65,6 +69,8 @@ internal fun TagDetailScreen(
     val chapterStateRepository = LocalChapterStateRepository.current
     val historyRepo = LocalReadHistoryRepository.current
     val contentCoverRepository = LocalContentCoverRepository.current
+    val downloadRepository = LocalDownloadRepository.current
+    val downloadQueue by downloadRepository.queue.collectAsState()
     val platformContext = LocalPlatformContext.current
 
     val scope = rememberCoroutineScope()
@@ -94,10 +100,35 @@ internal fun TagDetailScreen(
     var threadBookMarkEntries by remember { mutableStateOf<Map<Long, BookMarkRepository.Entry>>(emptyMap()) }
     var threadChapterStates by remember { mutableStateOf<Map<Long, ChapterStateRepository.Entry>>(emptyMap()) }
     var actionThread by remember { mutableStateOf<ThreadSummary?>(null) }
+    var showDownloadSheet by remember { mutableStateOf(false) }
 
     val appSettingsRepo = LocalAppSettingsRepository.current
     val isMangaMode = appSettingsRepo.isMangaMode.state()
     val stackSize = navigator.stack.size
+
+    fun tagMangaKey(thread: ThreadSummary): TagMangaChapterDownloadKey {
+        return TagMangaChapterDownloadKey(
+            tagId = tagId.value,
+            tid = thread.tid.value,
+            authorId = thread.author?.uid?.value,
+        )
+    }
+
+    suspend fun ensureDownloadStorageReady(): Boolean {
+        if (downloadRepository.isStorageReady()) return true
+        snackbarHostState.showSnackbar(i18n("尚未設定下載資料夾"))
+        navigator.navigate(IBackupSettingsScreen())
+        return false
+    }
+
+    val tagMangaDownloadEntries = remember(downloadQueue, tagId) {
+        downloadQueue
+            .mapNotNull { entry ->
+                val key = entry.key as? TagMangaChapterDownloadKey ?: return@mapNotNull null
+                if (key.tagId == tagId.value) key.tid.toLong() to entry else null
+            }
+            .toMap()
+    }
 
     suspend fun reloadThreadBookMarks() {
         threadBookMarkEntries = bookMarkRepository
@@ -251,9 +282,14 @@ internal fun TagDetailScreen(
         if (isMangaMode && isManga) {
             val threadState = threadChapterStates[thread.tid.value.toLong()]
             val threadHistory = mangaTagHistory?.takeIf { it.threadId == thread.tid }
-            val initialImagePage = threadState?.lastPageIndex?.plus(1)
-                ?: threadHistory?.threadImagePageIndex?.plus(1)
-                ?: 1
+            val isCompleted = threadState?.read == true
+            val initialImagePage = if (isCompleted) {
+                1
+            } else {
+                threadState?.lastPageIndex?.plus(1)
+                    ?: threadHistory?.threadImagePageIndex?.plus(1)
+                    ?: 1
+            }
             navigator.navigate(
                 IImageReaderScreen(
                     tid = thread.tid,
@@ -263,7 +299,7 @@ internal fun TagDetailScreen(
                     authorId = thread.author?.uid,
                     imageList = emptyList(),
                     initialPage = initialImagePage.coerceAtLeast(1),
-                    loadHistory = threadHistory != null,
+                    loadHistory = !isCompleted && threadHistory != null,
                     tagId = tagId,
                     tagName = currentTagName,
                     tagThreads = threads,
@@ -437,6 +473,8 @@ internal fun TagDetailScreen(
                                 val url = YamiboRoute.TagPage(tagId).build()
                                 shareText(platformContext, url, currentTagName)
                             },
+                            showDownloadAction = isMangaMode,
+                            onDownload = { showDownloadSheet = true },
                             noteContent = detailNote?.content.orEmpty(),
                             onNoteClick = { showNoteDialog = true },
                             onPageChange = { page ->
@@ -455,12 +493,74 @@ internal fun TagDetailScreen(
                                 .filter { it.bookmarked }
                                 .mapTo(mutableSetOf()) { it.targetId },
                             readThreadIds = emptySet(),
+                            downloadEntries = tagMangaDownloadEntries,
                             chapterStates = threadChapterStates,
                             tagMangaHistory = mangaTagHistory,
                             onThreadLongPress = { actionThread = it },
                         )
                     }
                 }
+            }
+        }
+    }
+
+    if (showDownloadSheet) {
+        val currentState = state as? TagDetailState.Success
+        val currentThreads = currentState?.page?.threadSummaries.orEmpty()
+        val currentPageHasDownloads = currentThreads.any { tagMangaDownloadEntries.containsKey(it.tid.value.toLong()) }
+        ModalBottomSheet(
+            onDismissRequest = { showDownloadSheet = false },
+            containerColor = colors.creamSurface,
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Text(i18n("標籤漫畫下載"), color = colors.textStrong, style = MaterialTheme.typography.titleMedium)
+                YamiboActionRow(i18n("下載目前分頁")) {
+                    showDownloadSheet = false
+                    scope.launch {
+                        if (!ensureDownloadStorageReady()) return@launch
+                        downloadRepository.enqueueTagMangaCurrentPage(
+                            tagId = tagId,
+                            tagName = currentTagName,
+                            threads = currentThreads,
+                            tagPage = currentPage,
+                        ).onFailure {
+                            snackbarHostState.showSnackbar(it.message ?: i18n("加入下載失敗"))
+                        }
+                    }
+                }
+                YamiboActionRow(i18n("下載全部分頁")) {
+                    showDownloadSheet = false
+                    scope.launch {
+                        if (!ensureDownloadStorageReady()) return@launch
+                        downloadRepository.enqueueTagMangaAllPages(tagId, currentTagName)
+                            .onFailure { snackbarHostState.showSnackbar(it.message ?: i18n("加入下載失敗")) }
+                    }
+                }
+                if (currentPageHasDownloads) {
+                    YamiboActionRow(i18n("清除目前分頁下載")) {
+                        showDownloadSheet = false
+                        scope.launch {
+                            currentThreads.forEach { downloadRepository.clearTagMangaChapter(tagMangaKey(it)) }
+                            snackbarHostState.showSnackbar(i18n("已清除目前分頁下載"))
+                        }
+                    }
+                }
+                if (tagMangaDownloadEntries.isNotEmpty()) {
+                    YamiboActionRow(i18n("清除整個標籤下載")) {
+                        showDownloadSheet = false
+                        scope.launch {
+                            downloadRepository.clearTagManga(tagId)
+                            snackbarHostState.showSnackbar(i18n("已清除整個標籤下載"))
+                        }
+                    }
+                }
+                Spacer(Modifier.height(4.dp))
             }
         }
     }
@@ -599,10 +699,14 @@ internal fun TagDetailScreen(
     actionThread?.let { thread ->
         val entry = threadBookMarkEntries[thread.tid.value.toLong()]
         val chapterState = threadChapterStates[thread.tid.value.toLong()]
+        val downloadEntry = tagMangaDownloadEntries[thread.tid.value.toLong()]
+        val downloadKey = tagMangaKey(thread)
         BookMarkActionDialog(
             bookmarked = entry?.bookmarked == true,
             read = chapterState?.read == true,
             hasProgress = chapterState?.hasProgress == true,
+            showDownloadActions = isMangaMode,
+            downloadStatus = downloadEntry?.status,
             onDismiss = { actionThread = null },
             onToggleBookMark = {
                 actionThread = null
@@ -665,6 +769,39 @@ internal fun TagDetailScreen(
                     snackbarHostState.showSnackbar(i18n("已清除閱讀紀錄"), duration = SnackbarDuration.Short)
                 }
             },
+            onDownloadChapter = {
+                actionThread = null
+                scope.launch {
+                    if (!ensureDownloadStorageReady()) return@launch
+                    downloadRepository.enqueueTagMangaChapter(tagId, currentTagName, thread, currentPage)
+                        .onFailure { snackbarHostState.showSnackbar(it.message ?: i18n("加入下載失敗")) }
+                }
+            },
+            onRefreshChapter = {
+                actionThread = null
+                scope.launch {
+                    if (!ensureDownloadStorageReady()) return@launch
+                    when (val result = downloadRepository.refreshTagMangaChapter(downloadKey)) {
+                        is YamiboResult.Success -> snackbarHostState.showSnackbar(i18n("已重新整理下載"))
+                        else -> snackbarHostState.showSnackbar(i18n("重新整理下載失敗：{}", i18n(result.message())))
+                    }
+                }
+            },
+            onRetryChapter = {
+                actionThread = null
+                scope.launch {
+                    if (!ensureDownloadStorageReady()) return@launch
+                    downloadRepository.retry(downloadKey)
+                        .onFailure { snackbarHostState.showSnackbar(it.message ?: i18n("重試失敗")) }
+                }
+            },
+            onClearChapterDownload = {
+                actionThread = null
+                scope.launch {
+                    downloadRepository.clearTagMangaChapter(downloadKey)
+                    snackbarHostState.showSnackbar(i18n("已清除此章下載"), duration = SnackbarDuration.Short)
+                }
+            },
         )
     }
 }
@@ -674,11 +811,17 @@ private fun BookMarkActionDialog(
     bookmarked: Boolean,
     read: Boolean,
     hasProgress: Boolean,
+    showDownloadActions: Boolean,
+    downloadStatus: DownloadStatus?,
     onDismiss: () -> Unit,
     onToggleBookMark: () -> Unit,
     onMarkRead: () -> Unit,
     onMarkUnread: () -> Unit,
     onClearHistory: () -> Unit,
+    onDownloadChapter: () -> Unit,
+    onRefreshChapter: () -> Unit,
+    onRetryChapter: () -> Unit,
+    onClearChapterDownload: () -> Unit,
 ) {
     val colors = YamiboTheme.colors
     AlertDialog(
@@ -696,6 +839,28 @@ private fun BookMarkActionDialog(
                     YamiboActionRow(i18n("標為已讀"), onMarkRead)
                 }
                 YamiboActionRow(i18n("清除閱讀紀錄"), onClearHistory)
+                if (showDownloadActions) {
+                    if (downloadStatus != null) {
+                        when (downloadStatus) {
+                            DownloadStatus.Failed -> {
+                                YamiboActionRow(i18n("重試下載"), onRetryChapter)
+                                YamiboActionRow(i18n("清除此章下載"), onClearChapterDownload)
+                            }
+                            DownloadStatus.Downloaded, DownloadStatus.UpdateAvailable -> {
+                                YamiboActionRow(i18n("重新整理此章"), onRefreshChapter)
+                                YamiboActionRow(i18n("清除此章下載"), onClearChapterDownload)
+                            }
+                            DownloadStatus.Queued, DownloadStatus.Downloading, DownloadStatus.Paused -> {
+                                YamiboActionRow(i18n("清除此章下載"), onClearChapterDownload)
+                            }
+                            DownloadStatus.NotDownloaded -> {
+                                YamiboActionRow(i18n("下載此章"), onDownloadChapter)
+                            }
+                        }
+                    } else {
+                        YamiboActionRow(i18n("下載此章"), onDownloadChapter)
+                    }
+                }
             }
         },
         confirmButton = {},

@@ -305,7 +305,7 @@ fun ProfilePage(
             )
 
             EntryCard(
-                title = i18n("下載佇列"),
+                title = i18n("下載管理"),
                 icon = YamiboIcons.Download,
                 showBadge = downloadQueue.any { it.status == DownloadStatus.Failed || it.status == DownloadStatus.UpdateAvailable },
                 onClick = { navigator.navigate(IDownloadQueueScreen()) }

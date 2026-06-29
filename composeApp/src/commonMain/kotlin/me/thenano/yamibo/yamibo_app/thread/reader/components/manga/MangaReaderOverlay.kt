@@ -44,6 +44,7 @@ fun MangaReaderOverlay(
     onNavigateToThread: (() -> Unit)? = null,
     subtitle: String? = null,
     onShare: (() -> Unit)? = null,
+    onRefresh: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val colors = YamiboTheme.colors
@@ -206,6 +207,22 @@ fun MangaReaderOverlay(
                                 Icon(
                                     imageVector = YamiboIcons.Share,
                                     contentDescription = i18n("分享"),
+                                    tint = Color.White,
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
+                        }
+
+                        if (onRefresh != null) {
+                            IconButton(
+                                onClick = onRefresh,
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .background(Color.Transparent, CircleShape)
+                            ) {
+                                Icon(
+                                    imageVector = YamiboIcons.Reload,
+                                    contentDescription = i18n("重新整理"),
                                     tint = Color.White,
                                     modifier = Modifier.size(28.dp)
                                 )

@@ -38,6 +38,8 @@ fun TagDetailHeaderCard(
     onFavorite: () -> Unit,
     onFavoriteLongPress: (() -> Unit)? = null,
     onShare: () -> Unit,
+    showDownloadAction: Boolean = false,
+    onDownload: () -> Unit = {},
     noteContent: String = "",
     onNoteClick: () -> Unit = {},
 ) {
@@ -195,6 +197,23 @@ fun TagDetailHeaderCard(
                             modifier = Modifier.size(22.dp),
                             tint = colors.brownDeep
                         )
+                    }
+                }
+
+                if (showDownloadAction) {
+                    Surface(
+                        onClick = onDownload,
+                        shape = RoundedCornerShape(12.dp),
+                        color = colors.brownPrimary.copy(alpha = 0.1f)
+                    ) {
+                        Box(Modifier.padding(10.dp), contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = YamiboIcons.Download,
+                                contentDescription = i18n("下載"),
+                                modifier = Modifier.size(22.dp),
+                                tint = colors.brownDeep
+                            )
+                        }
                     }
                 }
 

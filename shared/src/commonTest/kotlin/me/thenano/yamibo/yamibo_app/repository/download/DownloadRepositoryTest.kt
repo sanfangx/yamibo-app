@@ -4,6 +4,7 @@ import io.github.littlesurvival.core.YamiboResult
 import io.github.littlesurvival.dto.model.ForumSummary
 import io.github.littlesurvival.dto.model.PageNav
 import io.github.littlesurvival.dto.model.Tags
+import io.github.littlesurvival.dto.model.ThreadSummary
 import io.github.littlesurvival.dto.model.TimeInfo
 import io.github.littlesurvival.dto.model.User
 import io.github.littlesurvival.dto.page.Post
@@ -12,6 +13,7 @@ import io.github.littlesurvival.dto.page.RatePopoutPage
 import io.github.littlesurvival.dto.page.RateResultPopoutPage
 import io.github.littlesurvival.dto.page.ThreadInfo
 import io.github.littlesurvival.dto.page.ThreadPage
+import io.github.littlesurvival.dto.page.TagPage
 import io.github.littlesurvival.dto.page.VotersPopoutScreen
 import io.github.littlesurvival.dto.value.FormHash
 import io.github.littlesurvival.dto.value.ForumId
@@ -19,11 +21,13 @@ import io.github.littlesurvival.dto.value.PollOptionId
 import io.github.littlesurvival.dto.value.PostId
 import io.github.littlesurvival.dto.value.ThreadId
 import io.github.littlesurvival.dto.value.UserId
+import io.github.littlesurvival.dto.value.TagId
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import me.thenano.yamibo.yamibo_app.repository.TagRepository
 import me.thenano.yamibo.yamibo_app.repository.ThreadRepository
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -235,32 +239,207 @@ class DownloadRepositoryTest {
         Unit
     }
 
+    @Test
+    fun tagMangaKeyIsStableAndSeparatedFromThreadPageDownloads() {
+        val key = TagMangaChapterDownloadKey(tagId = 8, tid = 42, authorId = 7)
+
+        assertEquals("tag_manga_8_chapter_42_author_7", key.stableId)
+        assertEquals("tag_manga_8", key.tagStableId)
+        assertEquals("chapter_42_author_7", key.chapterStableId)
+    }
+
+    @Test
+    fun tagMangaCurrentPageQueuesOnlyVisibleThreads() = runBlocking {
+        val storage = FakeStorage()
+        val repository = repository(
+            FakeThreadRepository(
+                pages = mutableMapOf(
+                    1 to YamiboResult.Success(page(42, 1, 1, "https://img/42.jpg")),
+                ),
+            ),
+            storage,
+        )
+        val thread = summary(42, "chapter")
+
+        repository.enqueueTagMangaCurrentPage(TagId(8), "tag", listOf(thread), 3).getOrThrow()
+        awaitStatus(repository, TagMangaChapterDownloadKey(8, 42, 7), DownloadStatus.Downloaded)
+
+        assertEquals(setOf(TagMangaChapterDownloadKey(8, 42, 7)), storage.tagManifests.keys)
+        assertEquals(3, storage.tagManifests.getValue(TagMangaChapterDownloadKey(8, 42, 7)).tagPage)
+    }
+
+    @Test
+    fun tagMangaRefreshFailureKeepsExistingImages() = runBlocking {
+        val key = TagMangaChapterDownloadKey(8, 42, 7)
+        val storage = FakeStorage()
+        storage.seedTag(
+            key,
+            TagMangaChapterManifest(
+                key = key,
+                tagName = "tag",
+                tid = 42,
+                title = "old",
+                authorId = 7,
+                tagPage = 1,
+                imageCount = 1,
+                downloadedAt = 1,
+                images = listOf(DownloadedImage("https://old/a.jpg", "0001.jpg", 3)),
+            ),
+            mapOf("0001.jpg" to "content://tag/0001.jpg"),
+        )
+        val repository = repository(
+            FakeThreadRepository(pages = mutableMapOf(1 to YamiboResult.Failure("network failed"))),
+            storage,
+        )
+
+        val result = repository.refreshTagMangaChapter(key)
+
+        assertIs<YamiboResult.Failure>(result)
+        assertEquals("old", storage.tagManifests.getValue(key).title)
+        assertEquals(listOf("content://tag/0001.jpg"), repository.getTagMangaChapterImages(key))
+    }
+
+    @Test
+    fun threadDownloadPublishesStageAndImageProgress() = runBlocking {
+        val key = ThreadPageDownloadKey(42, 1)
+        val snapshots = mutableListOf<DownloadQueueEntry>()
+        val repository = repository(
+            FakeThreadRepository(
+                pages = mutableMapOf(
+                    1 to YamiboResult.Success(page(42, 1, 1, "https://img/a.jpg", "https://img/b.jpg")),
+                ),
+            ),
+            FakeStorage(),
+            backgroundController = DownloadBackgroundController { entries ->
+                entries.firstOrNull { it.key == key }?.let { snapshots += it }
+            },
+        )
+
+        repository.enqueuePage(ThreadId(42), "title", null, 1).getOrThrow()
+        awaitStatus(repository, key, DownloadStatus.Downloaded)
+
+        assertTrue(snapshots.any { it.stage == DownloadStage.Preparing })
+        assertTrue(snapshots.any { it.stage == DownloadStage.FetchingContent })
+        assertTrue(snapshots.any { it.stage == DownloadStage.DownloadingText })
+        assertTrue(snapshots.any {
+            it.stage == DownloadStage.DownloadingImages &&
+                it.progressCurrent == 2 &&
+                it.progressTotal == 2
+        })
+        assertTrue(snapshots.any { it.stage == DownloadStage.Saving })
+    }
+
+    @Test
+    fun tagMangaDownloadPublishesImageProgressWithoutTextStage() = runBlocking {
+        val key = TagMangaChapterDownloadKey(8, 42, 7)
+        val snapshots = mutableListOf<DownloadQueueEntry>()
+        val repository = repository(
+            FakeThreadRepository(
+                pages = mutableMapOf(
+                    1 to YamiboResult.Success(page(42, 1, 1, "https://img/a.jpg", "https://img/b.jpg")),
+                ),
+            ),
+            FakeStorage(),
+            backgroundController = DownloadBackgroundController { entries ->
+                entries.firstOrNull { it.key == key }?.let { snapshots += it }
+            },
+        )
+
+        repository.enqueueTagMangaChapter(TagId(8), "tag", summary(42, "chapter"), 1).getOrThrow()
+        awaitStatus(repository, key, DownloadStatus.Downloaded)
+
+        assertTrue(snapshots.none { it.stage == DownloadStage.DownloadingText })
+        assertTrue(snapshots.any { it.stage == DownloadStage.FetchingContent })
+        assertTrue(snapshots.any {
+            it.stage == DownloadStage.DownloadingImages &&
+                it.progressCurrent == 2 &&
+                it.progressTotal == 2
+        })
+        assertTrue(snapshots.any { it.stage == DownloadStage.Saving })
+    }
+
+    @Test
+    fun downloadedContentSummaryAndGroupsUseManifestImageSizes() = runBlocking {
+        val threadKey = ThreadPageDownloadKey(42, 2)
+        val tagKey = TagMangaChapterDownloadKey(8, 50, 7)
+        val storage = FakeStorage()
+        storage.seed(
+            threadKey,
+            ThreadPageDownloadManifest(
+                key = threadKey,
+                title = "thread",
+                downloadedAt = 1,
+                sourceTotalPages = 3,
+                pageKind = DownloadPageKind.Normal,
+                images = listOf(DownloadedImage("https://img/a.jpg", "0000.jpg", 10)),
+            ),
+            page(42, 2, 3),
+        )
+        storage.seedTag(
+            tagKey,
+            TagMangaChapterManifest(
+                key = tagKey,
+                tagName = "tag",
+                title = "chapter",
+                tagPage = 4,
+                imageCount = 2,
+                downloadedAt = 2,
+                images = listOf(
+                    DownloadedImage("https://img/b.jpg", "0001.jpg", 20),
+                    DownloadedImage("https://img/c.jpg", "0002.jpg", 30),
+                ),
+            ),
+        )
+        val repository = repository(FakeThreadRepository(), storage)
+
+        val summary = repository.getDownloadedContentSummary()
+        val groups = repository.getDownloadedContentGroups()
+
+        assertEquals(2, summary.totalItems)
+        assertEquals(1, summary.threadPages)
+        assertEquals(1, summary.tagMangaChapters)
+        assertEquals(3, summary.imageCount)
+        assertEquals(60, summary.imageBytes)
+        assertEquals(setOf(DownloadedContentGroupType.Thread, DownloadedContentGroupType.TagManga), groups.map { it.type }.toSet())
+        assertTrue(groups.any { it.title == "thread" && it.imageBytes == 10L })
+        assertTrue(groups.any { it.title == "#tag" && it.imageBytes == 50L })
+    }
+
     private fun repository(
         threadRepository: ThreadRepository,
         storage: FakeStorage,
-    ) = DownloadRepositoryImpl(
-        threadRepository = threadRepository,
-        storageProvider = storage,
-        imageFetcher = object : DownloadImageFetcher({ "" }) {
+        tagRepository: TagRepository? = null,
+        imageFetcher: DownloadImageFetcher = object : DownloadImageFetcher({ "" }) {
             override suspend fun fetch(url: String): ByteArray = byteArrayOf(1, 2, 3)
         },
+        backgroundController: DownloadBackgroundController = DownloadBackgroundController.None,
+    ) = DownloadRepositoryImpl(
+        threadRepository = threadRepository,
+        tagRepository = tagRepository,
+        storageProvider = storage,
+        imageFetcher = imageFetcher,
+        backgroundController = backgroundController,
         json = json,
     )
 
     private suspend fun awaitStatus(
         repository: DownloadRepository,
-        key: ThreadPageDownloadKey,
+        key: DownloadTaskKey,
         expected: DownloadStatus,
     ) {
         repeat(200) {
-            if (repository.getStatus(key) == expected) return
+            val actual = when (key) {
+                is ThreadPageDownloadKey -> repository.getStatus(key)
+                is TagMangaChapterDownloadKey -> repository.getStatus(key)
+            }
+            if (actual == expected) return
             delay(10)
         }
         error("Timed out waiting for $key to become $expected. Queue=${repository.queue.value}")
     }
 
-    private fun page(tid: Int, currentPage: Int, totalPages: Int, image: String? = null): ThreadPage {
-        val source = image ?: ""
+    private fun page(tid: Int, currentPage: Int, totalPages: Int, vararg images: String): ThreadPage {
+        val sources = images.toList()
         return ThreadPage(
             thread = ThreadInfo(
                 tid = ThreadId(tid),
@@ -274,8 +453,8 @@ class DownloadRepositoryTest {
                     title = "",
                     author = User(UserId(7), "author"),
                     timeCreate = TimeInfo("2026-01-01", null, 0),
-                    contentHtml = if (source.isBlank()) "" else "<img src=\"$source\">",
-                    images = if (source.isBlank()) emptyList() else listOf(PostImage(source)),
+                    contentHtml = sources.joinToString("") { "<img src=\"$it\">" },
+                    images = sources.map { PostImage(it) },
                     tags = Tags(),
                     poll = null,
                 ),
@@ -284,10 +463,23 @@ class DownloadRepositoryTest {
         )
     }
 
+    private fun summary(tid: Int, title: String): ThreadSummary {
+        return ThreadSummary(
+            tid = ThreadId(tid),
+            title = title,
+            fid = ForumId(1),
+            hasPoll = false,
+            url = "forum.php?mod=viewthread&tid=$tid",
+            author = User(UserId(7), "author"),
+        )
+    }
+
     private class FakeStorage : DownloadStorageProvider {
         val manifests = mutableMapOf<ThreadPageDownloadKey, ThreadPageDownloadManifest>()
         val pages = mutableMapOf<ThreadPageDownloadKey, ByteArray>()
+        val tagManifests = mutableMapOf<TagMangaChapterDownloadKey, TagMangaChapterManifest>()
         private val imageUris = mutableMapOf<Pair<ThreadPageDownloadKey, String>, String>()
+        private val tagImageUris = mutableMapOf<Pair<TagMangaChapterDownloadKey, String>, String>()
         private var queue = emptyList<DownloadQueueEntry>()
         private val json = Json { ignoreUnknownKeys = true }
 
@@ -304,6 +496,15 @@ class DownloadRepositoryTest {
 
         fun seedQueue(entries: List<DownloadQueueEntry>) {
             queue = entries
+        }
+
+        fun seedTag(
+            key: TagMangaChapterDownloadKey,
+            manifest: TagMangaChapterManifest,
+            images: Map<String, String> = emptyMap(),
+        ) {
+            tagManifests[key] = manifest
+            images.forEach { (name, uri) -> tagImageUris[key to name] = uri }
         }
 
         override suspend fun getSelectedFolderLabel(): String = "test"
@@ -324,6 +525,19 @@ class DownloadRepositoryTest {
             imageUris[key to fileName]
         override suspend fun readManifest(key: ThreadPageDownloadKey): ThreadPageDownloadManifest? = manifests[key]
         override suspend fun listManifests(): List<ThreadPageDownloadManifest> = manifests.values.toList()
+        override suspend fun writeTagMangaChapter(
+            key: TagMangaChapterDownloadKey,
+            manifestBytes: ByteArray,
+            images: List<PendingDownloadedImage>,
+        ) {
+            tagManifests[key] = json.decodeFromString(manifestBytes.decodeToString())
+            images.forEach { image -> tagImageUris[key to image.fileName] = "content://tag/${image.fileName}" }
+        }
+        override suspend fun resolveTagMangaImageUri(key: TagMangaChapterDownloadKey, fileName: String): String? =
+            tagImageUris[key to fileName]
+        override suspend fun readTagMangaManifest(key: TagMangaChapterDownloadKey): TagMangaChapterManifest? =
+            tagManifests[key]
+        override suspend fun listTagMangaManifests(): List<TagMangaChapterManifest> = tagManifests.values.toList()
         override suspend fun readQueue(): List<DownloadQueueEntry> = queue
         override suspend fun writeQueue(entries: List<DownloadQueueEntry>) {
             queue = entries
@@ -341,6 +555,30 @@ class DownloadRepositoryTest {
                 .toList()
                 .forEach { deleteThreadPage(it) }
         }
+
+        override suspend fun deleteTagMangaChapter(key: TagMangaChapterDownloadKey) {
+            tagManifests.remove(key)
+            tagImageUris.keys.removeAll { it.first == key }
+        }
+
+        override suspend fun deleteTagManga(tagId: Int) {
+            tagManifests.keys
+                .filter { it.tagId == tagId }
+                .toList()
+                .forEach { deleteTagMangaChapter(it) }
+        }
+    }
+
+    private class FakeTagRepository(
+        private val pages: MutableMap<Int, YamiboResult<TagPage>> = mutableMapOf(),
+    ) : TagRepository {
+        override suspend fun fetchTagPage(tagId: TagId, page: Int): YamiboResult<TagPage> =
+            pages[page] ?: YamiboResult.Failure("missing tag page $page")
+
+        override suspend fun fetchExtractTags(tid: ThreadId): YamiboResult<Tags> = error("unused")
+        override fun getCachedTagPage(tagId: TagId, page: Int): TagPage? = null
+        override fun setCachedTagPage(tagId: TagId, page: Int, tagPage: TagPage) = Unit
+        override fun clearCachedTagPage(tagId: TagId) = Unit
     }
 
     private class FakeThreadRepository(

@@ -83,8 +83,8 @@ class ContentCoverRepositoryImpl(
             ?: ContentCoverRepository.TargetType.ThreadNormal
         return ContentCoverRepository.Cover(
             key = ContentCoverRepository.Key(type, targetId),
-            automaticCoverUrl = automaticCoverUrl,
-            manualCoverUrl = manualCoverUrl,
+            automaticCoverUrl = automaticCoverUrl?.let(::normalizeCoverUrl),
+            manualCoverUrl = manualCoverUrl?.let(::normalizeCoverUrl),
             dynamicEnabled = dynamicEnabled != 0L,
             updatedAt = updatedAt,
         )
@@ -92,7 +92,7 @@ class ContentCoverRepositoryImpl(
 }
 
 internal fun normalizeCoverUrl(rawUrl: String): String? {
-    val url = rawUrl.trim()
+    val url = repairDomainPrefixedLocalCoverUri(rawUrl.trim())
     if (url.isEmpty()) return null
     val lower = url.lowercase()
     if (lower.startsWith("data:") || lower.startsWith("blob:")) return null
@@ -100,8 +100,16 @@ internal fun normalizeCoverUrl(rawUrl: String): String? {
         lower.contains("/smiley/") || lower.contains("/face/")) return null
     return when {
         lower.startsWith("https://") || lower.startsWith("http://") -> url
+        lower.contains("://") -> url
         url.startsWith("//") -> "https:$url"
         url.startsWith("/") -> "https://bbs.yamibo.com$url"
         else -> "https://bbs.yamibo.com/$url"
     }
 }
+
+private fun repairDomainPrefixedLocalCoverUri(url: String): String =
+    when {
+        url.startsWith("https://bbs.yamibo.com/content://") -> url.removePrefix("https://bbs.yamibo.com/")
+        url.startsWith("https://bbs.yamibo.com/file://") -> url.removePrefix("https://bbs.yamibo.com/")
+        else -> url
+    }

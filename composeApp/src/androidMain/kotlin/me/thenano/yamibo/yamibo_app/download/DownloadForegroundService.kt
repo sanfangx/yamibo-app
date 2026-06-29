@@ -18,7 +18,9 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.R
+import me.thenano.yamibo.yamibo_app.repository.download.DownloadQueueEntry
 import me.thenano.yamibo.yamibo_app.repository.download.DownloadStatus
+import me.thenano.yamibo.yamibo_app.repository.download.ThreadPageDownloadKey
 
 class DownloadForegroundService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -53,7 +55,7 @@ class DownloadForegroundService : Service() {
                         buildNotification(
                             completed = 0,
                             total = active.size,
-                            text = "${current.title} · 第 ${current.key.page} 頁",
+                            text = current.notificationText(),
                         ),
                     )
                 }
@@ -108,4 +110,9 @@ class DownloadForegroundService : Service() {
         fun startIntent(context: Context): Intent =
             Intent(context, DownloadForegroundService::class.java)
     }
+}
+
+private fun DownloadQueueEntry.notificationText(): String {
+    val page = (key as? ThreadPageDownloadKey)?.page
+    return if (page != null) "$title · 第 $page 頁" else title
 }

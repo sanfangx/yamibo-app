@@ -28,6 +28,7 @@ import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.thread.reader.debug.DebugRecomposeProbe
 import me.thenano.yamibo.yamibo_app.thread.reader.debug.debugPerfLog
+import me.thenano.yamibo.yamibo_app.util.normalizeImageUrl
 import me.thenano.yamibo.yamibo_app.util.rememberImageRequest
 import org.jetbrains.compose.resources.painterResource
 import yamibo_app.composeapp.generated.resources.Res
@@ -86,8 +87,7 @@ fun ImageViewer(
     val errorSubTextColor = if (isDarkTheme) Color.White.copy(alpha = 0.5f) else colors.textDark.copy(alpha = 0.6f)
     val errorUrlColor = if (isDarkTheme) Color.White.copy(alpha = 0.3f) else colors.brownDeep
 
-    // Resolve full URL
-    val fullUrl = if (url.startsWith("http")) url else "https://bbs.yamibo.com/$url"
+    val fullUrl = normalizeImageUrl(url)
     val imageRequest = rememberImageRequest(
         url = fullUrl,
         retryKey = retryKey,
@@ -353,4 +353,3 @@ private fun ImageErrorContent(
         }
     }
 }
-

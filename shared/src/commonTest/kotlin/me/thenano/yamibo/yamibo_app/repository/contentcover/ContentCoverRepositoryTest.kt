@@ -53,6 +53,12 @@ class ContentCoverRepositoryTest {
             normalizeCoverUrl("data/attachment/forum/cover.jpg"),
         )
         assertEquals("https://cdn.example.com/cover.jpg", normalizeCoverUrl("//cdn.example.com/cover.jpg"))
+        assertEquals("content://downloads/cover.jpg", normalizeCoverUrl("content://downloads/cover.jpg"))
+        assertEquals("file:///tmp/cover.jpg", normalizeCoverUrl("file:///tmp/cover.jpg"))
+        assertEquals(
+            "content://downloads/cover.jpg",
+            normalizeCoverUrl("https://bbs.yamibo.com/content://downloads/cover.jpg"),
+        )
     }
 
     @Test

@@ -14,10 +14,20 @@ import io.github.littlesurvival.YamiboRoute
 import me.thenano.yamibo.yamibo_app.LocalAuthRepository
 
 fun normalizeImageUrl(url: String): String {
-    return if (url.contains("://")) {
-        url
+    val cleaned = repairDomainPrefixedLocalUri(url)
+    return if (cleaned.contains("://")) {
+        cleaned
     } else {
-        "${YamiboRoute.Domain.build()}${url.removePrefix("/")}"
+        "${YamiboRoute.Domain.build().trimEnd('/')}/${cleaned.removePrefix("/")}"
+    }
+}
+
+private fun repairDomainPrefixedLocalUri(url: String): String {
+    val domain = YamiboRoute.Domain.build().trimEnd('/')
+    return when {
+        url.startsWith("$domain/content://") -> url.removePrefix("$domain/")
+        url.startsWith("$domain/file://") -> url.removePrefix("$domain/")
+        else -> url
     }
 }
 

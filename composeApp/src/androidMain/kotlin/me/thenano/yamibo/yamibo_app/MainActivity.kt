@@ -195,6 +195,7 @@ class MainActivity : ComponentActivity() {
             val downloadRepository = remember {
                 DownloadRepositoryImpl(
                     threadRepository = threadRepository,
+                    tagRepository = tagRepository,
                     storageProvider = AndroidDownloadStorageProvider(context, appSettingsRepository),
                     imageFetcher = DownloadImageFetcher { cookieStore.load().orEmpty() },
                     backgroundController = AndroidDownloadBackgroundController(context),
