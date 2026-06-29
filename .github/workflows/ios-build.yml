@@ -1,4 +1,4 @@
-﻿name: Build iOS IPA
+﻿name: Build iOS IPA (Unsigned)
 
 on:
   workflow_dispatch:
@@ -33,124 +33,96 @@ jobs:
 
       - name: Build Kotlin framework for iOS
         run: |
+          ./gradlew --stop 2>/dev/null || true
           ./gradlew :composeApp:linkReleaseFrameworkIosArm64 \
+            -Dorg.gradle.jvmargs="-Xmx8192M" \
             --console=plain
 
-      - name: Create shared xcscheme for CI
+      - name: Create xcscheme for CI
         shell: bash
         run: |
           mkdir -p iosApp/iosApp.xcodeproj/xcshareddata/xcschemes
-          cat > iosApp/iosApp.xcodeproj/xcshareddata/xcschemes/iosApp.xcscheme << 'XCS'
-          <?xml version="1.0" encoding="UTF-8"?>
-          <Scheme
-             LastUpgradeVersion = "1620"
-             version = "1.3">
-             <BuildAction
-                parallelizeBuildables = "YES"
-                buildImplicitDependencies = "YES">
-                <BuildActionEntries>
-                   <BuildActionEntry
-                      buildForTesting = "YES"
-                      buildForRunning = "YES"
-                      buildForProfiling = "YES"
-                      buildForArchiving = "YES"
-                      buildForAnalyzing = "YES">
-                      <BuildableReference
-                         BuildableIdentifier = "primary"
-                         BlueprintIdentifier = "FF31D3AF523983E277DF61E8"
-                         BuildableName = "yamibo_app.app"
-                         BlueprintName = "iosApp"
-                         ReferencedContainer = "container:iosApp.xcodeproj">
-                      </BuildableReference>
-                   </BuildActionEntry>
-                </BuildActionEntries>
-             </BuildAction>
-             <TestAction
-                buildConfiguration = "Debug"
-                selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
-                selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
-                shouldUseLaunchSchemeArgsEnv = "YES">
-                <Testables>
-                </Testables>
-             </TestAction>
-             <LaunchAction
-                buildConfiguration = "Debug"
-                selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
-                selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
-                launchStyle = "0"
-                useCustomWorkingDirectory = "NO"
-                ignoresPersistentStateOnLaunch = "NO"
-                debugDocumentVersioning = "YES"
-                debugServiceExtension = "internal"
-                allowLocationSimulation = "YES">
-                <BuildableProductRunnable
-                   runnableDebuggingMode = "0">
-                   <BuildableReference
-                      BuildableIdentifier = "primary"
-                      BlueprintIdentifier = "FF31D3AF523983E277DF61E8"
-                      BuildableName = "yamibo_app.app"
-                      BlueprintName = "iosApp"
-                      ReferencedContainer = "container:iosApp.xcodeproj">
-                   </BuildableReference>
-                </BuildableProductRunnable>
-             </LaunchAction>
-             <ProfileAction
-                buildConfiguration = "Release"
-                shouldUseLaunchSchemeArgsEnv = "YES"
-                savedToolIdentifier = ""
-                useCustomWorkingDirectory = "NO"
-                debugDocumentVersioning = "YES">
-                <BuildableProductRunnable
-                   runnableDebuggingMode = "0">
-                   <BuildableReference
-                      BuildableIdentifier = "primary"
-                      BlueprintIdentifier = "FF31D3AF523983E277DF61E8"
-                      BuildableName = "yamibo_app.app"
-                      BlueprintName = "iosApp"
-                      ReferencedContainer = "container:iosApp.xcodeproj">
-                   </BuildableReference>
-                </BuildableProductRunnable>
-             </ProfileAction>
-             <AnalyzeAction
-                buildConfiguration = "Debug">
-             </AnalyzeAction>
-             <ArchiveAction
-                buildConfiguration = "Release"
-                revealArchiveInOrganizer = "YES">
-             </ArchiveAction>
-          </Scheme>
-          XCS
+          python3 -c "
+          xml = '''<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+          <Scheme LastUpgradeVersion = \"1620\" version = \"1.3\">
+          <BuildAction parallelizeBuildables = \"YES\" buildImplicitDependencies = \"YES\">
+          <BuildActionEntries>
+          <BuildActionEntry buildForTesting = \"YES\" buildForRunning = \"YES\" buildForProfiling = \"YES\" buildForArchiving = \"YES\" buildForAnalyzing = \"YES\">
+          <BuildableReference BuildableIdentifier = \"primary\" BlueprintIdentifier = \"FF31D3AF523983E277DF61E8\" BuildableName = \"yamibo_app.app\" BlueprintName = \"iosApp\" ReferencedContainer = \"container:iosApp.xcodeproj\"></BuildableReference>
+          </BuildActionEntry>
+          </BuildActionEntries>
+          </BuildAction>
+          <TestAction buildConfiguration = \"Debug\" selectedDebuggerIdentifier = \"Xcode.DebuggerFoundation.Debugger.LLDB\" selectedLauncherIdentifier = \"Xcode.DebuggerFoundation.Launcher.LLDB\" shouldUseLaunchSchemeArgsEnv = \"YES\"><Testables></Testables></TestAction>
+          <LaunchAction buildConfiguration = \"Debug\" selectedDebuggerIdentifier = \"Xcode.DebuggerFoundation.Debugger.LLDB\" selectedLauncherIdentifier = \"Xcode.DebuggerFoundation.Launcher.LLDB\" launchStyle = \"0\" useCustomWorkingDirectory = \"NO\" ignoresPersistentStateOnLaunch = \"NO\" debugDocumentVersioning = \"YES\" debugServiceExtension = \"internal\" allowLocationSimulation = \"YES\"><BuildableProductRunnable runnableDebuggingMode = \"0\"><BuildableReference BuildableIdentifier = \"primary\" BlueprintIdentifier = \"FF31D3AF523983E277DF61E8\" BuildableName = \"yamibo_app.app\" BlueprintName = \"iosApp\" ReferencedContainer = \"container:iosApp.xcodeproj\"></BuildableReference></BuildableProductRunnable></LaunchAction>
+          <ProfileAction buildConfiguration = \"Release\" shouldUseLaunchSchemeArgsEnv = \"YES\" savedToolIdentifier = \"\" useCustomWorkingDirectory = \"NO\" debugDocumentVersioning = \"YES\"><BuildableProductRunnable runnableDebuggingMode = \"0\"><BuildableReference BuildableIdentifier = \"primary\" BlueprintIdentifier = \"FF31D3AF523983E277DF61E8\" BuildableName = \"yamibo_app.app\" BlueprintName = \"iosApp\" ReferencedContainer = \"container:iosApp.xcodeproj\"></BuildableReference></BuildableProductRunnable></ProfileAction>
+          <AnalyzeAction buildConfiguration = \"Debug\"></AnalyzeAction>
+          <ArchiveAction buildConfiguration = \"Release\" revealArchiveInOrganizer = \"YES\"></ArchiveAction>
+          </Scheme>'''
+          with open('iosApp/iosApp.xcodeproj/xcshareddata/xcschemes/iosApp.xcscheme', 'w') as f:
+              f.write(xml)
+          print('Scheme created')
+          "
 
-      - name: Archive iOS app
+      - name: Build iOS app (xcodebuild)
         shell: bash
         run: |
+          FW_PATH="$(pwd)/composeApp/build/bin/iosArm64/releaseFramework"
           OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED=YES \
-          xcodebuild archive \
+          xcodebuild build \
             -project iosApp/iosApp.xcodeproj \
             -scheme iosApp \
             -configuration Release \
             -destination "generic/platform=iOS" \
-            -archivePath build/ios.xcarchive \
+            -derivedDataPath build/derived \
             ONLY_ACTIVE_ARCH=NO \
+            "FRAMEWORK_SEARCH_PATHS=$FW_PATH" \
+            "OTHER_LDFLAGS=-framework ComposeApp -lsqlite3" \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
             DEVELOPMENT_TEAM="" \
             PROVISIONING_PROFILE_SPECIFIER=""
 
-      - name: Export IPA
+      - name: Copy Compose Resources into app bundle
         shell: bash
         run: |
-          xcodebuild -exportArchive \
-            -archivePath build/ios.xcarchive \
-            -exportPath build/ios \
-            -exportOptionsPlist iosApp/ExportOptions.plist
+          APP="$(find build/derived -name '*.app' -type d | head -1)"
+          echo "App at: $APP"
+
+          CVR_BASE="composeApp/build/generated/compose/resourceGenerator/preparedResources"
+          if [ -d "$CVR_BASE" ]; then
+            for dir in "$CVR_BASE"/*/; do
+              if [ -d "${dir}composeResources" ]; then
+                mkdir -p "$APP/compose-resources"
+                cp -R "${dir}composeResources"/* "$APP/compose-resources/" 2>/dev/null || true
+                echo "Copied CVR from $(basename $dir)"
+              fi
+            done
+          fi
+
+          STATIC_SRC="composeApp/src/commonMain/composeResources"
+          if [ -d "$STATIC_SRC" ]; then
+            cp -R "$STATIC_SRC"/* "$APP/" 2>/dev/null || true
+            echo "Copied static resources"
+          fi
+
+      - name: Package IPA
+        shell: bash
+        run: |
+          APP="$(find build/derived -name '*.app' -type d | head -1)"
+          mkdir -p build/ios/Payload
+          cp -R "$APP" build/ios/Payload/
+          cd build/ios
+          zip -r ../yamibo-unsigned.ipa Payload/
+          cd ../..
+          ls -lh build/yamibo-unsigned.ipa
+          echo "IPA_SIZE=$(stat -f%z build/yamibo-unsigned.ipa)" >> "$GITHUB_ENV"
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
           name: yamibo-ios-unsigned
-          path: build/ios/*.ipa
+          path: build/yamibo-unsigned.ipa
           if-no-files-found: error
 
       - name: Upload IPA to GitHub Release (tag only)
@@ -160,8 +132,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          ipa_file="$(find build/ios -name '*.ipa' -maxdepth 1 | head -n 1)"
-          if [ -z "$ipa_file" ]; then
+          ipa_file="build/yamibo-unsigned.ipa"
+          if [ ! -f "$ipa_file" ]; then
             echo "No IPA found" >&2
             exit 1
           fi
