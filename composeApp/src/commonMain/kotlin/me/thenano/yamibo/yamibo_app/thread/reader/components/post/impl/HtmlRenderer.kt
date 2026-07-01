@@ -98,6 +98,7 @@ internal fun normalizeHtmlBlocks(rawBlocks: List<HtmlBlock>): List<HtmlBlock> {
     fun appendTextBlock(block: HtmlBlock.Text) {
         val builder = pendingTextBuilder
         val pendingLength = builder?.length ?: 0
+        var appendOffset = pendingLength
         val shouldSplitLongText = builder != null &&
             pendingLength > 0 &&
             pendingLength + block.annotatedString.length > maxMergedTextLength
@@ -106,15 +107,22 @@ internal fun normalizeHtmlBlocks(rawBlocks: List<HtmlBlock>): List<HtmlBlock> {
             pendingTextBuilder = AnnotatedString.Builder()
             pendingTextAlign = block.textAlign
             pendingTextAnchorId = block.anchorId
+            appendOffset = 0
         } else {
             val currentText = builder.toAnnotatedString().text
             val nextText = block.annotatedString.text
             if (currentText.isNotEmpty() && currentText.last() != '\n' && nextText.firstOrNull() != '\n') {
                 builder.append("\n")
+                appendOffset += 1
             }
         }
         pendingTextBuilder?.append(block.annotatedString)
-        pendingRubies += block.rubies
+        pendingRubies += block.rubies.map { ruby ->
+            ruby.copy(
+                start = ruby.start + appendOffset,
+                end = ruby.end + appendOffset,
+            )
+        }
     }
 
     fun splitLongTextBlock(block: HtmlBlock.Text): List<HtmlBlock.Text> {
@@ -133,8 +141,17 @@ internal fun normalizeHtmlBlocks(rawBlocks: List<HtmlBlock>): List<HtmlBlock> {
             }
             val chunk = block.annotatedString.subSequence(start, end)
             if (chunk.isNotEmpty()) {
+                val chunkRubies = block.rubies
+                    .filter { it.start >= start && it.end <= end }
+                    .map { ruby ->
+                        ruby.copy(
+                            start = ruby.start - start,
+                            end = ruby.end - start,
+                        )
+                    }
                 chunks += block.copy(
                     annotatedString = chunk,
+                    rubies = chunkRubies,
                     anchorId = if (start == 0) block.anchorId else "${block.anchorId}-$start",
                 )
             }
@@ -387,7 +404,8 @@ private fun RubyFlowLine(
 
                 is RubySegment.Ruby -> {
                     RubySegmentView(
-                        ruby = segment.ruby,
+                        baseText = segment.baseText,
+                        rubyText = segment.ruby.rubyText,
                         fontFamily = fontFamily,
                         fontSizeSp = fontSizeSp,
                         lineHeightSp = lineHeightSp,
@@ -424,7 +442,8 @@ private fun RubyPlainTextSegment(
 
 @Composable
 private fun RubySegmentView(
-    ruby: HtmlBlock.RubyText,
+    baseText: AnnotatedString,
+    rubyText: String,
     fontFamily: FontFamily,
     fontSizeSp: Float,
     lineHeightSp: Float,
@@ -441,7 +460,7 @@ private fun RubySegmentView(
         contentAlignment = Alignment.TopCenter,
     ) {
         Text(
-            text = ruby.rubyText,
+            text = rubyText,
             color = textColor,
             fontFamily = fontFamily,
             fontSize = rubyFontSizeSp.sp,
@@ -450,7 +469,7 @@ private fun RubySegmentView(
             modifier = Modifier.align(Alignment.TopCenter),
         )
         Text(
-            text = ruby.baseText,
+            text = baseText,
             color = textColor,
             fontFamily = fontFamily,
             fontSize = fontSizeSp.sp,
@@ -465,7 +484,7 @@ private fun RubySegmentView(
 
 private sealed class RubySegment {
     data class Text(val text: AnnotatedString) : RubySegment()
-    data class Ruby(val ruby: HtmlBlock.RubyText) : RubySegment()
+    data class Ruby(val ruby: HtmlBlock.RubyText, val baseText: AnnotatedString) : RubySegment()
 }
 
 private data class RubyLine(
@@ -517,33 +536,15 @@ private fun buildRubySegments(
     var cursor = 0
     val source = text.text
 
-    if (source.any { it == '\uFFFC' }) {
-        var rubyIndex = 0
-        var start = 0
-        source.forEachIndexed { index, char ->
-            if (char == '\uFFFC') {
-                if (start < index) {
-                    segments += RubySegment.Text(text.subSequence(start, index))
-                }
-                rubies.getOrNull(rubyIndex)?.let { segments += RubySegment.Ruby(it) }
-                rubyIndex += 1
-                start = index + 1
-            }
+    rubies.sortedWith(compareBy<HtmlBlock.RubyText> { it.start }.thenBy { it.end }).forEach { ruby ->
+        val start = ruby.start.coerceIn(0, source.length)
+        val end = ruby.end.coerceIn(start, source.length)
+        if (start < cursor || start == end) return@forEach
+        if (cursor < start) {
+            segments += RubySegment.Text(text.subSequence(cursor, start))
         }
-        if (start < source.length) {
-            segments += RubySegment.Text(text.subSequence(start, source.length))
-        }
-        return segments
-    }
-
-    rubies.forEach { ruby ->
-        val index = source.indexOf(ruby.baseText, startIndex = cursor)
-        if (index < 0) return@forEach
-        if (cursor < index) {
-            segments += RubySegment.Text(text.subSequence(cursor, index))
-        }
-        segments += RubySegment.Ruby(ruby)
-        cursor = index + ruby.baseText.length
+        segments += RubySegment.Ruby(ruby, text.subSequence(start, end))
+        cursor = end
     }
     if (cursor < source.length) {
         segments += RubySegment.Text(text.subSequence(cursor, source.length))

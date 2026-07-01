@@ -15,6 +15,8 @@ sealed class HtmlBlock {
     ) : HtmlBlock()
     data class RubyText(
         val id: String,
+        val start: Int,
+        val end: Int,
         val baseText: String,
         val rubyText: String,
     )

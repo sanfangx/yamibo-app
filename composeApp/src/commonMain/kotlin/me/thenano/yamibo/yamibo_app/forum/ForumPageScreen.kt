@@ -183,7 +183,7 @@ fun ForumPageScreen(fid: ForumId, name: String) {
                             successCondition = { url -> url.contains("mod=forumdisplay") && url.contains("fid=") },
                             onSuccess = {
                                 scope.launch {
-                                    snackbarHostState.showSnackbar(i18n("發帖成功"))
+                                    snackbarHostState.showSnackbar(i18n("帖子已發表，請刷新頁面查看"))
                                 }
                             },
                         )

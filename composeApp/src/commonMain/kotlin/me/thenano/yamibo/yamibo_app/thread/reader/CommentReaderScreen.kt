@@ -102,7 +102,7 @@ internal fun CommentReaderScreen(
                 title = i18n("發表回復"),
                 initialUrl = replyPageUrl,
                 successCondition = { url -> url.contains("mod=viewthread") && url.contains("tid=") },
-                onSuccess = { scope.launch { snackbarHostState.showSnackbar(i18n("回復成功")) } },
+                    onSuccess = { scope.launch { snackbarHostState.showSnackbar(i18n("回復已發表，請刷新頁面查看")) } },
             )
         )
     }
@@ -506,7 +506,7 @@ internal fun CommentReaderScreen(
                             initialUrl = replyUrl,
                             successCondition = { url -> url.contains("mod=viewthread") && url.contains("tid=") },
                             onSuccess = {
-                                scope.launch { snackbarHostState.showSnackbar(i18n("回復成功")) }
+                                scope.launch { snackbarHostState.showSnackbar(i18n("回復已發表，請刷新頁面查看")) }
                             },
                         )
                     )
