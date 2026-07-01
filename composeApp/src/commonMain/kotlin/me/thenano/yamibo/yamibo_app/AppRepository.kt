@@ -28,6 +28,7 @@ import me.thenano.yamibo.yamibo_app.repository.ThreadRepository
 import me.thenano.yamibo.yamibo_app.repository.UserSpaceRepository
 import me.thenano.yamibo.yamibo_app.profile.settings.access.BackgroundAccessRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.AppSettingsRepository
+import me.thenano.yamibo.yamibo_app.repository.settings.ImageReaderModeOverrideRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.MangaReaderSettingsRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.NovelReaderSettingsRepository
 import me.thenano.yamibo.yamibo_app.favorite.sync.FavoriteSyncRunner
@@ -130,6 +131,9 @@ val LocalNovelReaderSettingsRepository =
 
 val LocalMangaReaderSettingsRepository =
     compositionLocalOf<MangaReaderSettingsRepository> { error("LocalMangaReaderSettingsRepository not provided") }
+
+val LocalImageReaderModeOverrideRepository =
+    compositionLocalOf<ImageReaderModeOverrideRepository> { error("LocalImageReaderModeOverrideRepository not provided") }
 
 val LocalDiskCacheFactory =
     compositionLocalOf<DiskCacheFactory> { error("LocalDiskCacheFactory not provided") }

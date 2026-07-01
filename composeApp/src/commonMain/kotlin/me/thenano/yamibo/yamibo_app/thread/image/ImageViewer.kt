@@ -61,6 +61,7 @@ fun ImageViewer(
     onReload: (() -> Unit)? = null,
     cachedHeightPx: Int? = null,
     placeholderAspectRatio: Float? = null,
+    imageVerticalPadding: Dp = 1.dp,
     onRenderedHeightChanged: ((Int) -> Unit)? = null,
     onRenderedAspectRatioChanged: ((Float) -> Unit)? = null,
 ) {
@@ -214,7 +215,7 @@ fun ImageViewer(
                             painter = painter,
                             contentDescription = contentDescription ?: "Yamibo Image",
                             modifier = (if (fillContainer) Modifier.fillMaxSize() else Modifier.fillMaxWidth())
-                                .padding(vertical = if (fillContainer) 0.dp else 1.dp)
+                                .padding(vertical = if (fillContainer) 0.dp else imageVerticalPadding)
                                 .onSizeChanged { size ->
                                     if (size.height > 0) {
                                         onRenderedHeightChanged?.invoke(size.height)

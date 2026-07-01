@@ -31,6 +31,8 @@ fun TagDetailHeaderCard(
     onMangaModeChange: (Boolean) -> Unit,
     dynamicCoverEnabled: Boolean,
     onDynamicCoverEnabledChange: (Boolean) -> Unit,
+    longStripModeEnabled: Boolean,
+    onLongStripModeEnabledChange: (Boolean) -> Unit,
     hasReadingHistory: Boolean,
     readingProgressText: String?,
     onContinueRead: () -> Unit,
@@ -140,6 +142,31 @@ fun TagDetailHeaderCard(
                     }
 
                     Spacer(Modifier.height(10.dp))
+
+                    if (isMangaMode) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(
+                                text = i18n("條漫模式"),
+                                fontSize = 13.sp,
+                                color = colors.brownPrimary.copy(alpha = 0.85f)
+                            )
+                            Spacer(Modifier.weight(1f))
+                            Switch(
+                                checked = longStripModeEnabled,
+                                onCheckedChange = onLongStripModeEnabledChange,
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = colors.brownDeep,
+                                    checkedTrackColor = colors.brownPrimary.copy(alpha = 0.45f)
+                                ),
+                                modifier = Modifier.height(24.dp)
+                            )
+                        }
+
+                        Spacer(Modifier.height(10.dp))
+                    }
 
                     Row(
                         verticalAlignment = Alignment.CenterVertically,

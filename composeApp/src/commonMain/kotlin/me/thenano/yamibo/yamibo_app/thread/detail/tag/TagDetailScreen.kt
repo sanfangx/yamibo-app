@@ -103,7 +103,9 @@ internal fun TagDetailScreen(
     var showDownloadSheet by remember { mutableStateOf(false) }
 
     val appSettingsRepo = LocalAppSettingsRepository.current
+    val imageReaderModeOverrideRepository = LocalImageReaderModeOverrideRepository.current
     val isMangaMode = appSettingsRepo.isMangaMode.state()
+    val longStripModeEnabled by imageReaderModeOverrideRepository.observeTagLongStrip(tagId).collectAsState(false)
     val stackSize = navigator.stack.size
 
     fun tagMangaKey(thread: ThreadSummary): TagMangaChapterDownloadKey {
@@ -447,11 +449,15 @@ internal fun TagDetailScreen(
                             coverUrl = coverUrl(),
                             isMangaMode = isMangaMode,
                             onMangaModeChange = { appSettingsRepo.isMangaMode.setValue(it) },
-                            dynamicCoverEnabled = canonicalCover?.dynamicEnabled ?: true,
-                            onDynamicCoverEnabledChange = { enabled ->
-                                scope.launch { contentCoverRepository.setDynamicEnabled(coverKey, enabled) }
-                            },
-                            hasReadingHistory = mangaTagHistory != null,
+                    dynamicCoverEnabled = canonicalCover?.dynamicEnabled ?: true,
+                    onDynamicCoverEnabledChange = { enabled ->
+                        scope.launch { contentCoverRepository.setDynamicEnabled(coverKey, enabled) }
+                    },
+                    longStripModeEnabled = longStripModeEnabled,
+                    onLongStripModeEnabledChange = { enabled ->
+                        imageReaderModeOverrideRepository.setTagLongStrip(tagId, enabled)
+                    },
+                    hasReadingHistory = mangaTagHistory != null,
                             readingProgressText = readingProgressText,
                             onContinueRead = {
                                 handleContinueRead(currentState.page.threadSummaries, currentState.page.pageNav)

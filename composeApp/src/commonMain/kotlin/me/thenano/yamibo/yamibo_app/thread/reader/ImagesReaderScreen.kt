@@ -49,11 +49,13 @@ import io.github.littlesurvival.dto.page.*
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.LocalChapterStateRepository
 import me.thenano.yamibo.yamibo_app.LocalContentCoverRepository
 import me.thenano.yamibo.yamibo_app.LocalReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.LocalMangaReaderSettingsRepository
+import me.thenano.yamibo.yamibo_app.LocalImageReaderModeOverrideRepository
 import me.thenano.yamibo.yamibo_app.LocalDownloadRepository
 import me.thenano.yamibo.yamibo_app.LocalTagRepository
 import me.thenano.yamibo.yamibo_app.LocalThreadRepository
@@ -78,8 +80,10 @@ import me.thenano.yamibo.yamibo_app.thread.detail.novel.INovelThreadDetailScreen
 import me.thenano.yamibo.yamibo_app.util.shareText
 import me.thenano.yamibo.yamibo_app.util.state
 import coil3.compose.LocalPlatformContext
+import me.thenano.yamibo.yamibo_app.repository.settings.EffectiveReadingModeSource
 import me.thenano.yamibo.yamibo_app.repository.settings.ReadingMode
 import me.thenano.yamibo.yamibo_app.repository.settings.TouchZoneLayout
+import me.thenano.yamibo.yamibo_app.repository.settings.resolveEffectiveReadingMode
 import me.thenano.yamibo.yamibo_app.components.systembars.SystemBarsEffect
 import kotlin.math.abs
 import kotlin.time.Duration.Companion.milliseconds
@@ -147,7 +151,23 @@ fun ImagesReaderScreen(
     val isMangaForum = remember(activeFid, tagId) { tagId != null || (activeFid?.let { YamiboForum.isMangaForum(it) } == true) }
 
     val mangaSettingsRepo = LocalMangaReaderSettingsRepository.current
-    val readingMode = mangaSettingsRepo.readingMode.state()
+    val imageReaderModeOverrideRepository = LocalImageReaderModeOverrideRepository.current
+    val globalReadingMode = mangaSettingsRepo.readingMode.state()
+    val tagLongStripEnabled by remember(tagId) {
+        tagId?.let { imageReaderModeOverrideRepository.observeTagLongStrip(it) } ?: flowOf(false)
+    }.collectAsState(false)
+    val threadModeOverride by remember(activeTid, activeAuthorId) {
+        imageReaderModeOverrideRepository.observeThreadMode(activeTid, activeAuthorId)
+    }.collectAsState(null)
+    val effectiveReadingMode = remember(globalReadingMode, tagLongStripEnabled, threadModeOverride) {
+        resolveEffectiveReadingMode(
+            global = globalReadingMode,
+            tagLongStrip = tagLongStripEnabled,
+            threadOverride = threadModeOverride,
+        )
+    }
+    val readingMode = effectiveReadingMode.mode
+    val modeSource = effectiveReadingMode.source
     val touchZoneLayout = mangaSettingsRepo.touchZone.state()
     
     val isRtl = readingMode == ReadingMode.SINGLE_RTL
@@ -1010,6 +1030,7 @@ fun ImagesReaderScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 enableContextMenu = false,
                                 isDarkTheme = true,
+                                imageVerticalPadding = if (readingMode == ReadingMode.SCROLL_CONTINUOUS) 0.dp else 1.dp,
                                 enableCrossfade = false
                             )
                             if (readingMode == ReadingMode.SCROLL_GAP && index < actualImageList.lastIndex) {
@@ -1338,7 +1359,28 @@ fun ImagesReaderScreen(
             visible = showSettings,
             currentReadingMode = readingMode,
             currentTouchZoneLayout = touchZoneLayout,
-            onReadingModeChange = { mode -> mangaSettingsRepo.readingMode.setValue(mode); resetZoom() },
+            readingModeSource = modeSource,
+            threadModeOverrideEnabled = threadModeOverride != null,
+            onReadingModeChange = { mode ->
+                if (modeSource != EffectiveReadingModeSource.TagLongStrip) {
+                    if (threadModeOverride != null) {
+                        imageReaderModeOverrideRepository.setThreadMode(activeTid, activeAuthorId, mode)
+                    } else {
+                        mangaSettingsRepo.readingMode.setValue(mode)
+                    }
+                    resetZoom()
+                }
+            },
+            onThreadModeOverrideEnabledChange = { enabled ->
+                if (modeSource != EffectiveReadingModeSource.TagLongStrip) {
+                    imageReaderModeOverrideRepository.setThreadMode(
+                        activeTid,
+                        activeAuthorId,
+                        if (enabled) readingMode else null,
+                    )
+                    resetZoom()
+                }
+            },
             onTouchZoneLayoutChange = { layout -> mangaSettingsRepo.touchZone.setValue(layout); showTouchZonePreview = true },
             modifier = Modifier.align(Alignment.BottomCenter)
         )

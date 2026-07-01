@@ -31,6 +31,7 @@ import me.thenano.yamibo.yamibo_app.repository.inapplinknavigation.DefaultInAppL
 import me.thenano.yamibo.yamibo_app.repository.settings.AppSettingsRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.MangaReaderSettingsRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.NovelReaderSettingsRepository
+import me.thenano.yamibo.yamibo_app.repository.settings.SettingsImageReaderModeOverrideRepository
 import me.thenano.yamibo.yamibo_app.repository.userspace.BlogRepositoryImpl
 import me.thenano.yamibo.yamibo_app.repository.userspace.UserSpaceRepositoryImpl
 import me.thenano.yamibo.yamibo_app.store.IOSCookieStore
@@ -49,6 +50,7 @@ fun MainViewController() = ComposeUIViewController {
     val appSettingsRepository = remember { AppSettingsRepository(settingsStore) }
     val novelReaderSettingsRepository = remember { NovelReaderSettingsRepository(settingsStore) }
     val mangaReaderSettingsRepository = remember { MangaReaderSettingsRepository(settingsStore) }
+    val imageReaderModeOverrideRepository = remember { SettingsImageReaderModeOverrideRepository(settingsStore) }
     val fontRepository = remember {
         DefaultFontRepository(
             settingsStore = settingsStore,
@@ -186,6 +188,7 @@ fun MainViewController() = ComposeUIViewController {
         LocalDiskCacheFactory provides diskCacheFactory,
         LocalNovelReaderSettingsRepository provides novelReaderSettingsRepository,
         LocalMangaReaderSettingsRepository provides mangaReaderSettingsRepository,
+        LocalImageReaderModeOverrideRepository provides imageReaderModeOverrideRepository,
     ) {
         androidx.compose.runtime.LaunchedEffect(Unit) {
             if (appSettingsRepository.clearCacheOnAppLaunch.getValue()) {
