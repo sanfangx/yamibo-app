@@ -40,6 +40,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -58,24 +59,34 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.thenano.yamibo.yamibo_app.LocalDownloadRepository
+import me.thenano.yamibo.yamibo_app.components.controls.YamiboActionChip
+import me.thenano.yamibo.yamibo_app.components.controls.YamiboMultiSelectDialog
+import me.thenano.yamibo.yamibo_app.components.controls.YamiboSingleSelectDialog
 import me.thenano.yamibo.yamibo_app.components.navigation.YamiboScrollableTabRow
 import me.thenano.yamibo.yamibo_app.components.navigation.YamiboTopBar
+import me.thenano.yamibo.yamibo_app.components.storage.YamiboStorageUsageOverview
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.core.cache.CacheStorageUsage
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.profile.settings.backup.IBackupSettingsScreen
+import me.thenano.yamibo.yamibo_app.repository.download.DOWNLOADED_CONTENT_FILTER_ALL
 import me.thenano.yamibo.yamibo_app.repository.download.DownloadQueueEntry
 import me.thenano.yamibo.yamibo_app.repository.download.DownloadQueueSummary
 import me.thenano.yamibo.yamibo_app.repository.download.DownloadStage
 import me.thenano.yamibo.yamibo_app.repository.download.DownloadStatus
 import me.thenano.yamibo.yamibo_app.repository.download.DownloadTaskKey
+import me.thenano.yamibo.yamibo_app.repository.download.DownloadedContentFilterOption
 import me.thenano.yamibo.yamibo_app.repository.download.DownloadedContentGroup
 import me.thenano.yamibo.yamibo_app.repository.download.DownloadedContentGroupType
 import me.thenano.yamibo.yamibo_app.repository.download.DownloadedContentItem
+import me.thenano.yamibo.yamibo_app.repository.download.DownloadedContentSortMode
 import me.thenano.yamibo.yamibo_app.repository.download.DownloadedContentSummary
 import me.thenano.yamibo.yamibo_app.repository.download.TagMangaChapterDownloadKey
 import me.thenano.yamibo.yamibo_app.repository.download.ThreadPageDownloadKey
+import me.thenano.yamibo.yamibo_app.repository.download.buildDownloadedContentFilterOptions
+import me.thenano.yamibo.yamibo_app.repository.download.filterAndSortDownloadedContentGroups
 
 private enum class DownloadManagerTab(val title: String) {
     Queue(i18n("下載佇列")),
@@ -104,6 +115,9 @@ fun DownloadQueueScreen() {
     var selectedTab by remember { mutableStateOf(DownloadManagerTab.Queue) }
     var contentState by remember { mutableStateOf<DownloadContentManagementState>(DownloadContentManagementState.Loading) }
     var contentReloadToken by remember { mutableStateOf(0) }
+    var contentSortMode by rememberSaveable { mutableStateOf(DownloadedContentSortMode.DownloadedAt) }
+    var contentSortDescending by rememberSaveable { mutableStateOf(true) }
+    var selectedContentFilterKeys by rememberSaveable { mutableStateOf(emptyList<String>()) }
 
     suspend fun reloadContentManagement() {
         contentState = DownloadContentManagementState.Loading
@@ -128,7 +142,7 @@ fun DownloadQueueScreen() {
     Scaffold(
         topBar = {
             YamiboTopBar(
-                title = i18n("下載管理（{}）", downloadManagerTitleStatus(entries, summary)),
+                title = i18n("下載管理"),
                 onBack = navigator::pop,
             )
         },
@@ -159,6 +173,18 @@ fun DownloadQueueScreen() {
                 )
                 DownloadManagerTab.Content -> DownloadContentManagementTab(
                     state = contentState,
+                    sortMode = contentSortMode,
+                    sortDescending = contentSortDescending,
+                    selectedFilterKeys = selectedContentFilterKeys.toSet(),
+                    onSelectSortMode = { mode ->
+                        if (mode == contentSortMode) {
+                            contentSortDescending = !contentSortDescending
+                        } else {
+                            contentSortMode = mode
+                            contentSortDescending = true
+                        }
+                    },
+                    onSelectFilterKeys = { keys -> selectedContentFilterKeys = keys.toList() },
                     onRetryLoad = { contentReloadToken++ },
                     onClearGroup = { group ->
                         scope.launch {
@@ -284,7 +310,13 @@ private fun DownloadSummaryCard(
             Column(Modifier.weight(1f).padding(start = 12.dp)) {
                 Text(i18n("下載佇列"), color = colors.textStrong, fontWeight = FontWeight.SemiBold, fontSize = 18.sp)
                 Text(
-                    i18n("下載中 {}，等待 {}，失敗 {}", summary.downloading, summary.queued, summary.failed),
+                    i18n(
+                        "{} · 下載中 {}，等待 {}，失敗 {}",
+                        downloadManagerTitleStatus(entries, summary),
+                        summary.downloading,
+                        summary.queued,
+                        summary.failed,
+                    ),
                     color = colors.textDark.copy(alpha = 0.68f),
                     fontSize = 13.sp,
                 )
@@ -364,6 +396,11 @@ private fun DownloadQueueEntryCard(
 @Composable
 private fun DownloadContentManagementTab(
     state: DownloadContentManagementState,
+    sortMode: DownloadedContentSortMode,
+    sortDescending: Boolean,
+    selectedFilterKeys: Set<String>,
+    onSelectSortMode: (DownloadedContentSortMode) -> Unit,
+    onSelectFilterKeys: (Set<String>) -> Unit,
     onRetryLoad: () -> Unit,
     onClearGroup: (DownloadedContentGroup) -> Unit,
     onClearItem: (DownloadedContentItem) -> Unit,
@@ -372,6 +409,22 @@ private fun DownloadContentManagementTab(
     val colors = YamiboTheme.colors
     val groups = (state as? DownloadContentManagementState.Ready)?.groups.orEmpty()
     var expandedGroups by remember(groups) { mutableStateOf(emptySet<String>()) }
+    var showSortDialog by remember { mutableStateOf(false) }
+    var showFilterDialog by remember { mutableStateOf(false) }
+    val filterOptions = remember(groups) { buildDownloadedContentFilterOptions(groups) }
+    val normalizedFilterKeys = remember(selectedFilterKeys, filterOptions) {
+        selectedFilterKeys.filterTo(mutableSetOf()) { selected ->
+            selected != DOWNLOADED_CONTENT_FILTER_ALL && filterOptions.any { it.key == selected }
+        }
+    }
+    val displayedGroups = remember(groups, normalizedFilterKeys, sortMode, sortDescending) {
+        filterAndSortDownloadedContentGroups(
+            groups = groups,
+            selectedFilterKeys = normalizedFilterKeys,
+            sortMode = sortMode,
+            descending = sortDescending,
+        )
+    }
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -394,6 +447,15 @@ private fun DownloadContentManagementTab(
                 }
             }
             is DownloadContentManagementState.Ready -> {
+                item {
+                    DownloadContentControlRow(
+                        sortMode = sortMode,
+                        sortDescending = sortDescending,
+                        filterActive = normalizedFilterKeys.isNotEmpty(),
+                        onSortClick = { showSortDialog = true },
+                        onFilterClick = { showFilterDialog = true },
+                    )
+                }
                 item { DownloadContentSummaryCard(state.summary) }
                 if (groups.isEmpty()) {
                     item {
@@ -401,8 +463,14 @@ private fun DownloadContentManagementTab(
                             Text(i18n("目前沒有已下載內容"), color = colors.textStrong, fontWeight = FontWeight.SemiBold)
                         }
                     }
+                } else if (displayedGroups.isEmpty()) {
+                    item {
+                        YamiboDownloadCard {
+                            Text(i18n("沒有符合篩選的下載內容"), color = colors.textStrong, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
                 } else {
-                    items(groups, key = { it.id }) { group ->
+                    items(displayedGroups, key = { it.id }) { group ->
                         val expanded = group.id in expandedGroups
                         DownloadContentGroupCard(
                             group = group,
@@ -418,6 +486,80 @@ private fun DownloadContentManagementTab(
                 }
             }
         }
+    }
+    if (showSortDialog) {
+        YamiboSingleSelectDialog(
+            title = i18n("排序"),
+            options = DownloadedContentSortMode.entries,
+            selected = sortMode,
+            onDismiss = { showSortDialog = false },
+            onSelect = onSelectSortMode,
+            label = { it.downloadedContentSortLabel() },
+            selectedText = if (sortDescending) "↓" else "↑",
+            footer = { YamiboActionChip(i18n("確定"), onClick = { showSortDialog = false }) },
+        )
+    }
+    if (showFilterDialog) {
+        val allOption = DownloadedContentFilterOption(
+            key = DOWNLOADED_CONTENT_FILTER_ALL,
+            label = i18n("全部"),
+            count = groups.sumOf { it.itemCount },
+        )
+        val options = listOf(allOption) + filterOptions
+        val selectedOptions = if (normalizedFilterKeys.isEmpty()) {
+            setOf(allOption)
+        } else {
+            options.filterTo(mutableSetOf()) { it.key in normalizedFilterKeys }
+        }
+        YamiboMultiSelectDialog(
+            title = i18n("篩選下載內容"),
+            options = options,
+            selected = selectedOptions,
+            onConfirm = { selected ->
+                showFilterDialog = false
+                onSelectFilterKeys(
+                    if (allOption in selected) {
+                        emptySet()
+                    } else {
+                        selected.mapTo(mutableSetOf()) { it.key }
+                    }
+                )
+            },
+            onCancel = { showFilterDialog = false },
+            label = { option -> i18n("{} ({})", option.label, option.count) },
+            toggleSelection = { option, current ->
+                when {
+                    option.key == DOWNLOADED_CONTENT_FILTER_ALL -> setOf(option)
+                    option in current -> (current - option).ifEmpty { setOf(allOption) }
+                    else -> (current - allOption) + option
+                }
+            },
+        )
+    }
+}
+
+@Composable
+private fun DownloadContentControlRow(
+    sortMode: DownloadedContentSortMode,
+    sortDescending: Boolean,
+    filterActive: Boolean,
+    onSortClick: () -> Unit,
+    onFilterClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        YamiboActionChip(
+            text = i18n("排序: {} {}", sortMode.downloadedContentSortLabel(), if (sortDescending) "↓" else "↑"),
+            onClick = onSortClick,
+        )
+        YamiboActionChip(
+            text = i18n("篩選"),
+            onClick = onFilterClick,
+            selected = filterActive,
+        )
     }
 }
 
@@ -441,8 +583,14 @@ private fun DownloadContentLoadingCard() {
 private fun DownloadContentSummaryCard(summary: DownloadedContentSummary) {
     val colors = YamiboTheme.colors
     YamiboDownloadCard {
-        Text(i18n("儲存空間"), color = colors.textStrong, fontWeight = FontWeight.SemiBold, fontSize = 18.sp)
-        Spacer(Modifier.height(6.dp))
+        YamiboStorageUsageOverview(
+            title = i18n("儲存空間"),
+            usages = listOf(
+                CacheStorageUsage("thread_downloads", i18n("Thread"), summary.threadImageBytes),
+                CacheStorageUsage("tag_manga_downloads", i18n("標籤漫畫"), summary.tagMangaImageBytes),
+            ),
+        )
+        Spacer(Modifier.height(12.dp))
         Text(
             i18n(
                 "共 {} 項，Thread {} 頁，標籤漫畫 {} 章，圖片 {} 張",
@@ -620,6 +768,11 @@ private fun statusLabel(status: DownloadStatus): String = when (status) {
     DownloadStatus.Failed -> i18n("下載失敗")
     DownloadStatus.Paused -> i18n("已暫停")
     DownloadStatus.UpdateAvailable -> i18n("可刷新")
+}
+
+private fun DownloadedContentSortMode.downloadedContentSortLabel(): String = when (this) {
+    DownloadedContentSortMode.TotalSize -> i18n("總大小")
+    DownloadedContentSortMode.DownloadedAt -> i18n("下載時間")
 }
 
 private fun entryDetailLabel(entry: DownloadQueueEntry): String = when (val key = entry.key) {

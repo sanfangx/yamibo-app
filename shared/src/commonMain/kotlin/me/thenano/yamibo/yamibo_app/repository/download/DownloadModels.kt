@@ -73,6 +73,8 @@ data class ThreadPageDownloadManifest(
     val downloadedAt: Long,
     val sourceTotalPages: Int,
     val pageKind: DownloadPageKind,
+    val forumId: Int? = null,
+    val forumName: String? = null,
     val images: List<DownloadedImage> = emptyList(),
 )
 
@@ -118,6 +120,8 @@ data class DownloadedContentSummary(
     val tagMangaChapters: Int = 0,
     val imageCount: Int = 0,
     val imageBytes: Long = 0L,
+    val threadImageBytes: Long = 0L,
+    val tagMangaImageBytes: Long = 0L,
 )
 
 data class DownloadedContentGroup(
@@ -128,6 +132,9 @@ data class DownloadedContentGroup(
     val imageCount: Int,
     val imageBytes: Long,
     val items: List<DownloadedContentItem>,
+    val filterKey: String = "",
+    val filterLabel: String = "",
+    val latestDownloadedAt: Long = 0L,
 )
 
 enum class DownloadedContentGroupType {

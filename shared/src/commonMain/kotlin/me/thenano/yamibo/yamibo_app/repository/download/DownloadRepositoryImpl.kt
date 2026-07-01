@@ -54,7 +54,10 @@ class DownloadRepositoryImpl(
         scope.launch {
             try {
                 if (!storageProvider.isReady()) return@launch
-                val restoredQueue = storageProvider.readQueue().map { entry ->
+                val restoredQueue = pruneExpiredQueueEntries(
+                    entries = storageProvider.readQueue(),
+                    now = currentTimeMillis(),
+                ).map { entry ->
                     when (entry.status) {
                         DownloadStatus.Downloading -> entry.copy(status = DownloadStatus.Queued)
                         else -> entry
@@ -89,6 +92,7 @@ class DownloadRepositoryImpl(
                 _queue.value = restored
                 restored.forEach { knownTitles[it.key] = it.title }
                 backgroundController.onQueueChanged(restored)
+                storageProvider.writeQueue(restoredQueue)
             } finally {
                 initialized.complete(Unit)
             }
@@ -115,13 +119,18 @@ class DownloadRepositoryImpl(
         initialized.await()
         val threadManifests = storageProvider.listManifests()
         val tagManifests = storageProvider.listTagMangaManifests()
-        val allImages = threadManifests.flatMap { it.images } + tagManifests.flatMap { it.images }
+        val threadImages = threadManifests.flatMap { it.images }
+        val tagImages = tagManifests.flatMap { it.images }
+        val threadBytes = threadImages.sumOf { it.bytes }
+        val tagBytes = tagImages.sumOf { it.bytes }
         return DownloadedContentSummary(
             totalItems = threadManifests.size + tagManifests.size,
             threadPages = threadManifests.size,
             tagMangaChapters = tagManifests.size,
-            imageCount = allImages.size,
-            imageBytes = allImages.sumOf { it.bytes },
+            imageCount = threadImages.size + tagImages.size,
+            imageBytes = threadBytes + tagBytes,
+            threadImageBytes = threadBytes,
+            tagMangaImageBytes = tagBytes,
         )
     }
 
@@ -150,6 +159,11 @@ class DownloadRepositoryImpl(
                     imageCount = items.sumOf { it.imageCount },
                     imageBytes = items.sumOf { it.imageBytes },
                     items = items,
+                    filterKey = sorted.firstOrNull()?.forumId?.let { "forum_$it" }
+                        ?: DOWNLOADED_CONTENT_FILTER_UNKNOWN_FORUM,
+                    filterLabel = sorted.firstOrNull()?.forumName?.takeIf { it.isNotBlank() }
+                        ?: "未知板塊",
+                    latestDownloadedAt = items.maxOfOrNull { it.downloadedAt } ?: 0L,
                 )
             }
         val tagGroups = storageProvider.listTagMangaManifests()
@@ -176,6 +190,9 @@ class DownloadRepositoryImpl(
                     imageCount = items.sumOf { it.imageCount },
                     imageBytes = items.sumOf { it.imageBytes },
                     items = items,
+                    filterKey = DOWNLOADED_CONTENT_FILTER_TAG_MANGA,
+                    filterLabel = "標籤漫畫",
+                    latestDownloadedAt = items.maxOfOrNull { it.downloadedAt } ?: 0L,
                 )
             }
         return (threadGroups + tagGroups).sortedWith(compareBy<DownloadedContentGroup> { it.type.name }.thenBy { it.title })
@@ -541,6 +558,8 @@ class DownloadRepositoryImpl(
             downloadedAt = currentTimeMillis(),
             sourceTotalPages = totalPages,
             pageKind = if (key.page >= totalPages) DownloadPageKind.LastAtDownloadTime else DownloadPageKind.Normal,
+            forumId = page.thread.forum.fid.value,
+            forumName = page.thread.forum.name,
             images = downloadedImages,
         )
         updateStage(key, DownloadStage.Saving, downloadedImages.size, downloadedImages.size)
@@ -690,3 +709,15 @@ class DownloadRepositoryImpl(
         val tagPage: Int,
     )
 }
+
+internal const val DOWNLOAD_QUEUE_TERMINAL_RETENTION_MS: Long = 24L * 60L * 60L * 1000L
+
+internal fun pruneExpiredQueueEntries(
+    entries: List<DownloadQueueEntry>,
+    now: Long,
+    retentionMs: Long = DOWNLOAD_QUEUE_TERMINAL_RETENTION_MS,
+): List<DownloadQueueEntry> =
+    entries.filter { entry ->
+        val expired = entry.updatedAt > 0L && now - entry.updatedAt > retentionMs
+        !expired || entry.status != DownloadStatus.Downloaded && entry.status != DownloadStatus.Failed
+    }

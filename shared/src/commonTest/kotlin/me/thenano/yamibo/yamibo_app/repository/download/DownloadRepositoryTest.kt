@@ -171,6 +171,54 @@ class DownloadRepositoryTest {
     }
 
     @Test
+    fun pruneExpiredQueueEntriesOnlyRemovesOldTerminalEntries() {
+        val now = DOWNLOAD_QUEUE_TERMINAL_RETENTION_MS * 2
+        val expired = now - DOWNLOAD_QUEUE_TERMINAL_RETENTION_MS - 1
+        val recent = now - 1_000L
+        val entries = listOf(
+            DownloadQueueEntry(ThreadPageDownloadKey(1, 1), "downloaded", DownloadStatus.Downloaded, updatedAt = expired),
+            DownloadQueueEntry(ThreadPageDownloadKey(2, 1), "failed", DownloadStatus.Failed, updatedAt = expired),
+            DownloadQueueEntry(ThreadPageDownloadKey(3, 1), "queued", DownloadStatus.Queued, updatedAt = expired),
+            DownloadQueueEntry(ThreadPageDownloadKey(4, 1), "downloading", DownloadStatus.Downloading, updatedAt = expired),
+            DownloadQueueEntry(ThreadPageDownloadKey(5, 1), "paused", DownloadStatus.Paused, updatedAt = expired),
+            DownloadQueueEntry(ThreadPageDownloadKey(6, 1), "update", DownloadStatus.UpdateAvailable, updatedAt = expired),
+            DownloadQueueEntry(ThreadPageDownloadKey(7, 1), "recent", DownloadStatus.Failed, updatedAt = recent),
+        )
+
+        val pruned = pruneExpiredQueueEntries(entries, now)
+
+        assertEquals(
+            setOf(3, 4, 5, 6, 7),
+            pruned.map { (it.key as ThreadPageDownloadKey).tid }.toSet(),
+        )
+    }
+
+    @Test
+    fun expiredQueueHistoryDoesNotRemoveManifestDownloadedStatus() = runBlocking {
+        val key = ThreadPageDownloadKey(42, 1)
+        val storage = FakeStorage()
+        storage.seed(
+            key,
+            ThreadPageDownloadManifest(key, "saved", 1, 1, DownloadPageKind.LastAtDownloadTime),
+            page(42, 1, 1),
+        )
+        storage.seedQueue(
+            listOf(
+                DownloadQueueEntry(
+                    key = key,
+                    title = "old history",
+                    status = DownloadStatus.Failed,
+                    updatedAt = 1,
+                ),
+            )
+        )
+        val repository = repository(FakeThreadRepository(), storage)
+
+        assertEquals(DownloadStatus.Downloaded, repository.getStatus(key))
+        assertTrue(repository.queue.value.any { it.key == key && it.status == DownloadStatus.Downloaded })
+    }
+
+    @Test
     fun clearingInFlightPagePreventsLateWrite() = runBlocking {
         val key = ThreadPageDownloadKey(42, 1)
         val gate = CompletableDeferred<Unit>()
@@ -371,6 +419,8 @@ class DownloadRepositoryTest {
                 downloadedAt = 1,
                 sourceTotalPages = 3,
                 pageKind = DownloadPageKind.Normal,
+                forumId = 2,
+                forumName = "板塊",
                 images = listOf(DownloadedImage("https://img/a.jpg", "0000.jpg", 10)),
             ),
             page(42, 2, 3),
@@ -400,9 +450,61 @@ class DownloadRepositoryTest {
         assertEquals(1, summary.tagMangaChapters)
         assertEquals(3, summary.imageCount)
         assertEquals(60, summary.imageBytes)
+        assertEquals(10, summary.threadImageBytes)
+        assertEquals(50, summary.tagMangaImageBytes)
         assertEquals(setOf(DownloadedContentGroupType.Thread, DownloadedContentGroupType.TagManga), groups.map { it.type }.toSet())
-        assertTrue(groups.any { it.title == "thread" && it.imageBytes == 10L })
-        assertTrue(groups.any { it.title == "#tag" && it.imageBytes == 50L })
+        assertTrue(groups.any { it.title == "thread" && it.imageBytes == 10L && it.filterKey == "forum_2" && it.filterLabel == "板塊" })
+        assertTrue(groups.any { it.title == "#tag" && it.imageBytes == 50L && it.filterKey == DOWNLOADED_CONTENT_FILTER_TAG_MANGA })
+    }
+
+    @Test
+    fun downloadedContentGroupsFallbackToUnknownForumForOldManifest() = runBlocking {
+        val key = ThreadPageDownloadKey(42, 1)
+        val storage = FakeStorage()
+        storage.seed(
+            key,
+            ThreadPageDownloadManifest(
+                key = key,
+                title = "old",
+                downloadedAt = 1,
+                sourceTotalPages = 1,
+                pageKind = DownloadPageKind.LastAtDownloadTime,
+            ),
+            page(42, 1, 1),
+        )
+        val repository = repository(FakeThreadRepository(), storage)
+
+        val group = repository.getDownloadedContentGroups().single()
+
+        assertEquals(DOWNLOADED_CONTENT_FILTER_UNKNOWN_FORUM, group.filterKey)
+        assertEquals("未知板塊", group.filterLabel)
+    }
+
+    @Test
+    fun downloadedContentPresentationSortsAndFiltersGroups() {
+        val groups = listOf(
+            contentGroup("thread-small", DownloadedContentGroupType.Thread, 10, 1, "forum_1", "A"),
+            contentGroup("thread-large", DownloadedContentGroupType.Thread, 30, 3, "forum_2", "B"),
+            contentGroup("tag", DownloadedContentGroupType.TagManga, 20, 2, DOWNLOADED_CONTENT_FILTER_TAG_MANGA, "標籤漫畫"),
+        )
+
+        val bySizeDesc = filterAndSortDownloadedContentGroups(
+            groups,
+            selectedFilterKeys = emptySet(),
+            sortMode = DownloadedContentSortMode.TotalSize,
+            descending = true,
+        )
+        val forumOnly = filterAndSortDownloadedContentGroups(
+            groups,
+            selectedFilterKeys = setOf("forum_1"),
+            sortMode = DownloadedContentSortMode.DownloadedAt,
+            descending = false,
+        )
+        val options = buildDownloadedContentFilterOptions(groups)
+
+        assertEquals(listOf("thread-large", "tag", "thread-small"), bySizeDesc.map { it.id })
+        assertEquals(listOf("thread-small"), forumOnly.map { it.id })
+        assertEquals(setOf("forum_1", "forum_2", DOWNLOADED_CONTENT_FILTER_TAG_MANGA), options.map { it.key }.toSet())
     }
 
     private fun repository(
@@ -471,6 +573,41 @@ class DownloadRepositoryTest {
             hasPoll = false,
             url = "forum.php?mod=viewthread&tid=$tid",
             author = User(UserId(7), "author"),
+        )
+    }
+
+    private fun contentGroup(
+        id: String,
+        type: DownloadedContentGroupType,
+        bytes: Long,
+        downloadedAt: Long,
+        filterKey: String,
+        filterLabel: String,
+    ): DownloadedContentGroup {
+        val key: DownloadTaskKey = when (type) {
+            DownloadedContentGroupType.Thread -> ThreadPageDownloadKey(id.hashCode(), 1)
+            DownloadedContentGroupType.TagManga -> TagMangaChapterDownloadKey(1, id.hashCode())
+        }
+        return DownloadedContentGroup(
+            id = id,
+            title = id,
+            type = type,
+            itemCount = 1,
+            imageCount = 1,
+            imageBytes = bytes,
+            items = listOf(
+                DownloadedContentItem(
+                    key = key,
+                    title = id,
+                    detail = id,
+                    downloadedAt = downloadedAt,
+                    imageCount = 1,
+                    imageBytes = bytes,
+                )
+            ),
+            filterKey = filterKey,
+            filterLabel = filterLabel,
+            latestDownloadedAt = downloadedAt,
         )
     }
 

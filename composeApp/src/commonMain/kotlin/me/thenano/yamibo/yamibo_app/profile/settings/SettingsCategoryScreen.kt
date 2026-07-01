@@ -20,11 +20,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.LocalAppSettingsRepository
+import me.thenano.yamibo.yamibo_app.LocalDownloadRepository
 import me.thenano.yamibo.yamibo_app.LocalSignReminderScheduler
 import me.thenano.yamibo.yamibo_app.LocalDiskCacheFactory
 import me.thenano.yamibo.yamibo_app.LocalFavoriteSyncRunner
 import me.thenano.yamibo.yamibo_app.LocalFavoriteUpdateRunner
 import me.thenano.yamibo.yamibo_app.core.cache.CacheStorageBreakdown
+import me.thenano.yamibo.yamibo_app.core.cache.CacheStorageUsage
+import me.thenano.yamibo.yamibo_app.components.storage.YamiboStorageUsageOverview
 import me.thenano.yamibo.yamibo_app.favorite.IFavoriteCategoryManageScreen
 import me.thenano.yamibo.yamibo_app.favorite.sync.FavoriteSyncStatusCard
 import me.thenano.yamibo.yamibo_app.favorite.sync.IFavoriteSyncProgressScreen
@@ -33,10 +36,12 @@ import me.thenano.yamibo.yamibo_app.i18n.localizedLabel
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.profile.settings.access.IBackgroundAccessSetupScreen
 import me.thenano.yamibo.yamibo_app.profile.settings.bound.*
+import me.thenano.yamibo.yamibo_app.profile.download.IDownloadQueueScreen
 import me.thenano.yamibo.yamibo_app.profile.settings.components.SettingsChipRow
 import me.thenano.yamibo.yamibo_app.profile.settings.components.ThemeSelectorContent
 import me.thenano.yamibo.yamibo_app.components.navigation.YamiboTopBar
 import me.thenano.yamibo.yamibo_app.repository.FavoriteSyncRepository.FavoriteSyncState
+import me.thenano.yamibo.yamibo_app.repository.download.DownloadedContentSummary
 import me.thenano.yamibo.yamibo_app.repository.settings.*
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
@@ -537,16 +542,21 @@ private fun RowScope.SettingsRowDescription(
 @Composable
 private fun StorageContent(snackbarHostState: SnackbarHostState) {
     val colors = YamiboTheme.colors
+    val navigator = LocalNavigator.current
     val appSettingsRepo = LocalAppSettingsRepository.current
     val diskCacheFactory = LocalDiskCacheFactory.current
+    val downloadRepository = LocalDownloadRepository.current
     val coroutineScope = rememberCoroutineScope()
 
     val clearOnLaunch = appSettingsRepo.clearCacheOnAppLaunch.state()
     var cacheSizeText by remember { mutableStateOf(i18n("正在計算中...")) }
     var cacheBreakdown by remember { mutableStateOf(CacheStorageBreakdown(rootPath = "", usages = emptyList())) }
+    var downloadSummary by remember { mutableStateOf(DownloadedContentSummary()) }
 
     suspend fun refreshCacheUsage() {
         cacheBreakdown = diskCacheFactory.getCacheStorageBreakdown()
+        downloadSummary = runCatching { downloadRepository.getDownloadedContentSummary() }
+            .getOrDefault(DownloadedContentSummary())
         cacheSizeText = formatStorageSize(cacheBreakdown.usages.sumOf { it.bytes })
     }
 
@@ -586,10 +596,23 @@ private fun StorageContent(snackbarHostState: SnackbarHostState) {
 
     Spacer(Modifier.height(24.dp))
 
-    if (cacheBreakdown.usages.isNotEmpty()) {
-        StorageUsageOverview(cacheBreakdown)
-        Spacer(Modifier.height(18.dp))
-    }
+    val storageUsages = cacheBreakdown.usages + CacheStorageUsage(
+        key = "downloads",
+        label = i18n("下載內容"),
+        bytes = downloadSummary.imageBytes,
+    )
+    YamiboStorageUsageOverview(
+        title = i18n("儲存空間使用情形"),
+        rootPath = cacheBreakdown.rootPath,
+        usages = storageUsages,
+    )
+    Spacer(Modifier.height(18.dp))
+
+    DownloadStorageSummaryTable(
+        summary = downloadSummary,
+        onOpenDownloadManager = { navigator.navigate(IDownloadQueueScreen()) },
+    )
+    Spacer(Modifier.height(18.dp))
 
     SettingsActionRow(
         title = i18n("立即清除所有緩存"),
@@ -606,78 +629,51 @@ private fun StorageContent(snackbarHostState: SnackbarHostState) {
 }
 
 @Composable
-private fun StorageUsageOverview(breakdown: CacheStorageBreakdown) {
+private fun DownloadStorageSummaryTable(
+    summary: DownloadedContentSummary,
+    onOpenDownloadManager: () -> Unit,
+) {
     val colors = YamiboTheme.colors
-    val usageColors = mapOf(
-        "images" to Color(0xFF5C8DD6),
-        "pages" to Color(0xFFB66D32),
-        "userspace" to Color(0xFF7D63B8),
-        "backup" to Color(0xFF4A9A76),
-        "other" to Color(0xFF8A7D70),
-    )
-    val totalBytes = breakdown.usages.sumOf { it.bytes }.coerceAtLeast(1L)
-
     Text(
-        text = i18n("儲存空間使用情形"),
+        text = i18n("下載內容"),
         fontSize = 16.sp,
         fontWeight = FontWeight.SemiBold,
         color = colors.brownDeep,
         modifier = Modifier.padding(horizontal = 4.dp),
     )
     Spacer(Modifier.height(8.dp))
-    Text(
-        text = breakdown.rootPath,
-        fontSize = 12.sp,
-        color = colors.textDark.copy(alpha = 0.62f),
-        maxLines = 2,
-        overflow = TextOverflow.Ellipsis,
-        modifier = Modifier.padding(horizontal = 4.dp),
+    StorageSummaryRow(i18n("Thread 頁數"), summary.threadPages.toString())
+    StorageSummaryRow(i18n("Tag Manga 章節數"), summary.tagMangaChapters.toString())
+    StorageSummaryRow(i18n("圖片張數"), summary.imageCount.toString())
+    StorageSummaryRow(i18n("容量"), formatStorageSize(summary.imageBytes))
+    Spacer(Modifier.height(8.dp))
+    SettingsActionRow(
+        title = i18n("前往下載管理"),
+        subtitle = i18n("查看下載佇列、已下載內容與清除/重新載入操作。"),
+        onClick = onOpenDownloadManager,
     )
-    Spacer(Modifier.height(10.dp))
+}
+
+@Composable
+private fun StorageSummaryRow(label: String, value: String) {
+    val colors = YamiboTheme.colors
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(10.dp)
-            .clip(RoundedCornerShape(50))
-            .background(colors.brownLight.copy(alpha = 0.32f)),
+            .padding(horizontal = 4.dp, vertical = 5.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        breakdown.usages.forEach { item ->
-            Box(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .weight((item.bytes.toFloat() / totalBytes.toFloat()).coerceAtLeast(0.01f))
-                    .background(usageColors[item.key] ?: colors.brownPrimary),
-            )
-        }
-    }
-    Spacer(Modifier.height(12.dp))
-    breakdown.usages.forEach { item ->
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 4.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(9.dp)
-                    .clip(CircleShape)
-                    .background(usageColors[item.key] ?: colors.brownPrimary),
-            )
-            Text(
-                text = item.label,
-                color = colors.textDark,
-                fontSize = 13.sp,
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(start = 8.dp),
-            )
-            Text(
-                text = formatStorageSize(item.bytes),
-                color = colors.textDark.copy(alpha = 0.62f),
-                fontSize = 12.sp,
-            )
-        }
+        Text(
+            text = label,
+            color = colors.textDark,
+            fontSize = 13.sp,
+            modifier = Modifier.weight(1f),
+        )
+        Text(
+            text = value,
+            color = colors.textDark.copy(alpha = 0.68f),
+            fontSize = 13.sp,
+        )
     }
 }
 @Composable
