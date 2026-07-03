@@ -30,3 +30,4 @@ node_modules/
 .run/composeApp releaseRun.run.xml
 /.codex
 /data/
+/openspec
