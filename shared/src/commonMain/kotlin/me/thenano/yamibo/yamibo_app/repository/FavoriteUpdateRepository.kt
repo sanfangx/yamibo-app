@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.repository
+﻿package me.thenano.yamibo.yamibo_app.repository
 
 import kotlinx.coroutines.flow.StateFlow
 
@@ -7,6 +7,7 @@ interface FavoriteUpdateRepository {
         NormalThread,
         NovelThread,
         TagManga,
+        RssSearch,
     }
 
     enum class RunStatus {
@@ -28,7 +29,7 @@ interface FavoriteUpdateRepository {
 
     data class UpdateEvent(
         val id: Long,
-        val targetType: LocalFavoriteRepository.FavoriteTargetType,
+        val targetType: FavoriteStoreRepository.FavoriteTargetType,
         val targetId: Long,
         val authorId: Long?,
         val fid: Int?,

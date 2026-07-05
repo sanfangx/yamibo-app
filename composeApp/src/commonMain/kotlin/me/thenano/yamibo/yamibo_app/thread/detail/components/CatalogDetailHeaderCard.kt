@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.thread.detail.tag.components
+package me.thenano.yamibo.yamibo_app.thread.detail.components
 
 import YamiboIcons
 import androidx.compose.foundation.layout.*
@@ -24,8 +24,10 @@ import yamibo_app.composeapp.generated.resources.Res
 import yamibo_app.composeapp.generated.resources.book
 
 @Composable
-fun TagDetailHeaderCard(
+fun CatalogDetailHeaderCard(
     tagName: String,
+    displayTitle: String = "#$tagName",
+    badgeText: String = i18n("#標籤漫畫"),
     coverUrl: String?,
     isMangaMode: Boolean,
     onMangaModeChange: (Boolean) -> Unit,
@@ -98,7 +100,7 @@ fun TagDetailHeaderCard(
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "#$tagName",
+                        text = displayTitle,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = colors.textDark
@@ -111,7 +113,7 @@ fun TagDetailHeaderCard(
                         color = colors.brownDeep.copy(alpha = 0.12f)
                     ) {
                         Text(
-                            text = i18n("#標籤漫畫"),
+                            text = badgeText,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                             fontSize = 11.sp,
                             color = colors.brownDeep

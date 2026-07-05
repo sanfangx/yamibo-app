@@ -23,12 +23,24 @@ interface DownloadStorageProvider {
         fileNames.mapNotNull { resolveTagMangaImageUri(key, it) }
     suspend fun readTagMangaManifest(key: TagMangaChapterDownloadKey): TagMangaChapterManifest?
     suspend fun listTagMangaManifests(): List<TagMangaChapterManifest>
+    suspend fun writeRssMangaChapter(
+        key: RssMangaChapterDownloadKey,
+        manifestBytes: ByteArray,
+        images: List<PendingDownloadedImage>,
+    )
+    suspend fun resolveRssMangaImageUri(key: RssMangaChapterDownloadKey, fileName: String): String?
+    suspend fun resolveRssMangaImageUris(key: RssMangaChapterDownloadKey, fileNames: List<String>): List<String> =
+        fileNames.mapNotNull { resolveRssMangaImageUri(key, it) }
+    suspend fun readRssMangaManifest(key: RssMangaChapterDownloadKey): RssMangaChapterManifest?
+    suspend fun listRssMangaManifests(): List<RssMangaChapterManifest>
     suspend fun readQueue(): List<DownloadQueueEntry>
     suspend fun writeQueue(entries: List<DownloadQueueEntry>)
     suspend fun deleteThreadPage(key: ThreadPageDownloadKey)
     suspend fun deleteThread(key: ThreadPageDownloadKey)
     suspend fun deleteTagMangaChapter(key: TagMangaChapterDownloadKey)
     suspend fun deleteTagManga(tagId: Int)
+    suspend fun deleteRssMangaChapter(key: RssMangaChapterDownloadKey)
+    suspend fun deleteRssManga(subscriptionId: Long)
 }
 
 data class PendingDownloadedImage(

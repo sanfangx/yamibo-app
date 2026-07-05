@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.thread.reader.components
+﻿package me.thenano.yamibo.yamibo_app.thread.reader.components
 
 import YamiboIcons
 import androidx.compose.animation.core.animateFloatAsState
@@ -25,7 +25,7 @@ import io.github.littlesurvival.dto.value.PostId
 import me.thenano.yamibo.yamibo_app.components.text.rememberConvertedText
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.i18n.i18n
-import me.thenano.yamibo.yamibo_app.repository.LocalChapterStateRepository
+import me.thenano.yamibo.yamibo_app.repository.ChapterStateRepository
 import me.thenano.yamibo.yamibo_app.repository.download.DownloadQueueEntry
 import me.thenano.yamibo.yamibo_app.repository.download.DownloadStage
 import me.thenano.yamibo.yamibo_app.repository.download.DownloadStatus
@@ -40,7 +40,7 @@ internal fun ReaderCatalogPanel(
     bookmarkedPostIds: Set<Long> = emptySet(),
     readPostIds: Set<Long> = emptySet(),
     downloadEntriesByPage: Map<Int, DownloadQueueEntry> = emptyMap(),
-    chapterStates: Map<Long, LocalChapterStateRepository.Entry> = emptyMap(),
+    chapterStates: Map<Long, ChapterStateRepository.Entry> = emptyMap(),
     onPageOrPostClick: (Int, Post?) -> Unit,
     onDownload: () -> Unit,
     onPostLongPress: (Post) -> Unit = {},
@@ -310,7 +310,7 @@ internal fun ReaderCatalogPanel(
     }
 }
 
-private fun LocalChapterStateRepository.Entry.progressLabel(): String? {
+private fun ChapterStateRepository.Entry.progressLabel(): String? {
     if (read) return null
     if (progressPercent <= 0) return null
     return i18n("已讀 {}%", progressPercent)

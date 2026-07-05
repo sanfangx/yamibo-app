@@ -28,6 +28,7 @@ import me.thenano.yamibo.yamibo_app.repository.font.DefaultFontRepository
 import me.thenano.yamibo.yamibo_app.repository.font.IOSFontPlatform
 import me.thenano.yamibo.yamibo_app.repository.appupdate.DefaultAppUpdateRepository
 import me.thenano.yamibo.yamibo_app.repository.inapplinknavigation.DefaultInAppLinkNavigationRepository
+import me.thenano.yamibo.yamibo_app.repository.rss.RssSearchSubscriptionRepositoryImpl
 import me.thenano.yamibo.yamibo_app.repository.settings.AppSettingsRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.MangaReaderSettingsRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.NovelReaderSettingsRepository
@@ -95,12 +96,20 @@ fun MainViewController() = ComposeUIViewController {
             threadRepository = threadRepository,
         )
     }
+    val rssSearchSubscriptionRepository = remember {
+        RssSearchSubscriptionRepositoryImpl(
+            db = favoriteSyncDatabase,
+            authRepository = authRepository,
+            forumRepository = forumRepository,
+        )
+    }
     val favoriteUpdateRepository = remember {
         FavoriteUpdateRepositoryImpl(
             db = favoriteSyncDatabase,
             localFavoriteRepository = favoriteRepository,
             threadRepository = threadRepository,
             tagRepository = tagRepository,
+            rssSearchSubscriptionRepository = rssSearchSubscriptionRepository,
         )
     }
     val backgroundTaskRepository = remember { IOSBackgroundTaskRepository(favoriteSyncRepository) }
@@ -121,6 +130,7 @@ fun MainViewController() = ComposeUIViewController {
         DownloadRepositoryImpl(
             threadRepository = threadRepository,
             tagRepository = tagRepository,
+            rssRepository = rssSearchSubscriptionRepository,
             storageProvider = IOSDownloadStorageProvider(appSettingsRepository),
             imageFetcher = DownloadImageFetcher { cookieStore.load().orEmpty() },
         )
@@ -176,6 +186,7 @@ fun MainViewController() = ComposeUIViewController {
         LocalFavoriteSyncRunner provides favoriteSyncRunner,
         LocalFavoriteUpdateRepository provides favoriteUpdateRepository,
         LocalFavoriteUpdateRunner provides favoriteUpdateRunner,
+        LocalRssSearchSubscriptionRepository provides rssSearchSubscriptionRepository,
         LocalFontRepository provides fontRepository,
         LocalBackgroundAccessRepository provides backgroundAccessRepository,
         LocalNovelThreadCacheRepository provides novelCacheRepository,

@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app
+﻿package me.thenano.yamibo.yamibo_app
 
 import androidx.compose.runtime.compositionLocalOf
 import me.thenano.yamibo.yamibo_app.core.cache.DiskCacheFactory
@@ -16,11 +16,12 @@ import me.thenano.yamibo.yamibo_app.repository.FavoriteUpdateRepository
 import me.thenano.yamibo.yamibo_app.repository.FontRepository
 import me.thenano.yamibo.yamibo_app.repository.ForumRepository
 import me.thenano.yamibo.yamibo_app.repository.InAppLinkNavigationRepository
-import me.thenano.yamibo.yamibo_app.repository.LocalBookMarkRepository as LocalBookMarkRepositoryType
-import me.thenano.yamibo.yamibo_app.repository.LocalChapterStateRepository as LocalChapterStateRepositoryType
-import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository as LocalFavoriteRepositoryType
+import me.thenano.yamibo.yamibo_app.repository.BookMarkRepository as BookMarkRepositoryType
+import me.thenano.yamibo.yamibo_app.repository.ChapterStateRepository as ChapterStateRepositoryType
+import me.thenano.yamibo.yamibo_app.repository.FavoriteStoreRepository as FavoriteStoreRepositoryType
 import me.thenano.yamibo.yamibo_app.repository.NovelPrePostCommentsCacheRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
+import me.thenano.yamibo.yamibo_app.repository.RssSearchSubscriptionRepository
 import me.thenano.yamibo.yamibo_app.repository.SignRepository
 import me.thenano.yamibo.yamibo_app.repository.TagRepository
 import me.thenano.yamibo.yamibo_app.repository.ThemeRepository
@@ -79,13 +80,13 @@ val LocalDetailNoteRepository =
     compositionLocalOf<DetailNoteRepository> { error("LocalDetailNoteRepository not provided") }
 
 val LocalBookMarkRepository =
-    compositionLocalOf<LocalBookMarkRepositoryType> { error("LocalBookMarkRepository not provided") }
+    compositionLocalOf<BookMarkRepositoryType> { error("LocalBookMarkRepository not provided") }
 
 val LocalChapterStateRepository =
-    compositionLocalOf<LocalChapterStateRepositoryType> { error("LocalChapterStateRepository not provided") }
+    compositionLocalOf<ChapterStateRepositoryType> { error("LocalChapterStateRepository not provided") }
 
 val LocalFavoriteRepository =
-    compositionLocalOf<LocalFavoriteRepositoryType> { error("LocalFavoriteRepository not provided") }
+    compositionLocalOf<FavoriteStoreRepositoryType> { error("LocalFavoriteRepository not provided") }
 
 val LocalRemoteFavoriteRepository =
     compositionLocalOf<FavoriteRepository> { error("LocalRemoteFavoriteRepository not provided") }
@@ -101,6 +102,9 @@ val LocalFavoriteUpdateRepository =
 
 val LocalFavoriteUpdateRunner =
     compositionLocalOf<FavoriteUpdateRunner> { error("LocalFavoriteUpdateRunner not provided") }
+
+val LocalRssSearchSubscriptionRepository =
+    compositionLocalOf<RssSearchSubscriptionRepository> { error("LocalRssSearchSubscriptionRepository not provided") }
 
 val LocalFontRepository =
     compositionLocalOf<FontRepository> { error("LocalFontRepository not provided") }

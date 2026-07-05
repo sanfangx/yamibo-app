@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.repository.favorite
+﻿package me.thenano.yamibo.yamibo_app.repository.favorite
 
 import io.github.littlesurvival.YamiboForum
 import io.github.littlesurvival.core.YamiboResult
@@ -25,7 +25,8 @@ import me.thenano.yamibo.yamibo_app.repository.FavoriteUpdateRepository.RunStatu
 import me.thenano.yamibo.yamibo_app.repository.FavoriteUpdateRepository.ScopeTarget
 import me.thenano.yamibo.yamibo_app.repository.FavoriteUpdateRepository.TargetMode
 import me.thenano.yamibo.yamibo_app.repository.FavoriteUpdateRepository.UpdateEvent
-import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository
+import me.thenano.yamibo.yamibo_app.repository.FavoriteStoreRepository
+import me.thenano.yamibo.yamibo_app.repository.RssSearchSubscriptionRepository
 import me.thenano.yamibo.yamibo_app.repository.TagRepository
 import me.thenano.yamibo.yamibo_app.repository.ThreadRepository
 import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
@@ -39,9 +40,10 @@ import kotlin.random.Random
 
 class FavoriteUpdateRepositoryImpl(
     private val db: Database,
-    private val localFavoriteRepository: LocalFavoriteRepository,
+    private val localFavoriteRepository: FavoriteStoreRepository,
     private val threadRepository: ThreadRepository,
     private val tagRepository: TagRepository,
+    private val rssSearchSubscriptionRepository: RssSearchSubscriptionRepository,
 ) : FavoriteUpdateRepository {
     private val targetQueries = db.favoriteUpdateTrackedTargetQueries
     private val eventQueries = db.favoriteUpdateEventQueries
@@ -49,6 +51,7 @@ class FavoriteUpdateRepositoryImpl(
     private val filterQueries = db.favoriteUpdateFidFilterQueries
     private val categoryFilterQueries = db.favoriteUpdateCategoryFilterQueries
     private val itemQueries = db.localFavoriteItemQueries
+    private val rssResultQueries = db.rssSearchSubscriptionResultQueries
     private val interruptRequestedRunIds = linkedSetOf<String>()
     private val stateFlow = MutableStateFlow<RunState>(RunState.Idle)
 
@@ -254,7 +257,7 @@ class FavoriteUpdateRepositoryImpl(
             }
         }
         return events.filter { event ->
-            val eventFid = if (event.targetType == LocalFavoriteRepository.FavoriteTargetType.TagManga) {
+            val eventFid = if (event.targetType == FavoriteStoreRepository.FavoriteTargetType.TagManga) {
                 TAG_MANGA_SCOPE_FID
             } else {
                 event.fid
@@ -312,20 +315,21 @@ class FavoriteUpdateRepositoryImpl(
         getFavoriteUpdateCandidates().map { item ->
             ScopeTarget(
                 fid = item.scopeFid(),
-                categoryIds = localFavoriteRepository.getCategoryIdsForItem(item.id),
+            categoryIds = localFavoriteRepository.getCategoryIdsForItem(item.id),
             )
         }
 
-    private suspend fun checkItem(item: LocalFavoriteRepository.FavoriteItem): CheckResult {
+    private suspend fun checkItem(item: FavoriteStoreRepository.FavoriteItem): CheckResult {
         return when (item.targetType) {
-            LocalFavoriteRepository.FavoriteTargetType.ThreadNormal -> checkThread(item, TargetMode.NormalThread, null)
-            LocalFavoriteRepository.FavoriteTargetType.ThreadNovel -> checkThread(item, TargetMode.NovelThread, item.authorId)
-            LocalFavoriteRepository.FavoriteTargetType.TagManga -> checkTagManga(item)
+            FavoriteStoreRepository.FavoriteTargetType.ThreadNormal -> checkThread(item, TargetMode.NormalThread, null)
+            FavoriteStoreRepository.FavoriteTargetType.ThreadNovel -> checkThread(item, TargetMode.NovelThread, item.authorId)
+            FavoriteStoreRepository.FavoriteTargetType.TagManga -> checkTagManga(item)
+            FavoriteStoreRepository.FavoriteTargetType.RssSearch -> checkRssSearch(item)
         }
     }
 
     private suspend fun checkThread(
-        item: LocalFavoriteRepository.FavoriteItem,
+        item: FavoriteStoreRepository.FavoriteItem,
         mode: TargetMode,
         authorId: UserId?,
     ): CheckResult {
@@ -341,7 +345,7 @@ class FavoriteUpdateRepositoryImpl(
     }
 
     private fun handleThreadPage(
-        item: LocalFavoriteRepository.FavoriteItem,
+        item: FavoriteStoreRepository.FavoriteItem,
         mode: TargetMode,
         page: ThreadPage,
         authorId: UserId?,
@@ -461,7 +465,7 @@ class FavoriteUpdateRepositoryImpl(
     }
 
     private fun shouldReportImportedUpdate(
-        item: LocalFavoriteRepository.FavoriteItem,
+        item: FavoriteStoreRepository.FavoriteItem,
         latestPid: Long?,
         latestUpdateMillis: Long?,
         existing: FavoriteUpdateTrackedTarget?,
@@ -481,15 +485,77 @@ class FavoriteUpdateRepositoryImpl(
         TargetMode.NovelThread -> i18n("作者有新的內容")
         TargetMode.NormalThread -> i18n("帖子有新的內容")
         TargetMode.TagManga -> i18n("Tag 有新的帖子")
+        TargetMode.RssSearch -> i18n("RSS 有新的帖子")
     }
 
     private fun TargetMode.editedUpdateSummary(): String = when (this) {
         TargetMode.NovelThread -> i18n("作者更新內容")
         TargetMode.NormalThread -> i18n("帖子內容已更新")
         TargetMode.TagManga -> i18n("Tag 內容已更新")
+        TargetMode.RssSearch -> i18n("RSS 內容已更新")
     }
 
-    private suspend fun checkTagManga(item: LocalFavoriteRepository.FavoriteItem): CheckResult {
+    private suspend fun checkRssSearch(item: FavoriteStoreRepository.FavoriteItem): CheckResult {
+        val now = currentTimeMillis()
+        val authorId = 0L
+        val existing = targetQueries.getByTarget(item.targetType.name, item.targetId, authorId).executeAsOneOrNull()
+        val refresh = when (val result = rssSearchSubscriptionRepository.refresh(item.targetId)) {
+            is YamiboResult.Success -> result.value
+            is YamiboResult.NotLoggedIn -> return CheckResult.Failed(i18n("登入狀態已失效，無法檢查 {}", item.title))
+            is YamiboResult.NoPermission -> return CheckResult.Failed(result.reason)
+            is YamiboResult.Maintenance -> return CheckResult.Failed(i18n("百合會維護中，無法檢查 {}", item.title))
+            is YamiboResult.Failure -> return CheckResult.Failed(result.reason)
+        }
+        val currentRows = rssResultQueries
+            .getBySubscription(item.targetId, Long.MAX_VALUE, 0)
+            .executeAsList()
+        val currentThreadIds = currentRows.map { it.threadId }.toSet()
+        val knownIds = existing?.knownThreadIds.csvLongs().toMutableSet()
+        val baselineReady = existing?.baselineReady == 1L
+        val newIds = if (baselineReady) currentThreadIds.filterNot { it in knownIds } else emptyList()
+        val newRows = currentRows.filter { it.threadId in newIds }
+        val detectedCount = if (newRows.isNotEmpty()) {
+            insertEvent(
+                item = item,
+                mode = TargetMode.RssSearch,
+                summary = i18n("RSS 新增 {} 個帖子", newRows.size),
+                latestPostTitle = newRows.firstOrNull()?.title?.takeIf { it.isNotBlank() },
+                detailIds = newRows.map { it.threadId },
+                ambiguous = false,
+                detectedAt = now,
+            )
+            1
+        } else {
+            0
+        }
+        knownIds += currentThreadIds
+        targetQueries.upsert(
+            targetType = item.targetType.name,
+            targetId = item.targetId,
+            authorId = authorId,
+            fid = item.scopeFid()?.toLong(),
+            forumName = item.scopeForumName(item.scopeFid() ?: RSS_SCOPE_FID),
+            title = item.title,
+            mode = TargetMode.RssSearch.name,
+            coverUrl = item.coverUrl,
+            knownLatestPostId = currentThreadIds.maxOrNull(),
+            knownLatestAuthorPostId = null,
+            knownReplyCount = null,
+            knownPageCount = null,
+            knownThreadIds = knownIds.joinToString(","),
+            knownFirstThreadId = currentThreadIds.firstOrNull(),
+            knownMaxPage = null,
+            tagPageFingerprints = null,
+            baselineReady = 1L,
+            lastCheckedAt = now,
+            lastUpdatedAt = if (detectedCount > 0) now else existing?.lastUpdatedAt,
+            lastError = null,
+            consecutiveFailures = 0L,
+        )
+        return CheckResult.Checked(detectedCount)
+    }
+
+    private suspend fun checkTagManga(item: FavoriteStoreRepository.FavoriteItem): CheckResult {
         val now = currentTimeMillis()
         val authorId = 0L
         val existing = targetQueries.getByTarget(item.targetType.name, item.targetId, authorId).executeAsOneOrNull()
@@ -595,7 +661,7 @@ class FavoriteUpdateRepositoryImpl(
     }
 
     private suspend fun fetchTagPageOrFailure(
-        item: LocalFavoriteRepository.FavoriteItem,
+        item: FavoriteStoreRepository.FavoriteItem,
         page: Int,
     ): Result<TagPage> {
         return when (val result = tagRepository.fetchTagPage(TagId(item.targetId.toInt()), page)) {
@@ -609,7 +675,7 @@ class FavoriteUpdateRepositoryImpl(
 
     private fun upsertTarget(
         existing: FavoriteUpdateTrackedTarget?,
-        item: LocalFavoriteRepository.FavoriteItem,
+        item: FavoriteStoreRepository.FavoriteItem,
         mode: TargetMode,
         latestPostId: Long?,
         latestAuthorPostId: Long?,
@@ -645,7 +711,7 @@ class FavoriteUpdateRepositoryImpl(
     }
 
     private fun insertEvent(
-        item: LocalFavoriteRepository.FavoriteItem,
+        item: FavoriteStoreRepository.FavoriteItem,
         mode: TargetMode,
         summary: String,
         latestPostTitle: String?,
@@ -672,7 +738,7 @@ class FavoriteUpdateRepositoryImpl(
         )
     }
 
-    private suspend fun refreshFidFilters(favorites: List<LocalFavoriteRepository.FavoriteItem>) {
+    private suspend fun refreshFidFilters(favorites: List<FavoriteStoreRepository.FavoriteItem>) {
         val now = currentTimeMillis()
         val counts = favorites.mapNotNull { item ->
             val fid = item.scopeFid() ?: return@mapNotNull null
@@ -703,7 +769,7 @@ class FavoriteUpdateRepositoryImpl(
         return filterQueries.getAll().executeAsList().map { it.toModel() }
     }
 
-    private suspend fun refreshCategoryFilters(favorites: List<LocalFavoriteRepository.FavoriteItem>) {
+    private suspend fun refreshCategoryFilters(favorites: List<FavoriteStoreRepository.FavoriteItem>) {
         val now = currentTimeMillis()
         val counts = mutableMapOf<Long, Int>()
         favorites.forEach { item ->
@@ -750,9 +816,9 @@ class FavoriteUpdateRepositoryImpl(
         }
     }
 
-    private suspend fun getFavoriteUpdateCandidates(): List<LocalFavoriteRepository.FavoriteItem> =
+    private suspend fun getFavoriteUpdateCandidates(): List<FavoriteStoreRepository.FavoriteItem> =
         localFavoriteRepository.getAllFavoriteItems()
-            .filter { it.targetType != LocalFavoriteRepository.FavoriteTargetType.ThreadNormal || it.targetId > 0L }
+            .filter { it.targetType != FavoriteStoreRepository.FavoriteTargetType.ThreadNormal || it.targetId > 0L }
 
     private fun persistSnapshot(snapshot: RunSnapshot) {
         runQueries.upsertRun(
@@ -826,7 +892,7 @@ class FavoriteUpdateRepositoryImpl(
     private fun FavoriteUpdateEvent.toModel(): UpdateEvent =
         UpdateEvent(
             id = id,
-            targetType = LocalFavoriteRepository.FavoriteTargetType.fromStorage(targetType),
+            targetType = FavoriteStoreRepository.FavoriteTargetType.fromStorage(targetType),
             targetId = targetId,
             authorId = authorId?.takeIf { it != 0L },
             fid = fid?.toInt(),
@@ -859,17 +925,21 @@ class FavoriteUpdateRepositoryImpl(
             itemCount = itemCount.toInt(),
         )
 
-    private fun LocalFavoriteRepository.FavoriteItem.targetKey(): String =
+    private fun FavoriteStoreRepository.FavoriteItem.targetKey(): String =
         "${targetType.name}:$targetId:${authorId?.value?.toLong() ?: 0L}"
 
-    private fun LocalFavoriteRepository.FavoriteItem.scopeFid(): Int? =
-        forumId?.value ?: if (targetType == LocalFavoriteRepository.FavoriteTargetType.TagManga) TAG_MANGA_SCOPE_FID else null
+    private fun FavoriteStoreRepository.FavoriteItem.scopeFid(): Int? =
+        forumId?.value ?: when (targetType) {
+            FavoriteStoreRepository.FavoriteTargetType.TagManga -> TAG_MANGA_SCOPE_FID
+            FavoriteStoreRepository.FavoriteTargetType.RssSearch -> RSS_SCOPE_FID
+            else -> null
+        }
 
-    private fun LocalFavoriteRepository.FavoriteItem.scopeForumName(fid: Int): String =
-        if (fid == TAG_MANGA_SCOPE_FID) {
-            i18n("標籤")
-        } else {
-            forumName ?: forumId?.let { YamiboForum.toForumName(it) } ?: i18n("版塊 {}", fid)
+    private fun FavoriteStoreRepository.FavoriteItem.scopeForumName(fid: Int): String =
+        when (fid) {
+            TAG_MANGA_SCOPE_FID -> i18n("標籤")
+            RSS_SCOPE_FID -> i18n("RSS")
+            else -> forumName ?: forumId?.let { YamiboForum.toForumName(it) } ?: i18n("版塊 {}", fid)
         }
 
     private fun UpdateEvent.targetKey(): String =
@@ -897,5 +967,6 @@ class FavoriteUpdateRepositoryImpl(
         private const val MAX_TAG_SCAN_PAGES = 8
         private const val UPDATE_TIME_TOLERANCE_MILLIS = 60_000L
         private const val TAG_MANGA_SCOPE_FID = -100_000
+        private const val RSS_SCOPE_FID = -100_001
     }
 }

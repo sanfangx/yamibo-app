@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.updates.components
+﻿package me.thenano.yamibo.yamibo_app.updates.components
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -6,7 +6,7 @@ import androidx.compose.runtime.*
 import me.thenano.yamibo.yamibo_app.components.controls.YamiboMultiSelectDialog
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.repository.FavoriteUpdateRepository
-import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository
+import me.thenano.yamibo.yamibo_app.repository.FavoriteStoreRepository
 
 internal const val UPDATE_RESULT_FILTER_ALL = "all"
 
@@ -49,12 +49,19 @@ internal fun buildUpdateResultFilterOptions(
     events: List<FavoriteUpdateRepository.UpdateEvent>,
 ): List<UpdateResultFilterOption> {
     val options = mutableListOf(UpdateResultFilterOption(UPDATE_RESULT_FILTER_ALL, i18n("全部"), events.size))
-    val tagCount = events.count { it.targetType == LocalFavoriteRepository.FavoriteTargetType.TagManga }
+    val tagCount = events.count { it.targetType == FavoriteStoreRepository.FavoriteTargetType.TagManga }
     if (tagCount > 0) {
         options += UpdateResultFilterOption("tag", i18n("標籤"), tagCount)
     }
+    val rssCount = events.count { it.targetType == FavoriteStoreRepository.FavoriteTargetType.RssSearch }
+    if (rssCount > 0) {
+        options += UpdateResultFilterOption("rss", i18n("RSS"), rssCount)
+    }
     options += events
-        .filter { it.targetType != LocalFavoriteRepository.FavoriteTargetType.TagManga }
+        .filter {
+            it.targetType != FavoriteStoreRepository.FavoriteTargetType.TagManga &&
+                it.targetType != FavoriteStoreRepository.FavoriteTargetType.RssSearch
+        }
         .mapNotNull { event ->
             val fid = event.fid ?: return@mapNotNull null
             val label = event.forumName?.takeIf { it.isNotBlank() } ?: i18n("版塊 {}", fid)
@@ -91,8 +98,10 @@ internal fun filterUpdateEvents(
 ): List<FavoriteUpdateRepository.UpdateEvent> {
     if (!isUpdateResultFilterRestricted(selectedKeys, options)) return events
     return events.filter { event ->
-        val key = if (event.targetType == LocalFavoriteRepository.FavoriteTargetType.TagManga) {
+        val key = if (event.targetType == FavoriteStoreRepository.FavoriteTargetType.TagManga) {
             "tag"
+        } else if (event.targetType == FavoriteStoreRepository.FavoriteTargetType.RssSearch) {
+            "rss"
         } else {
             event.fid?.let { "fid:$it" }
         }

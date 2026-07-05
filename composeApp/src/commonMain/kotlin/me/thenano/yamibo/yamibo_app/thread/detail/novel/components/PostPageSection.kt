@@ -30,7 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.littlesurvival.dto.page.Post
 import me.thenano.yamibo.yamibo_app.components.text.rememberConvertedText
-import me.thenano.yamibo.yamibo_app.repository.LocalChapterStateRepository
+import me.thenano.yamibo.yamibo_app.repository.ChapterStateRepository
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
 
 /** Expandable page section with post titles */
@@ -41,7 +41,7 @@ internal fun PostPageSection(
     posts: List<Post>?,
     bookmarkedPostIds: Set<Long>,
     readPostIds: Set<Long>,
-    chapterStates: Map<Long, LocalChapterStateRepository.Entry> = emptyMap(),
+    chapterStates: Map<Long, ChapterStateRepository.Entry> = emptyMap(),
     isFirstPage: Boolean,
     onToggle: () -> Unit,
     onPostClick: (Post) -> Unit,
@@ -208,7 +208,7 @@ private fun PostTitleRow(
     }
 }
 
-private fun LocalChapterStateRepository.Entry.progressLabel(): String? {
+private fun ChapterStateRepository.Entry.progressLabel(): String? {
     if (read || progressPercent <= 0) return null
     return i18n("已讀 {}%", progressPercent)
 }

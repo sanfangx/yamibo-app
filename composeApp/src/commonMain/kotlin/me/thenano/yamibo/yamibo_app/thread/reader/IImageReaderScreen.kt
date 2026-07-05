@@ -28,6 +28,11 @@ private data class ImageReaderRestorePayload(
     val authorId: Int? = null,
     val tagPage: Int? = null,
     val tagTotalPages: Int? = null,
+    val rssSubscriptionId: Long? = null,
+    val rssTitle: String? = null,
+    val rssQuery: String? = null,
+    val rssPage: Int? = null,
+    val rssTotalPages: Int? = null,
 )
 @RestorableScreenEntry
 class IImageReaderScreen(
@@ -46,8 +51,16 @@ class IImageReaderScreen(
     private val tagThreads: List<ThreadSummary>? = null,
     val tagPage: Int? = null,
     val tagTotalPages: Int? = null,
+
+    // RSS Search Catalog Mode Fields:
+    val rssSubscriptionId: Long? = null,
+    val rssTitle: String? = null,
+    val rssQuery: String? = null,
+    private val rssThreads: List<ThreadSummary>? = null,
+    val rssPage: Int? = null,
+    val rssTotalPages: Int? = null,
 ) : RestorableNavigatable {
-    override val id: String = buildId(tid.value, postId?.value, tagId?.value)
+    override val id: String = buildId(tid.value, postId?.value, tagId?.value, rssSubscriptionId)
     override val restoreDecoder = Decoder
 
     override fun toRestoreSnapshot(): RestorableScreenSnapshot = restoreSnapshot(
@@ -64,6 +77,11 @@ class IImageReaderScreen(
             authorId = authorId?.value,
             tagPage = tagPage,
             tagTotalPages = tagTotalPages,
+            rssSubscriptionId = rssSubscriptionId,
+            rssTitle = rssTitle,
+            rssQuery = rssQuery,
+            rssPage = rssPage,
+            rssTotalPages = rssTotalPages,
         ),
     )
 
@@ -82,7 +100,13 @@ class IImageReaderScreen(
             authorId = authorId,
             tagThreads = tagThreads,
             tagPage = tagPage,
-            tagTotalPages = tagTotalPages
+            tagTotalPages = tagTotalPages,
+            rssSubscriptionId = rssSubscriptionId,
+            rssTitle = rssTitle,
+            rssQuery = rssQuery,
+            rssThreads = rssThreads,
+            rssPage = rssPage,
+            rssTotalPages = rssTotalPages,
         )
     }
 
@@ -103,6 +127,12 @@ class IImageReaderScreen(
                 tagThreads = null,
                 tagPage = data.tagPage,
                 tagTotalPages = data.tagTotalPages,
+                rssSubscriptionId = data.rssSubscriptionId,
+                rssTitle = data.rssTitle,
+                rssQuery = data.rssQuery,
+                rssThreads = null,
+                rssPage = data.rssPage,
+                rssTotalPages = data.rssTotalPages,
             )
         }
     }

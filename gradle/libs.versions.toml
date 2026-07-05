@@ -15,7 +15,7 @@ ktor = "3.4.2"
 ktorClientCore = "3.4.2"
 coil3 = "3.4.0"
 securityCrypto = "1.1.0"
-yamiboApi = "1.1.16"
+yamiboApi = "1.1.17"
 androidx-work = "2.11.0"
 sqldelight = "2.2.1"
 okio = "3.17.0"
@@ -42,6 +42,7 @@ coil3-network-ktor3 = { module = "io.coil-kt.coil3:coil-network-ktor3", version.
 yamibo-api = { module = "io.github.littlesurvival:yamibo-api", version.ref = "yamiboApi" }
 sqldelight-android-driver = { module = "app.cash.sqldelight:android-driver", version.ref = "sqldelight" }
 sqldelight-native-driver = { module = "app.cash.sqldelight:native-driver", version.ref = "sqldelight" }
+sqldelight-sqlite-driver = { module = "app.cash.sqldelight:sqlite-driver", version.ref = "sqldelight" }
 sqldelight-coroutines = { module = "app.cash.sqldelight:coroutines-extensions", version.ref = "sqldelight" }
 okio = { module = "com.squareup.okio:okio", version.ref = "okio" }
 opencc4j = { module = "com.github.houbb:opencc4j", version.ref = "opencc4j" }

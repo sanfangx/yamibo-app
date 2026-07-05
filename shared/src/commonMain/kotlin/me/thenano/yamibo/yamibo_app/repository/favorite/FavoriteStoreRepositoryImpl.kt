@@ -1,20 +1,20 @@
-package me.thenano.yamibo.yamibo_app.repository.favorite
+﻿package me.thenano.yamibo.yamibo_app.repository.favorite
 
 import io.github.littlesurvival.dto.value.ForumId
 import io.github.littlesurvival.dto.value.TagId
 import io.github.littlesurvival.dto.value.ThreadId
 import io.github.littlesurvival.dto.value.UserId
 import me.thenano.yamibo.yamibo_app.Database
-import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository
-import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.Companion.DEFAULT_CATEGORY_NAME
-import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.FavoriteCategory
-import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.FavoriteCategoryContent
-import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.FavoriteCategoryDeletePreview
-import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.FavoriteCollection
-import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.FavoriteCollectionOption
-import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.FavoriteCollectionWithItems
-import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.FavoriteItem
-import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.FavoriteTargetType
+import me.thenano.yamibo.yamibo_app.repository.FavoriteStoreRepository
+import me.thenano.yamibo.yamibo_app.repository.FavoriteStoreRepository.Companion.DEFAULT_CATEGORY_NAME
+import me.thenano.yamibo.yamibo_app.repository.FavoriteStoreRepository.FavoriteCategory
+import me.thenano.yamibo.yamibo_app.repository.FavoriteStoreRepository.FavoriteCategoryContent
+import me.thenano.yamibo.yamibo_app.repository.FavoriteStoreRepository.FavoriteCategoryDeletePreview
+import me.thenano.yamibo.yamibo_app.repository.FavoriteStoreRepository.FavoriteCollection
+import me.thenano.yamibo.yamibo_app.repository.FavoriteStoreRepository.FavoriteCollectionOption
+import me.thenano.yamibo.yamibo_app.repository.FavoriteStoreRepository.FavoriteCollectionWithItems
+import me.thenano.yamibo.yamibo_app.repository.FavoriteStoreRepository.FavoriteItem
+import me.thenano.yamibo.yamibo_app.repository.FavoriteStoreRepository.FavoriteTargetType
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
@@ -23,15 +23,17 @@ import me.thenano.yamibo.yamiboapp.LocalFavoriteCategory
 import me.thenano.yamibo.yamiboapp.LocalFavoriteCollection
 import me.thenano.yamibo.yamiboapp.LocalFavoriteItem
 
-class LocalFavoriteRepositoryImpl(
+class FavoriteStoreRepositoryImpl(
     private val db: Database
-) : LocalFavoriteRepository {
+) : FavoriteStoreRepository {
     private val categoryQueries = db.localFavoriteCategoryQueries
     private val collectionQueries = db.localFavoriteCollectionQueries
     private val itemQueries = db.localFavoriteItemQueries
     private val itemCategoryCrossRefQueries = db.localFavoriteItemCategoryCrossRefQueries
     private val crossRefQueries = db.localFavoriteItemCollectionCrossRefQueries
     private val contentCoverQueries = db.contentCoverQueries
+    private val rssSubscriptionQueries = db.rssSearchSubscriptionQueries
+    private val rssResultQueries = db.rssSearchSubscriptionResultQueries
 
     override suspend fun ensureDefaults() {
         if (categoryQueries.getDefaultByName(DEFAULT_CATEGORY_NAME).executeAsOneOrNull() == null) {
@@ -406,6 +408,25 @@ class LocalFavoriteRepositoryImpl(
         mergeCollections(itemId, normalizedCollections)
     }
 
+    override suspend fun addRssSearchFavorite(
+        subscriptionId: Long,
+        title: String,
+        coverUrl: String?,
+        lastUpdatedTime: Long?,
+        categoryIds: List<Long>,
+        collectionIds: List<Long>,
+    ) {
+        addCatalogLikeFavorite(
+            targetType = FavoriteTargetType.RssSearch,
+            targetId = subscriptionId,
+            title = title,
+            coverUrl = coverUrl,
+            lastUpdatedTime = lastUpdatedTime,
+            categoryIds = categoryIds,
+            collectionIds = collectionIds,
+        )
+    }
+
     override suspend fun isThreadFavorited(
         tid: ThreadId,
         threadType: ReadHistoryRepository.ThreadEntryType,
@@ -601,7 +622,7 @@ class LocalFavoriteRepositoryImpl(
             itemIds.forEach { itemId ->
                 itemCategoryCrossRefQueries.deleteByItemId(itemId)
                 crossRefQueries.deleteByItemId(itemId)
-                itemQueries.deleteById(itemId)
+                deleteFavoriteItemById(itemId)
             }
         }
     }
@@ -668,6 +689,62 @@ class LocalFavoriteRepositoryImpl(
         mergeCollections(itemId, normalizedCollections)
     }
 
+    private suspend fun addCatalogLikeFavorite(
+        targetType: FavoriteTargetType,
+        targetId: Long,
+        title: String,
+        coverUrl: String?,
+        lastUpdatedTime: Long?,
+        categoryIds: List<Long>,
+        collectionIds: List<Long>,
+    ) {
+        ensureDefaults()
+        val now = currentTimeMillis()
+        val normalizedCollections = collectionIds.distinct()
+        val normalizedCategories = normalizeCategoryIds(categoryIds, normalizedCollections)
+        val existing = itemQueries.findByTarget(
+            targetType = targetType.name,
+            targetId = targetId,
+            authorId = 0L
+        ).executeAsOneOrNull()
+        upsertCanonicalCover(targetType, targetId, coverUrl, now)
+
+        val itemId = if (existing != null) {
+            itemQueries.updateFavoriteItem(
+                title = title,
+                coverUrl = coverUrl ?: existing.coverUrl,
+                lastUpdatedTime = lastUpdatedTime ?: existing.lastUpdatedTime,
+                forumId = null,
+                forumName = null,
+                authorId = 0L,
+                lastFavoriteStatusUpdateAt = now,
+                id = existing.id
+            )
+            existing.id
+        } else {
+            itemQueries.insertFavoriteItem(
+                targetType = targetType.name,
+                targetId = targetId,
+                title = title,
+                coverUrl = coverUrl,
+                lastUpdatedTime = lastUpdatedTime,
+                forumId = null,
+                forumName = null,
+                authorId = 0L,
+                createdAt = now,
+                lastFavoriteStatusUpdateAt = now
+            )
+            itemQueries.findByTarget(
+                targetType = targetType.name,
+                targetId = targetId,
+                authorId = 0L
+            ).executeAsOne().id
+        }
+
+        mergeCategories(itemId, normalizedCategories)
+        mergeCollections(itemId, normalizedCollections)
+    }
+
     private suspend fun normalizeCategoryIds(
         categoryIds: List<Long>,
         collectionIds: List<Long>
@@ -704,9 +781,18 @@ class LocalFavoriteRepositoryImpl(
                 crossRefQueries.countByItemId(itemId).executeAsOne() == 0L &&
                 itemCategoryCrossRefQueries.countByItemId(itemId).executeAsOne() == 0L
             ) {
-                itemQueries.deleteById(itemId)
+                deleteFavoriteItemById(itemId)
             }
         }
+    }
+
+    private fun deleteFavoriteItemById(itemId: Long) {
+        val item = itemQueries.getById(itemId).executeAsOneOrNull()
+        if (item?.targetType == FavoriteTargetType.RssSearch.name) {
+            rssResultQueries.deleteBySubscription(item.targetId)
+            rssSubscriptionQueries.deleteById(item.targetId)
+        }
+        itemQueries.deleteById(itemId)
     }
 
     private suspend fun validateFavoriteName(

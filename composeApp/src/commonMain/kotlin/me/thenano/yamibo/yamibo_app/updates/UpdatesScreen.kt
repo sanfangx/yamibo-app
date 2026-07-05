@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.updates
+﻿package me.thenano.yamibo.yamibo_app.updates
 
 import YamiboIcons
 import androidx.compose.foundation.background
@@ -9,7 +9,9 @@ import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -36,11 +38,12 @@ import me.thenano.yamibo.yamibo_app.i18n.localizedLabel
 import me.thenano.yamibo.yamibo_app.navigation.ComposableNavigator
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.FavoriteUpdateRepository
-import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository
+import me.thenano.yamibo.yamibo_app.repository.FavoriteStoreRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.repository.download.DownloadStatus
 import me.thenano.yamibo.yamibo_app.repository.download.ThreadPageDownloadKey
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.INovelThreadDetailScreen
+import me.thenano.yamibo.yamibo_app.thread.detail.rss.IRssSearchSubscriptionDetailScreen
 import me.thenano.yamibo.yamibo_app.thread.detail.tag.ITagDetailScreen
 import me.thenano.yamibo.yamibo_app.thread.reader.IThreadReaderScreen
 import me.thenano.yamibo.yamibo_app.util.state
@@ -100,7 +103,10 @@ fun UpdatesScreen() {
     val updateContent = state as? UpdatesScreenState.Success
     val updateDownloadTargetKeys = remember(updateContent?.events) {
         updateContent?.events
-            ?.filter { it.targetType != LocalFavoriteRepository.FavoriteTargetType.TagManga }
+            ?.filter {
+                it.targetType != FavoriteStoreRepository.FavoriteTargetType.TagManga &&
+                    it.targetType != FavoriteStoreRepository.FavoriteTargetType.RssSearch
+            }
             ?.map { UpdateDownloadTargetKey(it.targetId, it.authorId) }
             ?.toSet()
             .orEmpty()
@@ -186,7 +192,10 @@ fun UpdatesScreen() {
 
     LaunchedEffect(updateContent?.events) {
         updateContent?.events
-            ?.filter { it.targetType != LocalFavoriteRepository.FavoriteTargetType.TagManga }
+            ?.filter {
+                it.targetType != FavoriteStoreRepository.FavoriteTargetType.TagManga &&
+                    it.targetType != FavoriteStoreRepository.FavoriteTargetType.RssSearch
+            }
             ?.distinctBy { it.targetId to it.authorId }
             ?.forEach { event ->
                 downloadRepository.markThreadUpdateAvailable(
@@ -535,25 +544,28 @@ private fun navigateFavoriteUpdateEvent(
     navigator: ComposableNavigator,
 ) {
     when (event.targetType) {
-        LocalFavoriteRepository.FavoriteTargetType.TagManga -> navigator.navigate(
+        FavoriteStoreRepository.FavoriteTargetType.TagManga -> navigator.navigate(
             ITagDetailScreen(
                 tagId = io.github.littlesurvival.dto.value.TagId(event.targetId.toInt()),
                 title = event.title,
             )
         )
-        LocalFavoriteRepository.FavoriteTargetType.ThreadNovel -> navigator.navigate(
+        FavoriteStoreRepository.FavoriteTargetType.ThreadNovel -> navigator.navigate(
             INovelThreadDetailScreen(
                 tid = io.github.littlesurvival.dto.value.ThreadId(event.targetId.toInt()),
                 title = event.title,
                 authorId = event.authorId?.toInt()?.let { io.github.littlesurvival.dto.value.UserId(it) },
             )
         )
-        LocalFavoriteRepository.FavoriteTargetType.ThreadNormal -> navigator.navigate(
+        FavoriteStoreRepository.FavoriteTargetType.ThreadNormal -> navigator.navigate(
             IThreadReaderScreen(
                 tid = io.github.littlesurvival.dto.value.ThreadId(event.targetId.toInt()),
                 title = event.title,
                 threadType = ReadHistoryRepository.ThreadEntryType.Normal,
             )
+        )
+        FavoriteStoreRepository.FavoriteTargetType.RssSearch -> navigator.navigate(
+            IRssSearchSubscriptionDetailScreen(subscriptionId = event.targetId)
         )
     }
 }

@@ -36,6 +36,22 @@ data class TagMangaChapterDownloadKey(
         get() = "chapter_${tid}_author_${authorId ?: "all"}"
 }
 
+@Serializable
+data class RssMangaChapterDownloadKey(
+    val subscriptionId: Long,
+    val tid: Int,
+    val authorId: Int? = null,
+) : DownloadTaskKey {
+    override val stableId: String
+        get() = "rss_${subscriptionId}_chapter_${tid}_author_${authorId ?: "all"}"
+
+    val rssStableId: String
+        get() = "rss_$subscriptionId"
+
+    val chapterStableId: String
+        get() = "chapter_${tid}_author_${authorId ?: "all"}"
+}
+
 enum class DownloadStatus {
     NotDownloaded,
     Queued,
@@ -93,6 +109,21 @@ data class TagMangaChapterManifest(
 )
 
 @Serializable
+data class RssMangaChapterManifest(
+    val key: RssMangaChapterDownloadKey,
+    val subscriptionTitle: String,
+    val subscriptionQuery: String,
+    val tid: Int = key.tid,
+    val title: String,
+    val authorId: Int? = key.authorId,
+    val subscriptionPage: Int,
+    val imageCount: Int,
+    val downloadedAt: Long,
+    val sourceUpdatedAt: Long? = null,
+    val images: List<DownloadedImage> = emptyList(),
+)
+
+@Serializable
 data class DownloadQueueEntry(
     val key: DownloadTaskKey,
     val title: String,
@@ -118,10 +149,12 @@ data class DownloadedContentSummary(
     val totalItems: Int = 0,
     val threadPages: Int = 0,
     val tagMangaChapters: Int = 0,
+    val rssMangaChapters: Int = 0,
     val imageCount: Int = 0,
     val imageBytes: Long = 0L,
     val threadImageBytes: Long = 0L,
     val tagMangaImageBytes: Long = 0L,
+    val rssMangaImageBytes: Long = 0L,
 )
 
 data class DownloadedContentGroup(
@@ -140,6 +173,7 @@ data class DownloadedContentGroup(
 enum class DownloadedContentGroupType {
     Thread,
     TagManga,
+    RssManga,
 }
 
 data class DownloadedContentItem(

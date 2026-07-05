@@ -1,10 +1,10 @@
-package me.thenano.yamibo.yamibo_app.thread.detail.tag.components
+package me.thenano.yamibo.yamibo_app.thread.detail.components
 
 import androidx.compose.runtime.Composable
 import me.thenano.yamibo.yamibo_app.components.navigation.YamiboTopBar
 
 @Composable
-fun TagDetailTopBar(
+fun CatalogDetailTopBar(
     title: String,
     onBack: () -> Unit
 ) {

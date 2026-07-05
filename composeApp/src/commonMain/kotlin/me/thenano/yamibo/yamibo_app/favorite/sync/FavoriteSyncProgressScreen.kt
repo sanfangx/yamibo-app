@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.favorite.sync
+﻿package me.thenano.yamibo.yamibo_app.favorite.sync
 
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 

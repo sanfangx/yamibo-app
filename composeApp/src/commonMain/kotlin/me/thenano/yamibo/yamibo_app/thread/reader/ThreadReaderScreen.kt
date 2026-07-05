@@ -54,8 +54,8 @@ import me.thenano.yamibo.yamibo_app.repository.inapplinknavigation.InAppLinkCont
 import me.thenano.yamibo.yamibo_app.repository.ContentCoverRepository
 import me.thenano.yamibo.yamibo_app.repository.toCoverTargetType
 import me.thenano.yamibo.yamibo_app.repository.contentcover.ThreadCoverResolver
-import me.thenano.yamibo.yamibo_app.repository.LocalBookMarkRepository as BookMarkRepository
-import me.thenano.yamibo.yamibo_app.repository.LocalChapterStateRepository as ChapterStateRepository
+import me.thenano.yamibo.yamibo_app.repository.BookMarkRepository as BookMarkRepository
+import me.thenano.yamibo.yamibo_app.repository.ChapterStateRepository as ChapterStateRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository.ThreadReadingHistory
 import me.thenano.yamibo.yamibo_app.repository.download.DownloadStatus
@@ -68,6 +68,8 @@ import me.thenano.yamibo.yamibo_app.thread.detail.novel.components.ThreadLoading
 import me.thenano.yamibo.yamibo_app.profile.settings.backup.IBackupSettingsScreen
 import me.thenano.yamibo.yamibo_app.thread.image.LocalImageClickListener
 import me.thenano.yamibo.yamibo_app.thread.image.LocalImageDoubleClickListener
+import me.thenano.yamibo.yamibo_app.thread.image.LocalImageSetCatalogCoverLabel
+import me.thenano.yamibo.yamibo_app.thread.image.LocalImageSetCatalogCoverListener
 import me.thenano.yamibo.yamibo_app.thread.image.LocalImageSetCoverListener
 import me.thenano.yamibo.yamibo_app.thread.image.LocalReaderOverlayVisible
 import me.thenano.yamibo.yamibo_app.thread.reader.debug.DebugRecomposeProbe
@@ -289,7 +291,16 @@ internal fun ThreadReaderScreen(
     threadType: ReadHistoryRepository.ThreadEntryType = ReadHistoryRepository.ThreadEntryType.Normal,
     authorId: UserId? = null,
     initialPage: Int = 1,
-    targetPid: PostId? = null
+    targetPid: PostId? = null,
+    catalogCoverTargetType: ContentCoverRepository.TargetType? = null,
+    catalogCoverTargetId: Long? = null,
+    catalogTagId: TagId? = null,
+    catalogTagName: String? = null,
+    catalogTagPage: Int? = null,
+    catalogRssSubscriptionId: Long? = null,
+    catalogRssTitle: String? = null,
+    catalogRssQuery: String? = null,
+    catalogRssPage: Int? = null,
 ) {
     DebugRecomposeProbe("ThreadReaderScreen", tid.value.toString())
     val colors = YamiboTheme.colors
@@ -376,6 +387,11 @@ internal fun ThreadReaderScreen(
     var lastReadingSnapshot by remember(tid) {
         mutableStateOf<Pair<ThreadReadingHistory?, List<ChapterStateRepository.ProgressUpdate>>?>(null)
     }
+    val threadHistoryOrigin = when {
+        catalogTagId != null -> ReadHistoryRepository.ThreadHistoryOrigin.TagCatalog
+        catalogRssSubscriptionId != null -> ReadHistoryRepository.ThreadHistoryOrigin.RssCatalog
+        else -> ReadHistoryRepository.ThreadHistoryOrigin.Direct
+    }
 
     /** Extract image URL for thread avatar based on forum type */
     var coverUrl by remember { mutableStateOf<String?>(null) }
@@ -383,16 +399,35 @@ internal fun ThreadReaderScreen(
     val coverKey = remember(tid, threadType) {
         ContentCoverRepository.Key(threadType.toCoverTargetType(), tid.value.toLong())
     }
+    val catalogCoverKey = remember(catalogCoverTargetType, catalogCoverTargetId) {
+        if (catalogCoverTargetType == ContentCoverRepository.TargetType.TagManga ||
+            catalogCoverTargetType == ContentCoverRepository.TargetType.RssSearch
+        ) {
+            catalogCoverTargetId?.let { ContentCoverRepository.Key(catalogCoverTargetType, it) }
+        } else {
+            null
+        }
+    }
+    val catalogCoverLabel = when (catalogCoverKey?.targetType) {
+        ContentCoverRepository.TargetType.TagManga -> i18n("設為標籤封面")
+        ContentCoverRepository.TargetType.RssSearch -> i18n("設為RSS封面")
+        else -> null
+    }
+    val catalogCoverSavedMessage = when (catalogCoverKey?.targetType) {
+        ContentCoverRepository.TargetType.TagManga -> i18n("已設為標籤封面")
+        ContentCoverRepository.TargetType.RssSearch -> i18n("已設為RSS封面")
+        else -> null
+    }
     val canonicalCover by contentCoverRepository.observeCover(coverKey).collectAsState(null)
     val threadCoverResolver = remember(threadRepository) { ThreadCoverResolver(threadRepository) }
     var showFavoriteDialog by remember { mutableStateOf(false) }
     var favoriteDialogCategories by remember {
-        mutableStateOf<List<me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.FavoriteCategory>>(emptyList())
+        mutableStateOf<List<me.thenano.yamibo.yamibo_app.repository.FavoriteStoreRepository.FavoriteCategory>>(emptyList())
     }
     var favoriteDialogCategorySelection by remember { mutableStateOf<Set<Long>>(emptySet()) }
     var favoriteDialogSelection by remember { mutableStateOf<Set<Long>>(emptySet()) }
     var favoriteDialogOptions by remember {
-        mutableStateOf<List<me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.FavoriteCollectionOption>>(emptyList())
+        mutableStateOf<List<me.thenano.yamibo.yamibo_app.repository.FavoriteStoreRepository.FavoriteCollectionOption>>(emptyList())
     }
     var isFavorited by remember { mutableStateOf(false) }
     var favoriteRefreshToken by remember { mutableIntStateOf(0) }
@@ -438,6 +473,7 @@ internal fun ThreadReaderScreen(
         }
         threadCoverResolver.resolve(tid)?.let { resolved ->
             contentCoverRepository.setAutomaticCover(coverKey, resolved)
+            catalogCoverKey?.let { contentCoverRepository.setAutomaticCover(it, resolved) }
         }
     }
 
@@ -983,6 +1019,7 @@ internal fun ThreadReaderScreen(
             viewportHeight = (viewportBottom - viewportTop),
             firstVisibleItemIndex = firstVisible,
             firstVisibleItemOffset = firstVisibleOffset,
+            historyOrigin = threadHistoryOrigin,
             lastVisitTime = currentTimeMillis()
         )
     }
@@ -1024,7 +1061,10 @@ internal fun ThreadReaderScreen(
             ?.first
     }
 
-    fun canWriteReadingState(): Boolean = canPersistReadingState
+    fun canWriteReadingState(): Boolean {
+        return canPersistReadingState ||
+            (state == ReaderState.Success && readerEntries.isNotEmpty() && !isRestoringSavedPosition)
+    }
 
     fun progressUpdateForVisiblePost(
         postId: Long,
@@ -1111,6 +1151,62 @@ internal fun ThreadReaderScreen(
                 readHistoryRepo.savePosition(history)
             } catch (error: Exception) {
                 println("READER_PERSIST|history|${error::class.simpleName}|${error.message.orEmpty()}")
+            }
+            try {
+                val historyCover = history.threadCover ?: coverUrl
+                if (catalogTagId != null && catalogTagName != null && catalogTagPage != null) {
+                    readHistoryRepo.saveTagCatalogThreadHistory(
+                        ReadHistoryRepository.TagCatalogReadingHistory(
+                            tagId = catalogTagId,
+                            tagName = catalogTagName,
+                            tagPage = catalogTagPage,
+                            threadId = history.threadId,
+                            threadTitle = history.threadName,
+                            threadPage = history.page,
+                            postId = history.postId,
+                            postTitle = history.postTitle,
+                            authorId = history.authorId,
+                            anchorPostId = history.anchorPostId,
+                            anchorPostRatio = history.anchorPostRatio,
+                            anchorBlockId = history.anchorBlockId,
+                            anchorBlockType = history.anchorBlockType,
+                            anchorBlockRatio = history.anchorBlockRatio,
+                            viewportHeight = history.viewportHeight,
+                            firstVisibleItemIndex = history.firstVisibleItemIndex,
+                            firstVisibleItemOffset = history.firstVisibleItemOffset,
+                            lastVisitTime = history.lastVisitTime,
+                            coverUrl = historyCover,
+                        )
+                    )
+                }
+                if (catalogRssSubscriptionId != null && catalogRssTitle != null && catalogRssPage != null) {
+                    readHistoryRepo.saveRssCatalogThreadHistory(
+                        ReadHistoryRepository.RssCatalogReadingHistory(
+                            subscriptionId = catalogRssSubscriptionId,
+                            subscriptionTitle = catalogRssTitle,
+                            subscriptionQuery = catalogRssQuery ?: catalogRssTitle,
+                            subscriptionPage = catalogRssPage,
+                            threadId = history.threadId,
+                            threadTitle = history.threadName,
+                            threadPage = history.page,
+                            postId = history.postId,
+                            postTitle = history.postTitle,
+                            authorId = history.authorId,
+                            anchorPostId = history.anchorPostId,
+                            anchorPostRatio = history.anchorPostRatio,
+                            anchorBlockId = history.anchorBlockId,
+                            anchorBlockType = history.anchorBlockType,
+                            anchorBlockRatio = history.anchorBlockRatio,
+                            viewportHeight = history.viewportHeight,
+                            firstVisibleItemIndex = history.firstVisibleItemIndex,
+                            firstVisibleItemOffset = history.firstVisibleItemOffset,
+                            lastVisitTime = history.lastVisitTime,
+                            coverUrl = historyCover,
+                        )
+                    )
+                }
+            } catch (error: Exception) {
+                println("READER_PERSIST|catalog_history|${error::class.simpleName}|${error.message.orEmpty()}")
             }
         }
         try {
@@ -1286,10 +1382,28 @@ internal fun ThreadReaderScreen(
         }
     }
 
+    fun applySelectedCatalogCover(imageUrl: String) {
+        val key = catalogCoverKey ?: return
+        val savedMessage = catalogCoverSavedMessage ?: return
+        val resolvedCoverUrl = resolveValidCoverUrl(imageUrl) ?: return
+        scope.launch {
+            val saved = contentCoverRepository.setManualCover(key, resolvedCoverUrl)
+            if (saved) {
+                snackbarHostState.showSnackbar(savedMessage)
+            }
+        }
+    }
+
     suspend fun loadPage(page: Int, forceRefresh: Boolean = false, autoTriggered: Boolean = false): Boolean {
         if (!forceRefresh && page in loadedPages) return true
         isLoadingNextPage = true
         var loadSucceeded = false
+
+        fun markPageLoadSucceeded() {
+            if (state is ReaderState.Loading || page == initialPage || page == 1) {
+                state = ReaderState.Success
+            }
+        }
 
         suspend fun loadFromDownload(): Boolean {
             val downloadKey = ThreadPageDownloadKey(tid.value, page, authorId?.value)
@@ -1301,7 +1415,7 @@ internal fun ThreadReaderScreen(
             totalPages = downloaded.pageNav?.totalPages ?: 1
             loadedPages = loadedPages + page
             failedAutoLoadPages.remove(page)
-            if (page == initialPage || page == 1) state = ReaderState.Success
+            markPageLoadSucceeded()
             return true
         }
 
@@ -1314,7 +1428,7 @@ internal fun ThreadReaderScreen(
                 totalPages = cached.pageNav?.totalPages ?: 1
                 loadedPages = loadedPages + page
                 failedAutoLoadPages.remove(page)
-                if (page == initialPage || page == 1) state = ReaderState.Success
+                markPageLoadSucceeded()
                 return true
             }
             return false
@@ -1327,7 +1441,7 @@ internal fun ThreadReaderScreen(
             loadedPages = loadedPages + page
             failedAutoLoadPages.remove(page)
             threadInfo = result.value.thread
-            if (page == initialPage || page == 1) state = ReaderState.Success
+            markPageLoadSucceeded()
         }
 
         if (forceRefresh) {
@@ -1449,11 +1563,95 @@ internal fun ThreadReaderScreen(
         }
     }
 
+    fun ReadHistoryRepository.TagCatalogReadingHistory.toThreadReadingHistory(): ThreadReadingHistory {
+        return ThreadReadingHistory(
+            threadType = ReadHistoryRepository.ThreadEntryType.Normal,
+            threadName = threadTitle,
+            threadId = threadId,
+            threadCover = coverUrl,
+            lastUpdatedTime = null,
+            forumName = null,
+            forumId = null,
+            authorId = authorId,
+            page = threadPage,
+            postId = postId,
+            postTitle = postTitle,
+            anchorPostId = anchorPostId,
+            anchorPostRatio = anchorPostRatio,
+            anchorBlockId = anchorBlockId,
+            anchorBlockType = anchorBlockType,
+            anchorBlockRatio = anchorBlockRatio,
+            globalScrollY = null,
+            viewportHeight = viewportHeight,
+            firstVisibleItemIndex = firstVisibleItemIndex,
+            firstVisibleItemOffset = firstVisibleItemOffset,
+            historyOrigin = ReadHistoryRepository.ThreadHistoryOrigin.TagCatalog,
+            lastVisitTime = lastVisitTime,
+        )
+    }
+
+    fun ReadHistoryRepository.RssCatalogReadingHistory.toThreadReadingHistory(): ThreadReadingHistory {
+        return ThreadReadingHistory(
+            threadType = ReadHistoryRepository.ThreadEntryType.Normal,
+            threadName = threadTitle,
+            threadId = threadId,
+            threadCover = coverUrl,
+            lastUpdatedTime = null,
+            forumName = null,
+            forumId = null,
+            authorId = authorId,
+            page = threadPage,
+            postId = postId,
+            postTitle = postTitle,
+            anchorPostId = anchorPostId,
+            anchorPostRatio = anchorPostRatio,
+            anchorBlockId = anchorBlockId,
+            anchorBlockType = anchorBlockType,
+            anchorBlockRatio = anchorBlockRatio,
+            globalScrollY = null,
+            viewportHeight = viewportHeight,
+            firstVisibleItemIndex = firstVisibleItemIndex,
+            firstVisibleItemOffset = firstVisibleItemOffset,
+            historyOrigin = ReadHistoryRepository.ThreadHistoryOrigin.RssCatalog,
+            lastVisitTime = lastVisitTime,
+        )
+    }
+
     // Initial load + position restore
     LaunchedEffect(tid, initialPage, targetPid) {
         loadPage(initialPage)
 
         /** Restore position from history if no explicit targetPid */
+        if (!hasRestoredPosition && targetPid != null && threadHistoryOrigin != ReadHistoryRepository.ThreadHistoryOrigin.Direct) {
+            try {
+                val catalogPosition = when (threadHistoryOrigin) {
+                    ReadHistoryRepository.ThreadHistoryOrigin.TagCatalog -> catalogTagId
+                        ?.let { readHistoryRepo.getTagCatalogThreadHistoryPosition(it) }
+                        ?.takeIf { it.threadId == tid }
+                        ?.toThreadReadingHistory()
+                    ReadHistoryRepository.ThreadHistoryOrigin.RssCatalog -> catalogRssSubscriptionId
+                        ?.let { readHistoryRepo.getRssCatalogThreadHistoryPosition(it) }
+                        ?.takeIf { it.threadId == tid }
+                        ?.toThreadReadingHistory()
+                    ReadHistoryRepository.ThreadHistoryOrigin.Direct -> null
+                }
+                if (catalogPosition != null) {
+                    catalogPosition.threadCover?.let { savedCover ->
+                        coverUrl = savedCover
+                        contentCoverRepository.setAutomaticCover(coverKey, savedCover)
+                        catalogCoverKey?.let { contentCoverRepository.setAutomaticCover(it, savedCover) }
+                    }
+                    if (catalogPosition.page != initialPage) {
+                        loadPage(catalogPosition.page)
+                    }
+                    pendingSavedPosition = catalogPosition
+                    pendingTargetPid = null
+                }
+            } catch (_: Exception) {
+                // Fall through to targetPid restore.
+            }
+        }
+
         if (!hasRestoredPosition && targetPid == null) {
             try {
                 val savedPosition = readHistoryRepo.getPosition(tid, threadType, authorId)
@@ -1461,6 +1659,7 @@ internal fun ThreadReaderScreen(
                     savedPosition.threadCover?.let { savedCover ->
                         coverUrl = savedCover
                         contentCoverRepository.setAutomaticCover(coverKey, savedCover)
+                        catalogCoverKey?.let { contentCoverRepository.setAutomaticCover(it, savedCover) }
                     }
                     // Ensure the saved page is loaded
                     if (savedPosition.page != initialPage) {
@@ -1871,6 +2070,8 @@ internal fun ThreadReaderScreen(
             LocalImageClickListener provides { showMenu = !showMenu },
             LocalImageDoubleClickListener provides handleImageDoubleTap,
             LocalImageSetCoverListener provides ::applySelectedCover,
+            LocalImageSetCatalogCoverListener provides if (catalogCoverKey != null) ::applySelectedCatalogCover else null,
+            LocalImageSetCatalogCoverLabel provides catalogCoverLabel,
         ) {
             Box(
                 modifier = Modifier
@@ -2789,7 +2990,17 @@ internal fun ThreadReaderScreen(
                 catalogActionPost = null
                 scope.launch {
                     progressCoordinator.clearAll {
-                        readHistoryRepo.deleteHistory(tid, threadType, authorId)
+                        when (threadHistoryOrigin) {
+                            ReadHistoryRepository.ThreadHistoryOrigin.TagCatalog -> {
+                                catalogTagId?.let { readHistoryRepo.deleteTagCatalogThreadHistory(it) }
+                            }
+                            ReadHistoryRepository.ThreadHistoryOrigin.RssCatalog -> {
+                                catalogRssSubscriptionId?.let { readHistoryRepo.deleteRssCatalogThreadHistory(it) }
+                            }
+                            ReadHistoryRepository.ThreadHistoryOrigin.Direct -> {
+                                readHistoryRepo.deleteHistory(tid, threadType, authorId)
+                            }
+                        }
                     }
                     snackbarHostState.showSnackbar(i18n("已清除全部閱讀紀錄"), duration = SnackbarDuration.Short)
                 }

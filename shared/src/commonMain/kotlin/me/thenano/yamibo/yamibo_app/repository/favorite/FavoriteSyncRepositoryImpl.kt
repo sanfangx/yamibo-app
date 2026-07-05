@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.repository.favorite
+﻿package me.thenano.yamibo.yamibo_app.repository.favorite
 
 import io.github.littlesurvival.YamiboForum
 import io.github.littlesurvival.core.YamiboResult
@@ -24,7 +24,7 @@ import me.thenano.yamibo.yamibo_app.repository.FavoriteSyncRepository.FavoriteSy
 import me.thenano.yamibo.yamibo_app.repository.FavoriteSyncRepository.FavoriteSyncSnapshot
 import me.thenano.yamibo.yamibo_app.repository.FavoriteSyncRepository.FavoriteSyncState
 import me.thenano.yamibo.yamibo_app.repository.FavoriteSyncRepository.FavoriteSyncStatus
-import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository
+import me.thenano.yamibo.yamibo_app.repository.FavoriteStoreRepository
 import me.thenano.yamibo.yamibo_app.repository.ThreadRepository
 import me.thenano.yamibo.yamibo_app.repository.contentcover.findThreadCoverCandidate
 import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
@@ -36,7 +36,7 @@ class FavoriteSyncRepositoryImpl(
     db: Database,
     private val authRepository: AuthRepository,
     private val favoriteRepository: FavoriteRepository,
-    private val localFavoriteRepository: LocalFavoriteRepository,
+    private val localFavoriteRepository: FavoriteStoreRepository,
     private val threadRepository: ThreadRepository,
 ) : FavoriteSyncRepository {
     private val taskQueries = db.favoriteSyncTaskQueries
@@ -604,7 +604,7 @@ class FavoriteSyncRepositoryImpl(
             }
         }
 
-        localFavoriteRepository.deleteFavoriteItems(setOf(item.id))
+                localFavoriteRepository.deleteFavoriteItems(setOf(item.id))
         if (!removeRemote && mapping?.remoteFavoriteId != null) {
             mappingQueries.upsertMapping(
                 threadId = mapping.threadId,
@@ -670,7 +670,7 @@ class FavoriteSyncRepositoryImpl(
         }
     }
 
-    private suspend fun collectCategoryThreadItems(categoryId: Long): List<LocalFavoriteRepository.FavoriteItem> {
+    private suspend fun collectCategoryThreadItems(categoryId: Long): List<FavoriteStoreRepository.FavoriteItem> {
         val content = localFavoriteRepository.getCategoryContent(categoryId)
         return buildList {
             addAll(content.directItems)
@@ -678,8 +678,8 @@ class FavoriteSyncRepositoryImpl(
         }
             .distinctBy { it.id }
             .filter {
-                it.targetType == LocalFavoriteRepository.FavoriteTargetType.ThreadNormal ||
-                    it.targetType == LocalFavoriteRepository.FavoriteTargetType.ThreadNovel
+                it.targetType == FavoriteStoreRepository.FavoriteTargetType.ThreadNormal ||
+                    it.targetType == FavoriteStoreRepository.FavoriteTargetType.ThreadNovel
             }
     }
 
@@ -908,10 +908,11 @@ class FavoriteSyncRepositoryImpl(
     }
 
     private fun me.thenano.yamibo.yamiboapp.LocalFavoriteItem.asThreadIdOrNull(): ThreadId? {
-        return when (LocalFavoriteRepository.FavoriteTargetType.fromStorage(targetType)) {
-            LocalFavoriteRepository.FavoriteTargetType.ThreadNormal,
-            LocalFavoriteRepository.FavoriteTargetType.ThreadNovel -> ThreadId(targetId.toInt())
-            LocalFavoriteRepository.FavoriteTargetType.TagManga -> null
+        return when (FavoriteStoreRepository.FavoriteTargetType.fromStorage(targetType)) {
+            FavoriteStoreRepository.FavoriteTargetType.ThreadNormal,
+            FavoriteStoreRepository.FavoriteTargetType.ThreadNovel -> ThreadId(targetId.toInt())
+            FavoriteStoreRepository.FavoriteTargetType.TagManga,
+            FavoriteStoreRepository.FavoriteTargetType.RssSearch -> null
         }
     }
 

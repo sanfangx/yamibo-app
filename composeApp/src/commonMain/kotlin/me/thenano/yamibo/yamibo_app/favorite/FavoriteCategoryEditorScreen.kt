@@ -31,10 +31,10 @@ import me.thenano.yamibo.yamibo_app.components.navigation.YamiboTopBar
 import me.thenano.yamibo.yamibo_app.favorite.components.*
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
-import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.FavoriteCollection
+import me.thenano.yamibo.yamibo_app.repository.FavoriteStoreRepository.FavoriteCollection
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
-import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository as FavoriteRepositoryContract
+import me.thenano.yamibo.yamibo_app.repository.FavoriteStoreRepository as FavoriteRepositoryContract
 
 private val EditorRowHeight = 78.dp
 private val EditorRowSpacing = 14.dp

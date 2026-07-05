@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.favorite.components
+﻿package me.thenano.yamibo.yamibo_app.favorite.components
 
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.components.navigation.NavigationBackSymbol
@@ -26,7 +26,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import me.thenano.yamibo.yamibo_app.favorite.FavoriteDialogButton
-import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.FavoriteCategory
+import me.thenano.yamibo.yamibo_app.repository.FavoriteStoreRepository.FavoriteCategory
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.components.controls.YamiboActionChip
 import me.thenano.yamibo.yamibo_app.components.navigation.YamiboMainTabIconAction

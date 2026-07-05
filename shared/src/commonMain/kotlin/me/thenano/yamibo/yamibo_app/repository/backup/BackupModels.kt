@@ -142,6 +142,7 @@ internal data class BackupThreadReadingHistory(
     val viewportHeight: Long?,
     val firstVisibleItemIndex: Long?,
     val firstVisibleItemOffset: Long?,
+    val historyOrigin: String = "Direct",
     val lastVisitTime: Long,
     val lastUpdatedTime: Long?,
 )

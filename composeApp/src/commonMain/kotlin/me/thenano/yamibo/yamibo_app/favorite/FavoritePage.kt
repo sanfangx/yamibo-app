@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.favorite
+﻿package me.thenano.yamibo.yamibo_app.favorite
 
 
 import androidx.compose.foundation.background
@@ -26,13 +26,14 @@ import me.thenano.yamibo.yamibo_app.favorite.sync.IFavoriteSyncProgressScreen
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.navigation.*
 import me.thenano.yamibo.yamibo_app.repository.FavoriteSyncRepository.FavoriteSyncState
-import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.*
+import me.thenano.yamibo.yamibo_app.repository.FavoriteStoreRepository.*
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.FavoriteSortMode
 import me.thenano.yamibo.yamibo_app.profile.settings.access.IBackgroundAccessSetupScreen
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.INovelThreadDetailScreen
+import me.thenano.yamibo.yamibo_app.thread.detail.rss.IRssSearchSubscriptionDetailScreen
 import me.thenano.yamibo.yamibo_app.thread.detail.tag.ITagDetailScreen
 import me.thenano.yamibo.yamibo_app.thread.reader.IThreadReaderScreen
 import me.thenano.yamibo.yamibo_app.util.state
@@ -201,9 +202,10 @@ fun FavoritePage() {
                 content.directItems.forEach(::add)
                 content.collections.forEach { addAll(it.items) }
             }.distinctBy { it.id }
+            val isMangaMode = appSettingsRepository.isMangaMode.getValue()
             val lastReadMap = buildMap {
                 allSortItems.forEach { item ->
-                    put(item.id, favoriteItemLastReadAt(item, readHistoryRepository))
+                    put(item.id, favoriteItemLastReadAt(item, readHistoryRepository, isMangaMode))
                 }
             }
             val remoteFavoriteOrderMap = favoriteSyncRepository.getRemoteFavoriteOrderMap(
@@ -945,11 +947,24 @@ fun FavoritePage() {
     }
 }
 
-private suspend fun favoriteItemLastReadAt(item: FavoriteItem, repo: ReadHistoryRepository): Long {
+private suspend fun favoriteItemLastReadAt(
+    item: FavoriteItem,
+    repo: ReadHistoryRepository,
+    isMangaMode: Boolean,
+): Long {
     return when (item.targetType) {
         FavoriteTargetType.ThreadNormal -> repo.getPosition(ThreadId(item.targetId.toInt()), ReadHistoryRepository.ThreadEntryType.Normal)?.lastVisitTime ?: 0L
         FavoriteTargetType.ThreadNovel -> repo.getPosition(ThreadId(item.targetId.toInt()), ReadHistoryRepository.ThreadEntryType.Novel, item.authorId)?.lastVisitTime ?: 0L
-        FavoriteTargetType.TagManga -> repo.getTagMangaReaderModeHistoryPosition(TagId(item.targetId.toInt()))?.lastVisitTime ?: 0L
+        FavoriteTargetType.TagManga -> if (isMangaMode) {
+            repo.getTagMangaReaderModeHistoryPosition(TagId(item.targetId.toInt()))?.lastVisitTime ?: 0L
+        } else {
+            repo.getTagCatalogThreadHistoryPosition(TagId(item.targetId.toInt()))?.lastVisitTime ?: 0L
+        }
+        FavoriteTargetType.RssSearch -> if (isMangaMode) {
+            repo.getRssSearchReaderModeHistoryPosition(item.targetId)?.lastVisitTime ?: 0L
+        } else {
+            repo.getRssCatalogThreadHistoryPosition(item.targetId)?.lastVisitTime ?: 0L
+        }
     }
 }
 
@@ -1047,7 +1062,7 @@ private fun compareFavoriteItemsByOrder(
 }
 
 private suspend fun readySearchCounts(
-    favoriteRepository: me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository,
+    favoriteRepository: me.thenano.yamibo.yamibo_app.repository.FavoriteStoreRepository,
     query: String,
 ): Map<Long, Int> {
     val categories = favoriteRepository.getCategories()
@@ -1060,7 +1075,7 @@ private suspend fun readySearchCounts(
 }
 
 private suspend fun readyFavoriteCounts(
-    favoriteRepository: me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository,
+    favoriteRepository: me.thenano.yamibo.yamibo_app.repository.FavoriteStoreRepository,
 ): Map<Long, Int> {
     val categories = favoriteRepository.getCategories()
     return buildMap {
@@ -1075,7 +1090,7 @@ private fun categoryFavoriteCount(content: FavoriteCategoryContent): Int {
 }
 
 private suspend fun readyFavoriteForumCounts(
-    favoriteRepository: me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository,
+    favoriteRepository: me.thenano.yamibo.yamibo_app.repository.FavoriteStoreRepository,
 ): List<FavoriteForumFilterOption> {
     return favoriteRepository.getAllFavoriteItems()
         .groupBy(::favoriteForumKey)
@@ -1090,8 +1105,10 @@ private suspend fun readyFavoriteForumCounts(
 }
 
 private fun favoriteForumKey(item: FavoriteItem): String {
-    if (item.targetType == FavoriteTargetType.TagManga) {
-        return "tag"
+    when (item.targetType) {
+        FavoriteTargetType.TagManga -> return "tag"
+        FavoriteTargetType.RssSearch -> return "rss"
+        else -> Unit
     }
     return item.forumId?.value?.toString()
         ?: item.forumName?.takeIf { it.isNotBlank() }?.let { "name:$it" }
@@ -1099,8 +1116,10 @@ private fun favoriteForumKey(item: FavoriteItem): String {
 }
 
 private fun favoriteForumLabel(item: FavoriteItem?): String {
-    if (item?.targetType == FavoriteTargetType.TagManga) {
-        return i18n("標籤")
+    when (item?.targetType) {
+        FavoriteTargetType.TagManga -> return i18n("標籤")
+        FavoriteTargetType.RssSearch -> return i18n("RSS 搜尋目錄")
+        else -> Unit
     }
     return item?.forumName?.takeIf { it.isNotBlank() } ?: i18n("未知版塊")
 }
@@ -1135,6 +1154,7 @@ private fun openFavoriteItem(navigator: ComposableNavigator, item: FavoriteItem)
         FavoriteTargetType.ThreadNormal -> navigator.navigate(IThreadReaderScreen(tid = ThreadId(item.targetId.toInt()), title = item.title, threadType = ReadHistoryRepository.ThreadEntryType.Normal))
         FavoriteTargetType.ThreadNovel -> navigator.navigate(INovelThreadDetailScreen(tid = ThreadId(item.targetId.toInt()), title = item.title, authorId = item.authorId))
         FavoriteTargetType.TagManga -> navigator.navigate(ITagDetailScreen(tagId = TagId(item.targetId.toInt()), title = item.title))
+        FavoriteTargetType.RssSearch -> navigator.navigate(IRssSearchSubscriptionDetailScreen(subscriptionId = item.targetId))
     }
 }
 

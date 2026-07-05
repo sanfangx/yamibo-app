@@ -1,11 +1,12 @@
-package me.thenano.yamibo.yamibo_app.repository
+﻿package me.thenano.yamibo.yamibo_app.repository
 
 import kotlinx.coroutines.flow.Flow
 
-interface LocalChapterStateRepository {
+interface ChapterStateRepository {
     enum class TargetType {
         ThreadPost,
-        TagMangaThread;
+        TagMangaThread,
+        RssSearchThread;
 
         companion object {
             fun fromStorage(value: String): TargetType {

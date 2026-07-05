@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.history.components
+﻿package me.thenano.yamibo.yamibo_app.history.components
 
 import YamiboIcons
 import androidx.compose.animation.core.animateFloatAsState
@@ -27,7 +27,7 @@ import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository.TagMangaReadingHistory
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.components.feedback.resolvedContentCoverUrl
-import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository
+import me.thenano.yamibo.yamibo_app.repository.FavoriteStoreRepository
 import me.thenano.yamibo.yamibo_app.util.rememberImageRequest
 import org.jetbrains.compose.resources.painterResource
 import yamibo_app.composeapp.generated.resources.Res
@@ -37,6 +37,8 @@ import yamibo_app.composeapp.generated.resources.book
 fun TagMangaHistoryCard(
     history: TagMangaReadingHistory,
     timeLabel: String,
+    progressText: String = i18n("目前第 {} / {} 頁", history.threadImagePageIndex + 1, history.threadImageTotalPages),
+    modeLabel: String? = null,
     isSelectMode: Boolean = false,
     isSelected: Boolean = false,
     isFavorited: Boolean = false,
@@ -48,7 +50,7 @@ fun TagMangaHistoryCard(
 ) {
     val colors = YamiboTheme.colors
     val resolvedCoverUrl = resolvedContentCoverUrl(
-        targetType = LocalFavoriteRepository.FavoriteTargetType.TagManga,
+        targetType = FavoriteStoreRepository.FavoriteTargetType.TagManga,
         targetId = history.tagId.value.toLong(),
         fallback = history.coverUrl,
     )
@@ -143,14 +145,22 @@ fun TagMangaHistoryCard(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
-                val progress = i18n("目前第 {} / {} 頁", history.threadImagePageIndex + 1, history.threadImageTotalPages)
                 Text(
-                    text = progress,
+                    text = progressText,
                     fontSize = 12.sp,
                     color = colors.textDark.copy(alpha = 0.56f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+                if (!modeLabel.isNullOrBlank()) {
+                    Text(
+                        text = modeLabel,
+                        fontSize = 11.sp,
+                        color = colors.orangeAccent.copy(alpha = 0.9f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
                 Text(
                     text = timingSummary,
                     fontSize = 12.sp,

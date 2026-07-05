@@ -30,9 +30,9 @@ import me.thenano.yamibo.yamibo_app.favorite.sync.FavoriteSyncStatusCard
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.i18n.localizedLabel
 import me.thenano.yamibo.yamibo_app.repository.FavoriteSyncRepository.FavoriteSyncState
-import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository
-import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.FavoriteCollectionWithItems
-import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.FavoriteItem
+import me.thenano.yamibo.yamibo_app.repository.FavoriteStoreRepository
+import me.thenano.yamibo.yamibo_app.repository.FavoriteStoreRepository.FavoriteCollectionWithItems
+import me.thenano.yamibo.yamibo_app.repository.FavoriteStoreRepository.FavoriteItem
 import me.thenano.yamibo.yamibo_app.repository.settings.FavoriteGridMode
 import me.thenano.yamibo.yamibo_app.repository.settings.FavoriteSortMode
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
@@ -253,7 +253,7 @@ internal fun FavoritePageContent(
                     if (gridEntries.isEmpty()) {
                         val selectedCategory = ready.categories.firstOrNull { it.id == ready.selectedCategoryId }
                         val showDefaultSyncHint = !searchActive &&
-                            selectedCategory?.name == LocalFavoriteRepository.DEFAULT_CATEGORY_NAME
+                            selectedCategory?.name == FavoriteStoreRepository.DEFAULT_CATEGORY_NAME
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Text(i18n("目前還沒有收藏"), color = colors.textDark.copy(alpha = 0.52f), fontSize = 16.sp)

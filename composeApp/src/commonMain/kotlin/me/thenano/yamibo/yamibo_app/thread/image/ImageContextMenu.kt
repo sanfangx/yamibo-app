@@ -6,11 +6,13 @@ import YamiboIcons
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.windowInsetsBottomHeight
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -43,6 +45,8 @@ fun ImageContextMenu(
     visible: Boolean,
     imageUrl: String,
     onSetAsCover: ((String) -> Unit)? = null,
+    onSetAsCatalogCover: ((String) -> Unit)? = null,
+    catalogCoverLabel: String? = null,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
     isBottomSheet: Boolean = false
@@ -73,6 +77,8 @@ fun ImageContextMenu(
                     ContextMenuContainer(
                         imageUrl = imageUrl,
                         onSetAsCover = onSetAsCover,
+                        onSetAsCatalogCover = onSetAsCatalogCover,
+                        catalogCoverLabel = catalogCoverLabel,
                         onDismiss = onDismiss,
                         isBottomSheet = true
                     )
@@ -98,6 +104,8 @@ fun ImageContextMenu(
                     ContextMenuContainer(
                         imageUrl = imageUrl,
                         onSetAsCover = onSetAsCover,
+                        onSetAsCatalogCover = onSetAsCatalogCover,
+                        catalogCoverLabel = catalogCoverLabel,
                         onDismiss = onDismiss,
                         isBottomSheet = true
                     )
@@ -111,6 +119,8 @@ fun ImageContextMenu(
 private fun ContextMenuContainer(
     imageUrl: String,
     onSetAsCover: ((String) -> Unit)?,
+    onSetAsCatalogCover: ((String) -> Unit)?,
+    catalogCoverLabel: String?,
     onDismiss: () -> Unit,
     isBottomSheet: Boolean = true
 ) {
@@ -164,6 +174,16 @@ private fun ContextMenuContainer(
                 },
             )
         }
+        if (onSetAsCatalogCover != null && catalogCoverLabel != null) {
+            ContextMenuItem(
+                icon = YamiboIcons.StarOutline,
+                label = catalogCoverLabel,
+                onClick = {
+                    onSetAsCatalogCover(imageUrl)
+                    onDismiss()
+                },
+            )
+        }
     }
 
     Surface(
@@ -191,6 +211,7 @@ private fun ContextMenuContainer(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
                         .padding(horizontal = 24.dp, vertical = 20.dp),
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically

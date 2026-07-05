@@ -1,15 +1,16 @@
-package me.thenano.yamibo.yamibo_app.repository
+﻿package me.thenano.yamibo.yamibo_app.repository
 
 import io.github.littlesurvival.dto.value.ForumId
 import io.github.littlesurvival.dto.value.TagId
 import io.github.littlesurvival.dto.value.ThreadId
 import io.github.littlesurvival.dto.value.UserId
 
-interface LocalFavoriteRepository {
+interface FavoriteStoreRepository {
     enum class FavoriteTargetType {
         ThreadNormal,
         ThreadNovel,
-        TagManga;
+        TagManga,
+        RssSearch;
 
         companion object {
             fun fromStorage(value: String?): FavoriteTargetType {
@@ -131,6 +132,15 @@ interface LocalFavoriteRepository {
         tagId: TagId,
         tagName: String,
         coverUrl: String?,
+        categoryIds: List<Long> = emptyList(),
+        collectionIds: List<Long> = emptyList(),
+    )
+
+    suspend fun addRssSearchFavorite(
+        subscriptionId: Long,
+        title: String,
+        coverUrl: String?,
+        lastUpdatedTime: Long? = null,
         categoryIds: List<Long> = emptyList(),
         collectionIds: List<Long> = emptyList(),
     )

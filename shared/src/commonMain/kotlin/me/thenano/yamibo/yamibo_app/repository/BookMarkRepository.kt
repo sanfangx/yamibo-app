@@ -1,9 +1,10 @@
-package me.thenano.yamibo.yamibo_app.repository
+﻿package me.thenano.yamibo.yamibo_app.repository
 
-interface LocalBookMarkRepository {
+interface BookMarkRepository {
     enum class TargetType {
         ThreadPost,
-        TagMangaThread;
+        TagMangaThread,
+        RssSearchThread;
 
         companion object {
             fun fromStorage(value: String): TargetType {

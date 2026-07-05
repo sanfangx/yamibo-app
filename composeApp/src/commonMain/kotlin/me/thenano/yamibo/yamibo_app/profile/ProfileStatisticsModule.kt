@@ -56,8 +56,8 @@ import me.thenano.yamibo.yamibo_app.LocalFavoriteRepository
 import me.thenano.yamibo.yamibo_app.LocalReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.components.navigation.YamiboTopBar
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
-import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.FavoriteCategory
-import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.FavoriteTargetType
+import me.thenano.yamibo.yamibo_app.repository.FavoriteStoreRepository.FavoriteCategory
+import me.thenano.yamibo.yamibo_app.repository.FavoriteStoreRepository.FavoriteTargetType
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.util.time.currentLocalDateKeyAt
@@ -422,9 +422,9 @@ private fun FavoriteRatioList(
 
 private suspend fun loadProfileStatistics(
     range: ProfileStatsRange,
-    favoriteRepository: me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository,
+    favoriteRepository: me.thenano.yamibo.yamibo_app.repository.FavoriteStoreRepository,
     readHistoryRepository: ReadHistoryRepository,
-    bookMarkRepository: me.thenano.yamibo.yamibo_app.repository.LocalBookMarkRepository,
+    bookMarkRepository: me.thenano.yamibo.yamibo_app.repository.BookMarkRepository,
 ): ProfileStatisticsState {
     val chartRangeKeys = dateKeysForRange(range, readHistoryRepository)
     val chartDurationByDate = readHistoryRepository.getReadingDurationDays(
@@ -467,7 +467,7 @@ private suspend fun loadProfileStatistics(
 }
 
 private suspend fun FavoriteCategory.toRatioItem(
-    favoriteRepository: me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository,
+    favoriteRepository: me.thenano.yamibo.yamibo_app.repository.FavoriteStoreRepository,
 ): RatioItem {
     val content = favoriteRepository.getCategoryContent(id)
     val itemIds = (
@@ -666,6 +666,7 @@ private val FavoriteTargetType.label: String
         FavoriteTargetType.ThreadNormal -> i18n("帖子")
         FavoriteTargetType.ThreadNovel -> i18n("小說")
         FavoriteTargetType.TagManga -> i18n("Tag 漫畫")
+        FavoriteTargetType.RssSearch -> i18n("RSS 搜尋目錄")
     }
 
 private enum class ProfileStatsRange(val label: String, val days: Int?) {

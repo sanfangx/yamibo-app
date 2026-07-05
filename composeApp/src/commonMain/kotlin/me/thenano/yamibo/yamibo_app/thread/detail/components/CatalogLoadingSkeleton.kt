@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.thread.detail.tag.components
+package me.thenano.yamibo.yamibo_app.thread.detail.components
 
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
@@ -29,7 +29,7 @@ import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
 
 /** Loading skeleton */
 @Composable
-fun TagLoadingSkeleton() {
+fun CatalogLoadingSkeleton() {
     val colors = YamiboTheme.colors
     val shimmerColor = colors.brownLight
 

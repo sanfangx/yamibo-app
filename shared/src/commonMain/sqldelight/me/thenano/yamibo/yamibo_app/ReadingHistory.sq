@@ -6,39 +6,45 @@ INSERT OR REPLACE INTO ReadingHistory(
     anchorBlockId, anchorBlockType, anchorBlockRatio,
     globalScrollY, viewportHeight,
     firstVisibleItemIndex, firstVisibleItemOffset,
+    historyOrigin,
     lastVisitTime, lastUpdatedTime
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 getByThreadKey:
 SELECT * FROM ReadingHistory
-WHERE threadId = ? AND threadType = ? AND authorId = ?;
+WHERE threadId = ? AND threadType = ? AND authorId = ?
+ORDER BY lastVisitTime DESC
+LIMIT 1;
 
 getPage:
 SELECT * FROM ReadingHistory
+WHERE historyOrigin = 'Direct'
 ORDER BY lastVisitTime DESC
 LIMIT ? OFFSET ?;
 
 getAll:
 SELECT * FROM ReadingHistory
+WHERE historyOrigin = 'Direct'
 ORDER BY lastVisitTime DESC;
 
 countAll:
-SELECT COUNT(*) FROM ReadingHistory;
+SELECT COUNT(*) FROM ReadingHistory
+WHERE historyOrigin = 'Direct';
 
 getPageByForumId:
 SELECT * FROM ReadingHistory
-WHERE forumId = ?
+WHERE forumId = ? AND historyOrigin = 'Direct'
 ORDER BY lastVisitTime DESC
 LIMIT ? OFFSET ?;
 
 countByForumId:
 SELECT COUNT(*) FROM ReadingHistory
-WHERE forumId = ?;
+WHERE forumId = ? AND historyOrigin = 'Direct';
 
 getForumCounts:
 SELECT forumId, forumName, COUNT(*) AS count
 FROM ReadingHistory
-WHERE forumId IS NOT NULL
+WHERE forumId IS NOT NULL AND historyOrigin = 'Direct'
 GROUP BY forumId, forumName
 ORDER BY count DESC;
 
@@ -46,23 +52,27 @@ deleteByThreadKey:
 DELETE FROM ReadingHistory
 WHERE threadId = ? AND threadType = ? AND authorId = ?;
 
+deleteByThreadOrigin:
+DELETE FROM ReadingHistory
+WHERE threadId = ? AND threadType = ? AND authorId = ? AND historyOrigin = ?;
+
 deleteAll:
 DELETE FROM ReadingHistory;
 
 searchByName:
 SELECT * FROM ReadingHistory
-WHERE threadName LIKE '%' || ? || '%'
+WHERE historyOrigin = 'Direct' AND threadName LIKE '%' || ? || '%'
 ORDER BY lastVisitTime DESC
 LIMIT ? OFFSET ?;
 
 countByName:
 SELECT COUNT(*) FROM ReadingHistory
-WHERE threadName LIKE '%' || ? || '%';
+WHERE historyOrigin = 'Direct' AND threadName LIKE '%' || ? || '%';
 
 trimToLatest:
 DELETE FROM ReadingHistory
-WHERE (threadId, threadType, authorId) IN (
-    SELECT threadId, threadType, authorId
+WHERE (threadId, threadType, authorId, historyOrigin) IN (
+    SELECT threadId, threadType, authorId, historyOrigin
     FROM ReadingHistory
     ORDER BY lastVisitTime DESC
     LIMIT -1 OFFSET ?

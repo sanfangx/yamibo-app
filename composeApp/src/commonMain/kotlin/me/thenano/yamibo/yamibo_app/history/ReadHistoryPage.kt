@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.history
+﻿package me.thenano.yamibo.yamibo_app.history
 
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 
@@ -35,7 +35,8 @@ import me.thenano.yamibo.yamibo_app.favorite.*
 import me.thenano.yamibo.yamibo_app.forum.components.PageNavigation
 import me.thenano.yamibo.yamibo_app.history.components.*
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
-import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository
+import me.thenano.yamibo.yamibo_app.repository.FavoriteStoreRepository
+import me.thenano.yamibo.yamibo_app.repository.ContentCoverRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository.ThreadReadingHistory
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboSnackbarHost
@@ -75,10 +76,10 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
     var favoriteDialogCategorySelection by remember { mutableStateOf<Set<Long>>(emptySet()) }
     var favoriteDialogSelection by remember { mutableStateOf<Set<Long>>(emptySet()) }
     var favoriteDialogCategories by remember {
-        mutableStateOf<List<LocalFavoriteRepository.FavoriteCategory>>(emptyList())
+        mutableStateOf<List<FavoriteStoreRepository.FavoriteCategory>>(emptyList())
     }
     var favoriteCollectionOptions by remember {
-        mutableStateOf<List<LocalFavoriteRepository.FavoriteCollectionOption>>(emptyList())
+        mutableStateOf<List<FavoriteStoreRepository.FavoriteCollectionOption>>(emptyList())
     }
     var favoriteRefreshToken by remember { mutableIntStateOf(0) }
     var pendingFavoriteRemovalTarget by remember { mutableStateOf<FavoriteTargetPayload?>(null) }
@@ -118,6 +119,53 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
                     initialPage = topItem.threadImagePageIndex + 1
                 )
             )
+            is ReadHistoryRepository.TagCatalogReadingHistory -> navigator.navigate(
+                IThreadReaderScreen(
+                    tid = topItem.threadId,
+                    title = topItem.threadTitle,
+                    threadType = ReadHistoryRepository.ThreadEntryType.Normal,
+                    authorId = topItem.authorId,
+                    initialPage = topItem.threadPage,
+                    targetPid = topItem.postId,
+                    catalogCoverTargetType = ContentCoverRepository.TargetType.TagManga,
+                    catalogCoverTargetId = topItem.tagId.value.toLong(),
+                    catalogTagId = topItem.tagId,
+                    catalogTagName = topItem.tagName,
+                    catalogTagPage = topItem.tagPage,
+                )
+            )
+            is ReadHistoryRepository.RssSearchReadingHistory -> navigator.navigate(
+                IImageReaderScreen(
+                    tid = topItem.threadId,
+                    postId = null,
+                    fid = null,
+                    threadTitle = topItem.threadTitle,
+                    authorId = null,
+                    imageList = emptyList(),
+                    initialPage = topItem.threadImagePageIndex + 1,
+                    rssSubscriptionId = topItem.subscriptionId,
+                    rssTitle = topItem.subscriptionTitle,
+                    rssQuery = topItem.subscriptionQuery,
+                    rssPage = topItem.subscriptionPage,
+                    rssThreads = emptyList(),
+                )
+            )
+            is ReadHistoryRepository.RssCatalogReadingHistory -> navigator.navigate(
+                IThreadReaderScreen(
+                    tid = topItem.threadId,
+                    title = topItem.threadTitle,
+                    threadType = ReadHistoryRepository.ThreadEntryType.Normal,
+                    authorId = topItem.authorId,
+                    initialPage = topItem.threadPage,
+                    targetPid = topItem.postId,
+                    catalogCoverTargetType = ContentCoverRepository.TargetType.RssSearch,
+                    catalogCoverTargetId = topItem.subscriptionId,
+                    catalogRssSubscriptionId = topItem.subscriptionId,
+                    catalogRssTitle = topItem.subscriptionTitle,
+                    catalogRssQuery = topItem.subscriptionQuery,
+                    catalogRssPage = topItem.subscriptionPage,
+                )
+            )
             else -> {}
         }
     }
@@ -133,6 +181,7 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
                         label = when (filter) {
                             ReadHistoryRepository.HistoryFilter.All -> allLabel
                             ReadHistoryRepository.HistoryFilter.Tag -> "Tag"
+                            ReadHistoryRepository.HistoryFilter.Rss -> "RSS"
                             is ReadHistoryRepository.HistoryFilter.Forum -> counts
                                 .maxBy { it.count }
                                 .label
@@ -550,6 +599,126 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
                                             },
                                             favoriteRefreshToken = favoriteRefreshToken,
                                             navigator = navigator
+                                        )
+                                        is ReadHistoryRepository.TagCatalogReadingHistory -> TagCatalogHistoryItem(
+                                            history = history,
+                                            pageMode = mode,
+                                            selectedItems = selectedItems,
+                                            onToggleSelection = {
+                                                selectedItems =
+                                                    if (history in selectedItems) selectedItems - history else selectedItems + history
+                                            },
+                                            onDelete = {
+                                                scope.launch {
+                                                    readHistoryRepo.deleteTagCatalogThreadHistory(history.tagId)
+                                                    loadPage(currentPage)
+                                                    snackbarHostState.showSnackbar(i18n("已刪除這筆紀錄"))
+                                                }
+                                            },
+                                            onFavorite = {
+                                                scope.launch {
+                                                    toggleFavoriteQuickWithFeedback(
+                                                        FavoriteTargetPayload.TagManga(
+                                                            tagId = history.tagId,
+                                                            tagName = history.tagName,
+                                                            coverUrl = history.coverUrl
+                                                        )
+                                                    )
+                                                }
+                                            },
+                                            onFavoriteLongPress = {
+                                                scope.launch {
+                                                    openFavoriteDialogWithSelection(
+                                                        FavoriteTargetPayload.TagManga(
+                                                            tagId = history.tagId,
+                                                            tagName = history.tagName,
+                                                            coverUrl = history.coverUrl
+                                                        )
+                                                    )
+                                                }
+                                            },
+                                            favoriteRefreshToken = favoriteRefreshToken,
+                                            navigator = navigator
+                                        )
+                                        is ReadHistoryRepository.RssSearchReadingHistory -> RssHistoryItem(
+                                            history = history,
+                                            pageMode = mode,
+                                            selectedItems = selectedItems,
+                                            onToggleSelection = {
+                                                selectedItems =
+                                                    if (history in selectedItems) selectedItems - history else selectedItems + history
+                                            },
+                                            onDelete = {
+                                                scope.launch {
+                                                    readHistoryRepo.deleteRssSearchHistory(history.subscriptionId)
+                                                    loadPage(currentPage)
+                                                    snackbarHostState.showSnackbar(i18n("已刪除這筆紀錄"))
+                                                }
+                                            },
+                                            onFavorite = {
+                                                scope.launch {
+                                                    toggleFavoriteQuickWithFeedback(
+                                                        FavoriteTargetPayload.RssSearch(
+                                                            subscriptionId = history.subscriptionId,
+                                                            title = history.subscriptionTitle,
+                                                            coverUrl = history.coverUrl,
+                                                        )
+                                                    )
+                                                }
+                                            },
+                                            onFavoriteLongPress = {
+                                                scope.launch {
+                                                    openFavoriteDialogWithSelection(
+                                                        FavoriteTargetPayload.RssSearch(
+                                                            subscriptionId = history.subscriptionId,
+                                                            title = history.subscriptionTitle,
+                                                            coverUrl = history.coverUrl,
+                                                        )
+                                                    )
+                                                }
+                                            },
+                                            favoriteRefreshToken = favoriteRefreshToken,
+                                            navigator = navigator,
+                                        )
+                                        is ReadHistoryRepository.RssCatalogReadingHistory -> RssCatalogHistoryItem(
+                                            history = history,
+                                            pageMode = mode,
+                                            selectedItems = selectedItems,
+                                            onToggleSelection = {
+                                                selectedItems =
+                                                    if (history in selectedItems) selectedItems - history else selectedItems + history
+                                            },
+                                            onDelete = {
+                                                scope.launch {
+                                                    readHistoryRepo.deleteRssCatalogThreadHistory(history.subscriptionId)
+                                                    loadPage(currentPage)
+                                                    snackbarHostState.showSnackbar(i18n("已刪除這筆紀錄"))
+                                                }
+                                            },
+                                            onFavorite = {
+                                                scope.launch {
+                                                    toggleFavoriteQuickWithFeedback(
+                                                        FavoriteTargetPayload.RssSearch(
+                                                            subscriptionId = history.subscriptionId,
+                                                            title = history.subscriptionTitle,
+                                                            coverUrl = history.coverUrl,
+                                                        )
+                                                    )
+                                                }
+                                            },
+                                            onFavoriteLongPress = {
+                                                scope.launch {
+                                                    openFavoriteDialogWithSelection(
+                                                        FavoriteTargetPayload.RssSearch(
+                                                            subscriptionId = history.subscriptionId,
+                                                            title = history.subscriptionTitle,
+                                                            coverUrl = history.coverUrl,
+                                                        )
+                                                    )
+                                                }
+                                            },
+                                            favoriteRefreshToken = favoriteRefreshToken,
+                                            navigator = navigator,
                                         )
                                         else -> {}
                                     }

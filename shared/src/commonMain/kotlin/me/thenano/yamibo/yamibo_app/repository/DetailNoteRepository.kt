@@ -4,6 +4,7 @@ interface DetailNoteRepository {
     enum class TargetType {
         NovelThread,
         TagManga,
+        RssSearch,
     }
 
     data class DetailNote(

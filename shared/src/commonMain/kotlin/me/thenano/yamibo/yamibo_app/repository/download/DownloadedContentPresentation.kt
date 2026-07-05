@@ -58,6 +58,7 @@ private fun DownloadedContentGroup.normalizedFilterKey(): String =
     filterKey.ifBlank {
         when (type) {
             DownloadedContentGroupType.TagManga -> DOWNLOADED_CONTENT_FILTER_TAG_MANGA
+            DownloadedContentGroupType.RssManga -> DOWNLOADED_CONTENT_FILTER_TAG_MANGA
             DownloadedContentGroupType.Thread -> DOWNLOADED_CONTENT_FILTER_UNKNOWN_FORUM
         }
     }
@@ -66,6 +67,7 @@ private fun DownloadedContentGroup.normalizedFilterLabel(): String =
     filterLabel.ifBlank {
         when (type) {
             DownloadedContentGroupType.TagManga -> "標籤漫畫"
+            DownloadedContentGroupType.RssManga -> "RSS 漫畫"
             DownloadedContentGroupType.Thread -> "未知板塊"
         }
     }

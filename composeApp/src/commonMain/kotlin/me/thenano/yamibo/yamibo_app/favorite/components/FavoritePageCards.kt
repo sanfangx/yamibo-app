@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.favorite.components
+﻿package me.thenano.yamibo.yamibo_app.favorite.components
 
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 
@@ -41,8 +41,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import me.thenano.yamibo.yamibo_app.favorite.FavoriteGridEntry
-import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.FavoriteCollectionWithItems
-import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.FavoriteItem
+import me.thenano.yamibo.yamibo_app.repository.FavoriteStoreRepository.FavoriteCollectionWithItems
+import me.thenano.yamibo.yamibo_app.repository.FavoriteStoreRepository.FavoriteItem
 import me.thenano.yamibo.yamibo_app.repository.settings.FavoriteGridMode
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.components.feedback.resolvedContentCoverUrl

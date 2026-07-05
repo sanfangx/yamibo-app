@@ -151,6 +151,69 @@ class AndroidDownloadStorageProvider(
             }
     }
 
+    override suspend fun writeRssMangaChapter(
+        key: RssMangaChapterDownloadKey,
+        manifestBytes: ByteArray,
+        images: List<PendingDownloadedImage>,
+    ) {
+        val treeUri = selectedTreeUri() ?: error("尚未選擇備份資料夾")
+        val root = ensureDirectory(treeUri, rootDocumentUri(treeUri), ROOT_DIR)
+        val rssDir = ensureDirectory(treeUri, root, key.rssStableId)
+        val tmpName = "${key.chapterStableId}.tmp"
+        deleteChildByName(treeUri, rssDir, tmpName)
+        val tmp = ensureDirectory(treeUri, rssDir, tmpName)
+        val imagesDir = ensureDirectory(treeUri, tmp, IMAGES_DIR)
+        writeFile(treeUri, tmp, "manifest.json", "application/json", manifestBytes)
+        images.forEach { writeFile(treeUri, imagesDir, it.fileName, "application/octet-stream", it.bytes) }
+        val previousName = "${key.chapterStableId}.previous"
+        deleteChildByName(treeUri, rssDir, previousName)
+        val current = findChild(treeUri, rssDir, key.chapterStableId)
+        val previous = current?.let { DocumentsContract.renameDocument(resolver, it, previousName) }
+        try {
+            DocumentsContract.renameDocument(resolver, tmp, key.chapterStableId)
+                ?: error("儲存提供者不支援完成下載檔案")
+            previous?.let { runCatching { DocumentsContract.deleteDocument(resolver, it) } }
+        } catch (error: Throwable) {
+            runCatching { DocumentsContract.deleteDocument(resolver, tmp) }
+            previous?.let { runCatching { DocumentsContract.renameDocument(resolver, it, key.chapterStableId) } }
+            throw error
+        }
+    }
+
+    override suspend fun resolveRssMangaImageUri(key: RssMangaChapterDownloadKey, fileName: String): String? = withContext(Dispatchers.IO) {
+        val treeUri = selectedTreeUri() ?: return@withContext null
+        val chapterDir = findRssMangaChapterDir(treeUri, key) ?: return@withContext null
+        val imagesDir = findChild(treeUri, chapterDir, IMAGES_DIR) ?: return@withContext null
+        return@withContext findChild(treeUri, imagesDir, fileName)?.toString()
+    }
+
+    override suspend fun resolveRssMangaImageUris(
+        key: RssMangaChapterDownloadKey,
+        fileNames: List<String>,
+    ): List<String> = withContext(Dispatchers.IO) {
+        val treeUri = selectedTreeUri() ?: return@withContext emptyList()
+        val chapterDir = findRssMangaChapterDir(treeUri, key) ?: return@withContext emptyList()
+        val imagesDir = findChild(treeUri, chapterDir, IMAGES_DIR) ?: return@withContext emptyList()
+        val childrenByName = listChildren(treeUri, imagesDir).associateBy { it.name }
+        fileNames.mapNotNull { childrenByName[it]?.uri?.toString() }
+    }
+
+    override suspend fun readRssMangaManifest(key: RssMangaChapterDownloadKey): RssMangaChapterManifest? = withContext(Dispatchers.IO) {
+        val treeUri = selectedTreeUri() ?: return@withContext null
+        val chapterDir = findRssMangaChapterDir(treeUri, key) ?: return@withContext null
+        return@withContext readRssMangaManifestFromDir(treeUri, chapterDir)
+    }
+
+    override suspend fun listRssMangaManifests(): List<RssMangaChapterManifest> {
+        val treeUri = selectedTreeUri() ?: return emptyList()
+        val root = downloadsRoot(treeUri) ?: return emptyList()
+        return listChildren(treeUri, root)
+            .filter { it.name.startsWith("rss_") }
+            .flatMap { rssDir ->
+                listChildren(treeUri, rssDir.uri).mapNotNull { readRssMangaManifestFromDir(treeUri, it.uri) }
+            }
+    }
+
     override suspend fun readQueue(): List<DownloadQueueEntry> {
         val treeUri = selectedTreeUri() ?: return emptyList()
         val root = downloadsRoot(treeUri) ?: return emptyList()
@@ -198,6 +261,18 @@ class AndroidDownloadStorageProvider(
         deleteChildByName(treeUri, root, "tag_manga_$tagId")
     }
 
+    override suspend fun deleteRssMangaChapter(key: RssMangaChapterDownloadKey) {
+        val treeUri = selectedTreeUri() ?: return
+        val rssDir = findRssMangaDir(treeUri, key.subscriptionId) ?: return
+        deleteChildByName(treeUri, rssDir, key.chapterStableId)
+    }
+
+    override suspend fun deleteRssManga(subscriptionId: Long) {
+        val treeUri = selectedTreeUri() ?: return
+        val root = downloadsRoot(treeUri) ?: return
+        deleteChildByName(treeUri, root, "rss_$subscriptionId")
+    }
+
     private fun selectedTreeUri(): Uri? =
         appSettingsRepository.backupFolderUri.getValue().takeIf { it.isNotBlank() }?.let(Uri::parse)
 
@@ -212,6 +287,12 @@ class AndroidDownloadStorageProvider(
 
     private fun findTagMangaChapterDir(treeUri: Uri, key: TagMangaChapterDownloadKey): Uri? =
         findChild(treeUri, findTagMangaDir(treeUri, key.tagId) ?: return null, key.chapterStableId)
+
+    private fun findRssMangaDir(treeUri: Uri, subscriptionId: Long): Uri? =
+        findChild(treeUri, downloadsRoot(treeUri) ?: return null, "rss_$subscriptionId")
+
+    private fun findRssMangaChapterDir(treeUri: Uri, key: RssMangaChapterDownloadKey): Uri? =
+        findChild(treeUri, findRssMangaDir(treeUri, key.subscriptionId) ?: return null, key.chapterStableId)
 
     private fun ensureDirectory(treeUri: Uri, parent: Uri, name: String): Uri =
         findChild(treeUri, parent, name)
@@ -236,6 +317,12 @@ class AndroidDownloadStorageProvider(
         val file = findChild(treeUri, dir, "manifest.json") ?: return null
         val bytes = resolver.openInputStream(file)?.use { it.readBytes() } ?: return null
         return runCatching { json.decodeFromString<TagMangaChapterManifest>(bytes.decodeToString()) }.getOrNull()
+    }
+
+    private fun readRssMangaManifestFromDir(treeUri: Uri, dir: Uri): RssMangaChapterManifest? {
+        val file = findChild(treeUri, dir, "manifest.json") ?: return null
+        val bytes = resolver.openInputStream(file)?.use { it.readBytes() } ?: return null
+        return runCatching { json.decodeFromString<RssMangaChapterManifest>(bytes.decodeToString()) }.getOrNull()
     }
 
     private fun deleteChildByName(treeUri: Uri, parent: Uri, name: String) {

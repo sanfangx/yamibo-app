@@ -172,6 +172,7 @@ class BackupRepositoryImpl(
                         viewportHeight = it.viewportHeight,
                         firstVisibleItemIndex = it.firstVisibleItemIndex,
                         firstVisibleItemOffset = it.firstVisibleItemOffset,
+                        historyOrigin = it.historyOrigin,
                         lastVisitTime = it.lastVisitTime,
                         lastUpdatedTime = it.lastUpdatedTime,
                     )
@@ -340,6 +341,7 @@ class BackupRepositoryImpl(
                     viewportHeight = it.viewportHeight,
                     firstVisibleItemIndex = it.firstVisibleItemIndex,
                     firstVisibleItemOffset = it.firstVisibleItemOffset,
+                    historyOrigin = it.historyOrigin,
                     lastVisitTime = it.lastVisitTime,
                     lastUpdatedTime = it.lastUpdatedTime,
                 )

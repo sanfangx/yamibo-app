@@ -1,36 +1,36 @@
-package me.thenano.yamibo.yamibo_app.repository.bookmark
+﻿package me.thenano.yamibo.yamibo_app.repository.bookmark
 
 import me.thenano.yamibo.yamibo_app.Database
-import me.thenano.yamibo.yamibo_app.repository.LocalBookMarkRepository
+import me.thenano.yamibo.yamibo_app.repository.BookMarkRepository
 import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
 import me.thenano.yamibo.yamiboapp.LocalBookMark
 
-class LocalBookMarkRepositoryImpl(
+class BookMarkRepositoryImpl(
     db: Database,
-) : LocalBookMarkRepository {
+) : BookMarkRepository {
     private val queries = db.localBookMarkQueries
 
     override suspend fun getEntry(
-        targetType: LocalBookMarkRepository.TargetType,
+        targetType: BookMarkRepository.TargetType,
         parentId: Long,
         targetId: Long,
-    ): LocalBookMarkRepository.Entry? {
+    ): BookMarkRepository.Entry? {
         return queries.getByTarget(targetType.name, parentId, targetId).executeAsOneOrNull()?.toEntry()
     }
 
     override suspend fun getEntriesByParent(
-        targetType: LocalBookMarkRepository.TargetType,
+        targetType: BookMarkRepository.TargetType,
         parentId: Long,
-    ): List<LocalBookMarkRepository.Entry> {
+    ): List<BookMarkRepository.Entry> {
         return queries.getByParent(targetType.name, parentId).executeAsList().map { it.toEntry() }
     }
 
-    override suspend fun getAllEntries(): List<LocalBookMarkRepository.Entry> {
+    override suspend fun getAllEntries(): List<BookMarkRepository.Entry> {
         return queries.getAll().executeAsList().map { it.toEntry() }
     }
 
     override suspend fun setBookmarked(
-        targetType: LocalBookMarkRepository.TargetType,
+        targetType: BookMarkRepository.TargetType,
         parentId: Long,
         targetId: Long,
         title: String,
@@ -40,7 +40,7 @@ class LocalBookMarkRepositoryImpl(
     }
 
     override suspend fun setRead(
-        targetType: LocalBookMarkRepository.TargetType,
+        targetType: BookMarkRepository.TargetType,
         parentId: Long,
         targetId: Long,
         title: String,
@@ -50,19 +50,19 @@ class LocalBookMarkRepositoryImpl(
     }
 
     override suspend fun clearTarget(
-        targetType: LocalBookMarkRepository.TargetType,
+        targetType: BookMarkRepository.TargetType,
         parentId: Long,
         targetId: Long,
     ) {
         queries.deleteByTarget(targetType.name, parentId, targetId)
     }
 
-    override suspend fun clearParent(targetType: LocalBookMarkRepository.TargetType, parentId: Long) {
+    override suspend fun clearParent(targetType: BookMarkRepository.TargetType, parentId: Long) {
         queries.deleteByParent(targetType.name, parentId)
     }
 
     private fun upsertState(
-        targetType: LocalBookMarkRepository.TargetType,
+        targetType: BookMarkRepository.TargetType,
         parentId: Long,
         targetId: Long,
         title: String,
@@ -86,9 +86,9 @@ class LocalBookMarkRepositoryImpl(
         queries.deleteIfEmpty(targetType.name, parentId, targetId)
     }
 
-    private fun LocalBookMark.toEntry(): LocalBookMarkRepository.Entry {
-        return LocalBookMarkRepository.Entry(
-            targetType = LocalBookMarkRepository.TargetType.fromStorage(targetType),
+    private fun LocalBookMark.toEntry(): BookMarkRepository.Entry {
+        return BookMarkRepository.Entry(
+            targetType = BookMarkRepository.TargetType.fromStorage(targetType),
             parentId = parentId,
             targetId = targetId,
             title = title,

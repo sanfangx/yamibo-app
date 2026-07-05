@@ -533,6 +533,7 @@ class DownloadRepositoryTest {
             val actual = when (key) {
                 is ThreadPageDownloadKey -> repository.getStatus(key)
                 is TagMangaChapterDownloadKey -> repository.getStatus(key)
+                is RssMangaChapterDownloadKey -> repository.getStatus(key)
             }
             if (actual == expected) return
             delay(10)
@@ -587,6 +588,7 @@ class DownloadRepositoryTest {
         val key: DownloadTaskKey = when (type) {
             DownloadedContentGroupType.Thread -> ThreadPageDownloadKey(id.hashCode(), 1)
             DownloadedContentGroupType.TagManga -> TagMangaChapterDownloadKey(1, id.hashCode())
+            DownloadedContentGroupType.RssManga -> RssMangaChapterDownloadKey(1, id.hashCode())
         }
         return DownloadedContentGroup(
             id = id,
@@ -615,8 +617,10 @@ class DownloadRepositoryTest {
         val manifests = mutableMapOf<ThreadPageDownloadKey, ThreadPageDownloadManifest>()
         val pages = mutableMapOf<ThreadPageDownloadKey, ByteArray>()
         val tagManifests = mutableMapOf<TagMangaChapterDownloadKey, TagMangaChapterManifest>()
+        val rssManifests = mutableMapOf<RssMangaChapterDownloadKey, RssMangaChapterManifest>()
         private val imageUris = mutableMapOf<Pair<ThreadPageDownloadKey, String>, String>()
         private val tagImageUris = mutableMapOf<Pair<TagMangaChapterDownloadKey, String>, String>()
+        private val rssImageUris = mutableMapOf<Pair<RssMangaChapterDownloadKey, String>, String>()
         private var queue = emptyList<DownloadQueueEntry>()
         private val json = Json { ignoreUnknownKeys = true }
 
@@ -642,6 +646,15 @@ class DownloadRepositoryTest {
         ) {
             tagManifests[key] = manifest
             images.forEach { (name, uri) -> tagImageUris[key to name] = uri }
+        }
+
+        fun seedRss(
+            key: RssMangaChapterDownloadKey,
+            manifest: RssMangaChapterManifest,
+            images: Map<String, String> = emptyMap(),
+        ) {
+            rssManifests[key] = manifest
+            images.forEach { (name, uri) -> rssImageUris[key to name] = uri }
         }
 
         override suspend fun getSelectedFolderLabel(): String = "test"
@@ -675,6 +688,19 @@ class DownloadRepositoryTest {
         override suspend fun readTagMangaManifest(key: TagMangaChapterDownloadKey): TagMangaChapterManifest? =
             tagManifests[key]
         override suspend fun listTagMangaManifests(): List<TagMangaChapterManifest> = tagManifests.values.toList()
+        override suspend fun writeRssMangaChapter(
+            key: RssMangaChapterDownloadKey,
+            manifestBytes: ByteArray,
+            images: List<PendingDownloadedImage>,
+        ) {
+            rssManifests[key] = json.decodeFromString(manifestBytes.decodeToString())
+            images.forEach { image -> rssImageUris[key to image.fileName] = "content://rss/${image.fileName}" }
+        }
+        override suspend fun resolveRssMangaImageUri(key: RssMangaChapterDownloadKey, fileName: String): String? =
+            rssImageUris[key to fileName]
+        override suspend fun readRssMangaManifest(key: RssMangaChapterDownloadKey): RssMangaChapterManifest? =
+            rssManifests[key]
+        override suspend fun listRssMangaManifests(): List<RssMangaChapterManifest> = rssManifests.values.toList()
         override suspend fun readQueue(): List<DownloadQueueEntry> = queue
         override suspend fun writeQueue(entries: List<DownloadQueueEntry>) {
             queue = entries
@@ -703,6 +729,18 @@ class DownloadRepositoryTest {
                 .filter { it.tagId == tagId }
                 .toList()
                 .forEach { deleteTagMangaChapter(it) }
+        }
+
+        override suspend fun deleteRssMangaChapter(key: RssMangaChapterDownloadKey) {
+            rssManifests.remove(key)
+            rssImageUris.keys.removeAll { it.first == key }
+        }
+
+        override suspend fun deleteRssManga(subscriptionId: Long) {
+            rssManifests.keys
+                .filter { it.subscriptionId == subscriptionId }
+                .toList()
+                .forEach { deleteRssMangaChapter(it) }
         }
     }
 

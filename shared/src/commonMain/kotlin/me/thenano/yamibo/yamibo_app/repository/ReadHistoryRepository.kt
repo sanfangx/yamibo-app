@@ -22,6 +22,7 @@ interface ReadHistoryRepository {
         data object All : HistoryFilter
         data class Forum(val forumId: ForumId) : HistoryFilter
         data object Tag : HistoryFilter
+        data object Rss : HistoryFilter
     }
 
     data class HistoryFilterCount(
@@ -42,6 +43,18 @@ interface ReadHistoryRepository {
         companion object {
             fun fromStorage(value: String?): ThreadEntryType {
                 return entries.firstOrNull { it.name == value } ?: Normal
+            }
+        }
+    }
+
+    enum class ThreadHistoryOrigin {
+        Direct,
+        TagCatalog,
+        RssCatalog;
+
+        companion object {
+            fun fromStorage(value: String?): ThreadHistoryOrigin {
+                return entries.firstOrNull { it.name == value } ?: Direct
             }
         }
     }
@@ -71,6 +84,7 @@ interface ReadHistoryRepository {
         val viewportHeight: Int? = null,
         val firstVisibleItemIndex: Int? = null,
         val firstVisibleItemOffset: Int? = null,
+        val historyOrigin: ThreadHistoryOrigin = ThreadHistoryOrigin.Direct,
 
         override val lastVisitTime: Long,
     ) : AnyReadingHistory
@@ -209,6 +223,29 @@ interface ReadHistoryRepository {
         val coverUrl: String? = null
     ) : AnyReadingHistory
 
+    /** Non-manga catalog reading history for a tag detail thread entry. */
+    data class TagCatalogReadingHistory(
+        val tagId: TagId,
+        val tagName: String,
+        val tagPage: Int,
+        val threadId: ThreadId,
+        val threadTitle: String,
+        val threadPage: Int,
+        val postId: PostId,
+        val postTitle: String,
+        val authorId: UserId? = null,
+        val anchorPostId: Long = postId.value.toLong(),
+        val anchorPostRatio: Float? = null,
+        val anchorBlockId: String? = null,
+        val anchorBlockType: String? = null,
+        val anchorBlockRatio: Float? = null,
+        val viewportHeight: Int? = null,
+        val firstVisibleItemIndex: Int? = null,
+        val firstVisibleItemOffset: Int? = null,
+        override val lastVisitTime: Long,
+        val coverUrl: String? = null,
+    ) : AnyReadingHistory
+
     /** Save or update manga tag reading position */
     suspend fun saveTagMangaReaderModeHistory(history: TagMangaReadingHistory)
 
@@ -217,4 +254,61 @@ interface ReadHistoryRepository {
 
     /** Delete manga tag reading history */
     suspend fun deleteMangaTagHistory(tagId: TagId)
+
+    suspend fun saveTagCatalogThreadHistory(history: TagCatalogReadingHistory)
+
+    suspend fun getTagCatalogThreadHistoryPosition(tagId: TagId): TagCatalogReadingHistory?
+
+    suspend fun deleteTagCatalogThreadHistory(tagId: TagId)
+
+    /** Reading history entry for RSS search catalog reading mode (keyed by subscriptionId) */
+    data class RssSearchReadingHistory(
+        val subscriptionId: Long,
+        val subscriptionTitle: String,
+        val subscriptionQuery: String,
+        val subscriptionPage: Int,
+        val threadId: ThreadId,
+        val threadTitle: String,
+        val threadImagePageIndex: Int,
+        val threadImageTotalPages: Int,
+        val firstVisibleItemIndex: Int? = null,
+        val firstVisibleItemOffset: Int? = null,
+        override val lastVisitTime: Long,
+        val coverUrl: String? = null,
+    ) : AnyReadingHistory
+
+    data class RssCatalogReadingHistory(
+        val subscriptionId: Long,
+        val subscriptionTitle: String,
+        val subscriptionQuery: String,
+        val subscriptionPage: Int,
+        val threadId: ThreadId,
+        val threadTitle: String,
+        val threadPage: Int,
+        val postId: PostId,
+        val postTitle: String,
+        val authorId: UserId? = null,
+        val anchorPostId: Long = postId.value.toLong(),
+        val anchorPostRatio: Float? = null,
+        val anchorBlockId: String? = null,
+        val anchorBlockType: String? = null,
+        val anchorBlockRatio: Float? = null,
+        val viewportHeight: Int? = null,
+        val firstVisibleItemIndex: Int? = null,
+        val firstVisibleItemOffset: Int? = null,
+        override val lastVisitTime: Long,
+        val coverUrl: String? = null,
+    ) : AnyReadingHistory
+
+    suspend fun saveRssSearchReaderModeHistory(history: RssSearchReadingHistory)
+
+    suspend fun getRssSearchReaderModeHistoryPosition(subscriptionId: Long): RssSearchReadingHistory?
+
+    suspend fun deleteRssSearchHistory(subscriptionId: Long)
+
+    suspend fun saveRssCatalogThreadHistory(history: RssCatalogReadingHistory)
+
+    suspend fun getRssCatalogThreadHistoryPosition(subscriptionId: Long): RssCatalogReadingHistory?
+
+    suspend fun deleteRssCatalogThreadHistory(subscriptionId: Long)
 }

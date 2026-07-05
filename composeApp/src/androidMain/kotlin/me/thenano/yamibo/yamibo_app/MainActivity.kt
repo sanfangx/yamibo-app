@@ -48,6 +48,7 @@ import me.thenano.yamibo.yamibo_app.repository.font.AndroidFontPlatform
 import me.thenano.yamibo.yamibo_app.repository.font.DefaultFontRepository
 import me.thenano.yamibo.yamibo_app.repository.appupdate.DefaultAppUpdateRepository
 import me.thenano.yamibo.yamibo_app.repository.inapplinknavigation.DefaultInAppLinkNavigationRepository
+import me.thenano.yamibo.yamibo_app.repository.rss.RssSearchSubscriptionRepositoryImpl
 import me.thenano.yamibo.yamibo_app.repository.settings.AppSettingsRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.MangaReaderSettingsRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.NovelReaderSettingsRepository
@@ -170,12 +171,20 @@ class MainActivity : ComponentActivity() {
                     threadRepository = threadRepository,
                 )
             }
+            val rssSearchSubscriptionRepository = remember {
+                RssSearchSubscriptionRepositoryImpl(
+                    db = favoriteSyncDatabase,
+                    authRepository = authRepository,
+                    forumRepository = forumRepository,
+                )
+            }
             val favoriteUpdateRepository = remember {
                 FavoriteUpdateRepositoryImpl(
                     db = favoriteSyncDatabase,
                     localFavoriteRepository = favoriteRepository,
                     threadRepository = threadRepository,
                     tagRepository = tagRepository,
+                    rssSearchSubscriptionRepository = rssSearchSubscriptionRepository,
                 )
             }
             val backgroundTaskRepository = remember { AndroidBackgroundTaskRepository(context) }
@@ -198,6 +207,7 @@ class MainActivity : ComponentActivity() {
                 DownloadRepositoryImpl(
                     threadRepository = threadRepository,
                     tagRepository = tagRepository,
+                    rssRepository = rssSearchSubscriptionRepository,
                     storageProvider = AndroidDownloadStorageProvider(context, appSettingsRepository),
                     imageFetcher = DownloadImageFetcher { cookieStore.load().orEmpty() },
                     backgroundController = AndroidDownloadBackgroundController(context),
@@ -264,6 +274,7 @@ class MainActivity : ComponentActivity() {
                 LocalFavoriteSyncRunner provides favoriteSyncRunner,
                 LocalFavoriteUpdateRepository provides favoriteUpdateRepository,
                 LocalFavoriteUpdateRunner provides favoriteUpdateRunner,
+                LocalRssSearchSubscriptionRepository provides rssSearchSubscriptionRepository,
                 LocalFontRepository provides fontRepository,
                 LocalBackgroundAccessRepository provides backgroundAccessRepository,
                 LocalNovelThreadCacheRepository provides novelCacheRepository,

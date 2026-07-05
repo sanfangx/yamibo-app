@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.thread.reader
+﻿package me.thenano.yamibo.yamibo_app.thread.reader
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import me.thenano.yamibo.yamibo_app.repository.LocalChapterStateRepository
+import me.thenano.yamibo.yamibo_app.repository.ChapterStateRepository
 import kotlin.math.floor
 
 internal data class ReaderProgressGeometry(
@@ -108,13 +108,13 @@ internal fun calculateReaderProgress(
 }
 
 internal class ReaderProgressCoordinator(
-    private val repository: LocalChapterStateRepository,
+    private val repository: ChapterStateRepository,
     private val parentId: Long,
     scope: CoroutineScope,
 ) {
-    val chapterStates: StateFlow<Map<Long, LocalChapterStateRepository.Entry>> =
+    val chapterStates: StateFlow<Map<Long, ChapterStateRepository.Entry>> =
         repository.observeEntriesByParent(
-            targetType = LocalChapterStateRepository.TargetType.ThreadPost,
+            targetType = ChapterStateRepository.TargetType.ThreadPost,
             parentId = parentId,
         ).stateIn(scope, SharingStarted.Eagerly, emptyMap())
 
@@ -141,10 +141,10 @@ internal class ReaderProgressCoordinator(
         writesBlockedUntilScroll = false
     }
 
-    suspend fun applyProgress(updates: List<LocalChapterStateRepository.ProgressUpdate>) {
+    suspend fun applyProgress(updates: List<ChapterStateRepository.ProgressUpdate>) {
         writeMutex.withLock {
             if (writesBlockedUntilScroll) return
-            val merged = LinkedHashMap<Long, LocalChapterStateRepository.ProgressUpdate>()
+            val merged = LinkedHashMap<Long, ChapterStateRepository.ProgressUpdate>()
             pendingReadPosts.forEach { (postId, title) ->
                 val existing = chapterStates.value[postId]
                 if (existing?.read != true && submittedStates[postId] != (100 to true)) {
@@ -178,7 +178,7 @@ internal class ReaderProgressCoordinator(
     suspend fun setRead(postId: Long, title: String, read: Boolean) {
         writeMutex.withLock {
             repository.setRead(
-                targetType = LocalChapterStateRepository.TargetType.ThreadPost,
+                targetType = ChapterStateRepository.TargetType.ThreadPost,
                 parentId = parentId,
                 targetId = postId,
                 title = title,
@@ -195,7 +195,7 @@ internal class ReaderProgressCoordinator(
             pendingReadPosts.clear()
             submittedStates.clear()
             repository.clearParent(
-                targetType = LocalChapterStateRepository.TargetType.ThreadPost,
+                targetType = ChapterStateRepository.TargetType.ThreadPost,
                 parentId = parentId,
             )
             clearThreadHistory()
@@ -207,8 +207,8 @@ internal class ReaderProgressCoordinator(
         title: String,
         progressPercent: Int,
         read: Boolean,
-    ) = LocalChapterStateRepository.ProgressUpdate(
-        targetType = LocalChapterStateRepository.TargetType.ThreadPost,
+    ) = ChapterStateRepository.ProgressUpdate(
+        targetType = ChapterStateRepository.TargetType.ThreadPost,
         parentId = parentId,
         targetId = postId,
         title = title,

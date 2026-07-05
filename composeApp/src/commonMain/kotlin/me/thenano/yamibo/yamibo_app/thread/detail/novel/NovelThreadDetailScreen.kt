@@ -36,8 +36,8 @@ import me.thenano.yamibo.yamibo_app.thread.detail.novel.components.*
 import me.thenano.yamibo.yamibo_app.thread.reader.IThreadReaderScreen
 import me.thenano.yamibo.yamibo_app.util.shareText
 import me.thenano.yamibo.yamibo_app.util.time.epochMillisOrNull
-import me.thenano.yamibo.yamibo_app.repository.LocalBookMarkRepository as BookMarkRepository
-import me.thenano.yamibo.yamibo_app.repository.LocalChapterStateRepository as ChapterStateRepository
+import me.thenano.yamibo.yamibo_app.repository.BookMarkRepository as BookMarkRepository
+import me.thenano.yamibo.yamibo_app.repository.ChapterStateRepository as ChapterStateRepository
 
 /** Thread detail state */
 internal sealed interface ThreadState {
@@ -74,10 +74,10 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
     var favoriteDialogCategorySelection by remember { mutableStateOf<Set<Long>>(emptySet()) }
     var favoriteDialogSelection by remember { mutableStateOf<Set<Long>>(emptySet()) }
     var favoriteDialogCategories by remember {
-        mutableStateOf<List<me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.FavoriteCategory>>(emptyList())
+        mutableStateOf<List<me.thenano.yamibo.yamibo_app.repository.FavoriteStoreRepository.FavoriteCategory>>(emptyList())
     }
     var favoriteDialogOptions by remember {
-        mutableStateOf<List<me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.FavoriteCollectionOption>>(emptyList())
+        mutableStateOf<List<me.thenano.yamibo.yamibo_app.repository.FavoriteStoreRepository.FavoriteCollectionOption>>(emptyList())
     }
     var isFavorited by remember { mutableStateOf(false) }
     var favoritePaths by remember { mutableStateOf<List<String>>(emptyList()) }

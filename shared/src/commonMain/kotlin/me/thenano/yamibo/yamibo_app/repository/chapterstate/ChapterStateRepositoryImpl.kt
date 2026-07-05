@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.repository.chapterstate
+﻿package me.thenano.yamibo.yamibo_app.repository.chapterstate
 
 import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToList
@@ -9,38 +9,38 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import me.thenano.yamibo.yamibo_app.Database
-import me.thenano.yamibo.yamibo_app.repository.LocalChapterStateRepository
+import me.thenano.yamibo.yamibo_app.repository.ChapterStateRepository
 import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
 import me.thenano.yamibo.yamiboapp.LocalChapterState
 
-class LocalChapterStateRepositoryImpl(
+class ChapterStateRepositoryImpl(
     private val db: Database,
-) : LocalChapterStateRepository {
+) : ChapterStateRepository {
     private val queries = db.localChapterStateQueries
 
     override suspend fun getEntry(
-        targetType: LocalChapterStateRepository.TargetType,
+        targetType: ChapterStateRepository.TargetType,
         parentId: Long,
         targetId: Long,
-    ): LocalChapterStateRepository.Entry? = withContext(Dispatchers.IO) {
+    ): ChapterStateRepository.Entry? = withContext(Dispatchers.IO) {
         queries.getByTarget(targetType.name, parentId, targetId).executeAsOneOrNull()?.toEntry()
     }
 
     override suspend fun getEntriesByParent(
-        targetType: LocalChapterStateRepository.TargetType,
+        targetType: ChapterStateRepository.TargetType,
         parentId: Long,
-    ): List<LocalChapterStateRepository.Entry> = withContext(Dispatchers.IO) {
+    ): List<ChapterStateRepository.Entry> = withContext(Dispatchers.IO) {
         queries.getByParent(targetType.name, parentId).executeAsList().map { it.toEntry() }
     }
 
-    override suspend fun getAllEntries(): List<LocalChapterStateRepository.Entry> = withContext(Dispatchers.IO) {
+    override suspend fun getAllEntries(): List<ChapterStateRepository.Entry> = withContext(Dispatchers.IO) {
         queries.getAll().executeAsList().map { it.toEntry() }
     }
 
     override fun observeEntriesByParent(
-        targetType: LocalChapterStateRepository.TargetType,
+        targetType: ChapterStateRepository.TargetType,
         parentId: Long,
-    ): Flow<Map<Long, LocalChapterStateRepository.Entry>> =
+    ): Flow<Map<Long, ChapterStateRepository.Entry>> =
         queries.getByParent(targetType.name, parentId)
             .asFlow()
             .mapToList(Dispatchers.IO)
@@ -48,7 +48,7 @@ class LocalChapterStateRepositoryImpl(
             .distinctUntilChanged()
 
     override suspend fun upsertProgress(
-        targetType: LocalChapterStateRepository.TargetType,
+        targetType: ChapterStateRepository.TargetType,
         parentId: Long,
         targetId: Long,
         title: String,
@@ -85,7 +85,7 @@ class LocalChapterStateRepositoryImpl(
     }
 
     override suspend fun setRead(
-        targetType: LocalChapterStateRepository.TargetType,
+        targetType: ChapterStateRepository.TargetType,
         parentId: Long,
         targetId: Long,
         title: String,
@@ -109,7 +109,7 @@ class LocalChapterStateRepositoryImpl(
     }
 
     override suspend fun applyProgressUpdates(
-        updates: List<LocalChapterStateRepository.ProgressUpdate>,
+        updates: List<ChapterStateRepository.ProgressUpdate>,
     ): Unit = withContext(Dispatchers.IO) {
         if (updates.isEmpty()) return@withContext
         db.transaction {
@@ -147,7 +147,7 @@ class LocalChapterStateRepositoryImpl(
     }
 
     override suspend fun clearTarget(
-        targetType: LocalChapterStateRepository.TargetType,
+        targetType: ChapterStateRepository.TargetType,
         parentId: Long,
         targetId: Long,
     ): Unit = withContext(Dispatchers.IO) {
@@ -156,16 +156,16 @@ class LocalChapterStateRepositoryImpl(
     }
 
     override suspend fun clearParent(
-        targetType: LocalChapterStateRepository.TargetType,
+        targetType: ChapterStateRepository.TargetType,
         parentId: Long,
     ): Unit = withContext(Dispatchers.IO) {
         queries.deleteByParent(targetType.name, parentId)
         Unit
     }
 
-    private fun LocalChapterState.toEntry(): LocalChapterStateRepository.Entry {
-        return LocalChapterStateRepository.Entry(
-            targetType = LocalChapterStateRepository.TargetType.fromStorage(targetType),
+    private fun LocalChapterState.toEntry(): ChapterStateRepository.Entry {
+        return ChapterStateRepository.Entry(
+            targetType = ChapterStateRepository.TargetType.fromStorage(targetType),
             parentId = parentId,
             targetId = targetId,
             title = title,

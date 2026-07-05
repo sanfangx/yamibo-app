@@ -83,6 +83,7 @@ import me.thenano.yamibo.yamibo_app.repository.download.DownloadedContentGroupTy
 import me.thenano.yamibo.yamibo_app.repository.download.DownloadedContentItem
 import me.thenano.yamibo.yamibo_app.repository.download.DownloadedContentSortMode
 import me.thenano.yamibo.yamibo_app.repository.download.DownloadedContentSummary
+import me.thenano.yamibo.yamibo_app.repository.download.RssMangaChapterDownloadKey
 import me.thenano.yamibo.yamibo_app.repository.download.TagMangaChapterDownloadKey
 import me.thenano.yamibo.yamibo_app.repository.download.ThreadPageDownloadKey
 import me.thenano.yamibo.yamibo_app.repository.download.buildDownloadedContentFilterOptions
@@ -216,6 +217,7 @@ fun DownloadQueueScreen() {
                                     key.page,
                                 )
                                 is TagMangaChapterDownloadKey -> repository.refreshTagMangaChapter(key)
+                                is RssMangaChapterDownloadKey -> repository.refreshRssMangaChapter(key)
                             }
                             when (result) {
                                 is YamiboResult.Success -> {
@@ -778,6 +780,7 @@ private fun DownloadedContentSortMode.downloadedContentSortLabel(): String = whe
 private fun entryDetailLabel(entry: DownloadQueueEntry): String = when (val key = entry.key) {
     is ThreadPageDownloadKey -> i18n("第 {} 頁", key.page)
     is TagMangaChapterDownloadKey -> i18n("標籤漫畫章節")
+    is RssMangaChapterDownloadKey -> i18n("RSS 漫畫章節")
 }
 
 private suspend fun clearItem(
@@ -786,6 +789,7 @@ private suspend fun clearItem(
 ): Result<Unit> = when (key) {
     is ThreadPageDownloadKey -> repository.clearPage(key)
     is TagMangaChapterDownloadKey -> repository.clearTagMangaChapter(key)
+    is RssMangaChapterDownloadKey -> repository.clearRssMangaChapter(key)
 }
 
 private suspend fun clearGroup(
@@ -796,6 +800,7 @@ private suspend fun clearGroup(
     return when (firstKey) {
         is ThreadPageDownloadKey -> repository.clearThread(firstKey)
         is TagMangaChapterDownloadKey -> repository.clearTagManga(TagId(firstKey.tagId))
+        is RssMangaChapterDownloadKey -> repository.clearRssManga(firstKey.subscriptionId)
     }
 }
 

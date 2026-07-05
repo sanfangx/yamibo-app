@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.history.components
+﻿package me.thenano.yamibo.yamibo_app.history.components
 
 import YamiboIcons
 import androidx.compose.animation.core.animateFloatAsState
@@ -28,7 +28,7 @@ import me.thenano.yamibo.yamibo_app.components.feedback.resolvedContentCoverUrl
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.favorite.FavoriteActionButton
 import me.thenano.yamibo.yamibo_app.i18n.i18n
-import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository
+import me.thenano.yamibo.yamibo_app.repository.FavoriteStoreRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository.ThreadReadingHistory
 import me.thenano.yamibo.yamibo_app.util.rememberImageRequest
@@ -51,9 +51,9 @@ fun ReadHistoryCard(
     val resolvedCoverUrl = resolvedContentCoverUrl(
         targetType = when (history.threadType) {
             ReadHistoryRepository.ThreadEntryType.Normal ->
-                LocalFavoriteRepository.FavoriteTargetType.ThreadNormal
+                FavoriteStoreRepository.FavoriteTargetType.ThreadNormal
             ReadHistoryRepository.ThreadEntryType.Novel ->
-                LocalFavoriteRepository.FavoriteTargetType.ThreadNovel
+                FavoriteStoreRepository.FavoriteTargetType.ThreadNovel
         },
         targetId = history.threadId.value.toLong(),
         fallback = history.threadCover,

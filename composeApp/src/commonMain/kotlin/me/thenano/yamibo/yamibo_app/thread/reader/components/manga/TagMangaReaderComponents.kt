@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.thread.reader.components.manga
+﻿package me.thenano.yamibo.yamibo_app.thread.reader.components.manga
 
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 
@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.littlesurvival.dto.model.ThreadSummary
 import io.github.littlesurvival.dto.value.ThreadId
-import me.thenano.yamibo.yamibo_app.repository.LocalChapterStateRepository
+import me.thenano.yamibo.yamibo_app.repository.ChapterStateRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.ReadingMode
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
 
@@ -135,7 +135,7 @@ internal fun TagCatalogPanel(
     loadedThreadsByPage: Map<Int, List<ThreadSummary>>,
     currentTagPage: Int,
     currentThreadId: ThreadId?,
-    chapterStates: Map<Long, LocalChapterStateRepository.Entry> = emptyMap(),
+    chapterStates: Map<Long, ChapterStateRepository.Entry> = emptyMap(),
     onPageOrThreadClick: (Int, ThreadSummary?) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -309,7 +309,7 @@ internal fun TagCatalogPanel(
     }
 }
 
-private fun LocalChapterStateRepository.Entry.progressLabel(): String? {
+private fun ChapterStateRepository.Entry.progressLabel(): String? {
     if (read) return null
     val currentPage = lastPageIndex?.plus(1) ?: return null
     val totalPage = totalPages?.takeIf { it > 0 } ?: return null

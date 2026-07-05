@@ -1,13 +1,16 @@
-﻿package me.thenano.yamibo.yamibo_app.thread.detail.tag
+package me.thenano.yamibo.yamibo_app.thread.detail.tag
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import coil3.compose.LocalPlatformContext
 import io.github.littlesurvival.YamiboForum
 import io.github.littlesurvival.YamiboRoute
@@ -20,30 +23,21 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.thenano.yamibo.yamibo_app.*
+import me.thenano.yamibo.yamibo_app.components.theme.YamiboSnackbarHost
+import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.favorite.*
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
-import me.thenano.yamibo.yamibo_app.repository.DetailNoteRepository
-import me.thenano.yamibo.yamibo_app.repository.ContentCoverRepository
-import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
-import me.thenano.yamibo.yamibo_app.repository.download.DownloadQueueEntry
-import me.thenano.yamibo.yamibo_app.repository.download.DownloadStatus
-import me.thenano.yamibo.yamibo_app.repository.download.TagMangaChapterDownloadKey
-import me.thenano.yamibo.yamibo_app.components.theme.YamiboSnackbarHost
-import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.profile.settings.backup.IBackupSettingsScreen
-import me.thenano.yamibo.yamibo_app.thread.detail.components.DetailNoteEditorDialog
+import me.thenano.yamibo.yamibo_app.repository.*
+import me.thenano.yamibo.yamibo_app.repository.download.TagMangaChapterDownloadKey
+import me.thenano.yamibo.yamibo_app.thread.detail.components.*
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.INovelThreadDetailScreen
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.components.ThreadErrorContent
-import me.thenano.yamibo.yamibo_app.thread.detail.tag.components.TagDetailContent
-import me.thenano.yamibo.yamibo_app.thread.detail.tag.components.TagDetailTopBar
-import me.thenano.yamibo.yamibo_app.thread.detail.tag.components.TagLoadingSkeleton
 import me.thenano.yamibo.yamibo_app.thread.reader.IImageReaderScreen
 import me.thenano.yamibo.yamibo_app.thread.reader.IThreadReaderScreen
 import me.thenano.yamibo.yamibo_app.util.shareText
 import me.thenano.yamibo.yamibo_app.util.state
-import me.thenano.yamibo.yamibo_app.repository.LocalBookMarkRepository as BookMarkRepository
-import me.thenano.yamibo.yamibo_app.repository.LocalChapterStateRepository as ChapterStateRepository
 
 /** Tag page state */
 internal sealed interface TagDetailState {
@@ -84,10 +78,10 @@ internal fun TagDetailScreen(
     var favoriteDialogCategorySelection by remember { mutableStateOf<Set<Long>>(emptySet()) }
     var favoriteDialogSelection by remember { mutableStateOf<Set<Long>>(emptySet()) }
     var favoriteDialogCategories by remember {
-        mutableStateOf<List<me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.FavoriteCategory>>(emptyList())
+        mutableStateOf<List<FavoriteStoreRepository.FavoriteCategory>>(emptyList())
     }
     var favoriteDialogOptions by remember {
-        mutableStateOf<List<me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.FavoriteCollectionOption>>(emptyList())
+        mutableStateOf<List<FavoriteStoreRepository.FavoriteCollectionOption>>(emptyList())
     }
     var isFavorited by remember { mutableStateOf(false) }
     var favoritePaths by remember { mutableStateOf<List<String>>(emptyList()) }
@@ -164,6 +158,9 @@ internal fun TagDetailScreen(
     var mangaTagHistory by remember {
         mutableStateOf<ReadHistoryRepository.TagMangaReadingHistory?>(null)
     }
+    var tagCatalogHistory by remember {
+        mutableStateOf<ReadHistoryRepository.TagCatalogReadingHistory?>(null)
+    }
     val coverKey = remember(tagId) {
         ContentCoverRepository.Key(
             ContentCoverRepository.TargetType.TagManga,
@@ -171,7 +168,7 @@ internal fun TagDetailScreen(
         )
     }
     val canonicalCover by contentCoverRepository.observeCover(coverKey).collectAsState(null)
-    val coverUrl: () -> String? = { canonicalCover?.resolvedUrl ?: mangaTagHistory?.coverUrl }
+    val coverUrl: () -> String? = { canonicalCover?.resolvedUrl ?: mangaTagHistory?.coverUrl ?: tagCatalogHistory?.coverUrl }
 
     suspend fun loadPage(page: Int) {
         val cached = tagRepository.getCachedTagPage(tagId, page)
@@ -219,7 +216,11 @@ internal fun TagDetailScreen(
     // Load reading history for manga tags (hot reload on resume/back navigation)
     LaunchedEffect(tagId, stackSize) {
         mangaTagHistory = historyRepo.getTagMangaReaderModeHistoryPosition(tagId)
+        tagCatalogHistory = historyRepo.getTagCatalogThreadHistoryPosition(tagId)
         mangaTagHistory?.coverUrl?.let { contentCoverRepository.setAutomaticCover(coverKey, it) }
+        if (mangaTagHistory?.coverUrl == null) {
+            tagCatalogHistory?.coverUrl?.let { contentCoverRepository.setAutomaticCover(coverKey, it) }
+        }
     }
 
     fun favoriteTarget(): FavoriteTargetPayload.TagManga {
@@ -266,12 +267,14 @@ internal fun TagDetailScreen(
     }
     
     // Reading progress text
-    val readingProgressText = remember(mangaTagHistory, isMangaMode) {
-        val h = mangaTagHistory ?: return@remember null
+    val activeReadingHistory = if (isMangaMode) mangaTagHistory else tagCatalogHistory
+    val readingProgressText = remember(mangaTagHistory, tagCatalogHistory, isMangaMode) {
         if (isMangaMode) {
+            val h = mangaTagHistory ?: return@remember null
             i18n("第{} ‧ {} ‧ {}/{}", h.tagPage, h.threadTitle, h.threadImagePageIndex + 1, h.threadImageTotalPages)
         } else {
-            i18n("第{} ‧ {}", h.tagPage, h.threadTitle)
+            val h = tagCatalogHistory ?: return@remember null
+            i18n("第{} ‧ {}", h.threadPage, h.threadTitle)
         }
     }
 
@@ -322,7 +325,12 @@ internal fun TagDetailScreen(
                 IThreadReaderScreen(
                     tid = thread.tid,
                     title = thread.title,
-                    threadType = ReadHistoryRepository.ThreadEntryType.Normal
+                    threadType = ReadHistoryRepository.ThreadEntryType.Normal,
+                    catalogCoverTargetType = ContentCoverRepository.TargetType.TagManga,
+                    catalogCoverTargetId = tagId.value.toLong(),
+                    catalogTagId = tagId,
+                    catalogTagName = currentTagName,
+                    catalogTagPage = currentPage,
                 )
             )
         }
@@ -347,31 +355,58 @@ internal fun TagDetailScreen(
                     page?.threadSummaries.orEmpty().ifEmpty { threads }
                 }
                 val threadIndex = historyThreads.indexOfFirst { it.tid == history.threadId }
-                val authorId = if (threadIndex >= 0) historyThreads[threadIndex].author?.uid else null
-                navigator.navigate(
-                    IImageReaderScreen(
-                        tid = history.threadId,
-                        postId = null,
-                        fid = null,
-                        threadTitle = history.threadTitle,
-                        authorId = authorId,
-                        imageList = emptyList(),
-                        initialPage = 1,
-                        loadHistory = true,
-                        tagId = tagId,
-                        tagName = currentTagName,
-                        tagThreads = historyThreads,
-                        tagPage = history.tagPage,
-                        tagTotalPages = pageNav?.totalPages ?: 1
+                val historyThread = historyThreads.getOrNull(threadIndex)
+                val authorId = historyThread?.author?.uid
+                val isHistoryManga = historyThread?.fid?.let { YamiboForum.isMangaForum(it) } == true
+                if (isHistoryManga) {
+                    navigator.navigate(
+                        IImageReaderScreen(
+                            tid = history.threadId,
+                            postId = null,
+                            fid = historyThread.fid,
+                            threadTitle = history.threadTitle,
+                            authorId = authorId,
+                            imageList = emptyList(),
+                            initialPage = 1,
+                            loadHistory = true,
+                            tagId = tagId,
+                            tagName = currentTagName,
+                            tagThreads = historyThreads,
+                            tagPage = history.tagPage,
+                            tagTotalPages = pageNav?.totalPages ?: 1
+                        )
                     )
-                )
+                } else {
+                    navigator.navigate(
+                        IThreadReaderScreen(
+                            tid = history.threadId,
+                            title = history.threadTitle,
+                            threadType = ReadHistoryRepository.ThreadEntryType.Normal,
+                            authorId = authorId,
+                            catalogCoverTargetType = ContentCoverRepository.TargetType.TagManga,
+                            catalogCoverTargetId = tagId.value.toLong(),
+                            catalogTagId = tagId,
+                            catalogTagName = currentTagName,
+                            catalogTagPage = history.tagPage,
+                        )
+                    )
+                }
             }
-        } else if (history != null) {
+        } else if (tagCatalogHistory != null) {
+            val catalogHistory = tagCatalogHistory ?: return
             navigator.navigate(
                 IThreadReaderScreen(
-                    tid = history.threadId,
-                    title = history.threadTitle,
-                    threadType = ReadHistoryRepository.ThreadEntryType.Normal
+                    tid = catalogHistory.threadId,
+                    title = catalogHistory.threadTitle,
+                    threadType = ReadHistoryRepository.ThreadEntryType.Normal,
+                    authorId = catalogHistory.authorId,
+                    initialPage = catalogHistory.threadPage,
+                    targetPid = catalogHistory.postId,
+                    catalogCoverTargetType = ContentCoverRepository.TargetType.TagManga,
+                    catalogCoverTargetId = tagId.value.toLong(),
+                    catalogTagId = tagId,
+                    catalogTagName = currentTagName,
+                    catalogTagPage = catalogHistory.tagPage,
                 )
             )
         } else {
@@ -386,7 +421,7 @@ internal fun TagDetailScreen(
             YamiboSnackbarHost(hostState = snackbarHostState)
         },
         topBar = {
-            TagDetailTopBar(
+            CatalogDetailTopBar(
                 title = currentTagName,
                 onBack = { navigator.pop() }
             )
@@ -399,7 +434,7 @@ internal fun TagDetailScreen(
                 .background(colors.creamBackground)
         ) {
             when (val currentState = state) {
-                is TagDetailState.Loading -> TagLoadingSkeleton()
+                is TagDetailState.Loading -> CatalogLoadingSkeleton()
 
                 is TagDetailState.Error -> {
                     ThreadErrorContent(
@@ -443,7 +478,7 @@ internal fun TagDetailScreen(
                         },
                         modifier = Modifier.fillMaxSize()
                     ) {
-                        TagDetailContent(
+                        CatalogDetailContent(
                             tagPage = currentState.page,
                             tagName = currentTagName,
                             coverUrl = coverUrl(),
@@ -457,7 +492,7 @@ internal fun TagDetailScreen(
                     onLongStripModeEnabledChange = { enabled ->
                         imageReaderModeOverrideRepository.setTagLongStrip(tagId, enabled)
                     },
-                    hasReadingHistory = mangaTagHistory != null,
+                              hasReadingHistory = activeReadingHistory != null,
                             readingProgressText = readingProgressText,
                             onContinueRead = {
                                 handleContinueRead(currentState.page.threadSummaries, currentState.page.pageNav)
@@ -501,7 +536,21 @@ internal fun TagDetailScreen(
                             readThreadIds = emptySet(),
                             downloadEntries = tagMangaDownloadEntries,
                             chapterStates = threadChapterStates,
-                            tagMangaHistory = mangaTagHistory,
+                              historyThreadId = if (isMangaMode) {
+                                  mangaTagHistory?.threadId?.value?.toLong()
+                              } else {
+                                  tagCatalogHistory?.threadId?.value?.toLong()
+                              },
+                              historyThreadCompleted = if (isMangaMode) mangaTagHistory?.let {
+                                  it.threadImageTotalPages > 0 && it.threadImagePageIndex >= it.threadImageTotalPages - 1
+                              } == true else false,
+                              historyThreadProgressText = if (isMangaMode) mangaTagHistory?.let {
+                                  if (it.threadImageTotalPages <= 0) null else {
+                                      val clampedPageIndex = it.threadImagePageIndex.coerceIn(0, it.threadImageTotalPages - 1)
+                                      val progress = (((clampedPageIndex + 1) * 100f) / it.threadImageTotalPages).toInt().coerceIn(1, 100)
+                                      if (progress >= 100) null else "${clampedPageIndex + 1}/${it.threadImageTotalPages}"
+                                  }
+                              } else tagCatalogHistory?.let { i18n("第{}頁", it.threadPage) },
                             onThreadLongPress = { actionThread = it },
                         )
                     }
@@ -514,19 +563,11 @@ internal fun TagDetailScreen(
         val currentState = state as? TagDetailState.Success
         val currentThreads = currentState?.page?.threadSummaries.orEmpty()
         val currentPageHasDownloads = currentThreads.any { tagMangaDownloadEntries.containsKey(it.tid.value.toLong()) }
-        ModalBottomSheet(
-            onDismissRequest = { showDownloadSheet = false },
-            containerColor = colors.creamSurface,
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .navigationBarsPadding()
-                    .padding(horizontal = 20.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                Text(i18n("標籤漫畫下載"), color = colors.textStrong, style = MaterialTheme.typography.titleMedium)
-                YamiboActionRow(i18n("下載目前分頁")) {
+        CatalogDownloadActionSheet(
+            title = i18n("標籤漫畫下載"),
+            onDismiss = { showDownloadSheet = false },
+            actions = buildList {
+                add(CatalogDownloadAction(i18n("下載目前分頁")) {
                     showDownloadSheet = false
                     scope.launch {
                         if (!ensureDownloadStorageReady()) return@launch
@@ -539,36 +580,35 @@ internal fun TagDetailScreen(
                             snackbarHostState.showSnackbar(it.message ?: i18n("加入下載失敗"))
                         }
                     }
-                }
-                YamiboActionRow(i18n("下載全部分頁")) {
+                })
+                add(CatalogDownloadAction(i18n("下載全部分頁")) {
                     showDownloadSheet = false
                     scope.launch {
                         if (!ensureDownloadStorageReady()) return@launch
                         downloadRepository.enqueueTagMangaAllPages(tagId, currentTagName)
                             .onFailure { snackbarHostState.showSnackbar(it.message ?: i18n("加入下載失敗")) }
                     }
-                }
+                })
                 if (currentPageHasDownloads) {
-                    YamiboActionRow(i18n("清除目前分頁下載")) {
+                    add(CatalogDownloadAction(i18n("清除目前分頁下載")) {
                         showDownloadSheet = false
                         scope.launch {
                             currentThreads.forEach { downloadRepository.clearTagMangaChapter(tagMangaKey(it)) }
                             snackbarHostState.showSnackbar(i18n("已清除目前分頁下載"))
                         }
-                    }
+                    })
                 }
                 if (tagMangaDownloadEntries.isNotEmpty()) {
-                    YamiboActionRow(i18n("清除整個標籤下載")) {
+                    add(CatalogDownloadAction(i18n("清除整個標籤下載")) {
                         showDownloadSheet = false
                         scope.launch {
                             downloadRepository.clearTagManga(tagId)
                             snackbarHostState.showSnackbar(i18n("已清除整個標籤下載"))
                         }
-                    }
+                    })
                 }
-                Spacer(Modifier.height(4.dp))
-            }
-        }
+            },
+        )
     }
 
     if (showFavoriteDialog) {
@@ -625,49 +665,18 @@ internal fun TagDetailScreen(
         )
     }
 
-    if (showFavoriteRemovalConfirm) {
-        FavoriteRemovalConfirmDialog(
-            onDismiss = {
-                showFavoriteRemovalConfirm = false
-                pendingFavoriteRemovalSelection = null
-            },
-            onConfirm = { skipNextTime ->
-                appSettingsRepo.skipFavoriteRemovalConfirm.setValue(skipNextTime)
-                showFavoriteRemovalConfirm = false
-                scope.launch {
-                    val selection = pendingFavoriteRemovalSelection
-                    if ((selection?.paths?.size ?: 0) > 1) {
-                        showFavoriteMultiPathDialog = true
-                    } else {
-                        withContext(Dispatchers.Default) { removeFavoriteWithSync(favoriteRepository, favoriteSyncRepository, favoriteTarget()) }
-                        favoriteRefreshToken += 1
-                        snackbarHostState.showSnackbar(i18n("已移除收藏"))
-                        pendingFavoriteRemovalSelection = null
-                    }
-                }
-            },
-        )
-    }
-
-    if (showFavoriteMultiPathDialog) {
-        FavoriteMultiPathRemoveDialog(
-            paths = pendingFavoriteRemovalSelection?.paths.orEmpty(),
-            tip = i18n("tip：長按可詳細編輯收藏路徑"),
-            onDismiss = {
-                showFavoriteMultiPathDialog = false
-                pendingFavoriteRemovalSelection = null
-            },
-            onRemoveAll = {
-                showFavoriteMultiPathDialog = false
-                scope.launch {
-                        withContext(Dispatchers.Default) { removeFavoriteWithSync(favoriteRepository, favoriteSyncRepository, favoriteTarget()) }
-                    favoriteRefreshToken += 1
-                    snackbarHostState.showSnackbar(i18n("已從所有位置移除收藏"))
-                    pendingFavoriteRemovalSelection = null
-                }
-            },
-        )
-    }
+    CatalogFavoriteRemovalDialogs(
+        showRemovalConfirm = showFavoriteRemovalConfirm,
+        showMultiPathDialog = showFavoriteMultiPathDialog,
+        pendingSelection = pendingFavoriteRemovalSelection,
+        snackbarHostState = snackbarHostState,
+        setShowRemovalConfirm = { showFavoriteRemovalConfirm = it },
+        setShowMultiPathDialog = { showFavoriteMultiPathDialog = it },
+        clearPendingSelection = { pendingFavoriteRemovalSelection = null },
+        setSkipNextTime = { appSettingsRepo.skipFavoriteRemovalConfirm.setValue(it) },
+        removeFavorite = { removeFavoriteWithSync(favoriteRepository, favoriteSyncRepository, favoriteTarget()) },
+        onRemoved = { favoriteRefreshToken += 1 },
+    )
 
     if (showNoteDialog) {
         DetailNoteEditorDialog(
@@ -707,7 +716,7 @@ internal fun TagDetailScreen(
         val chapterState = threadChapterStates[thread.tid.value.toLong()]
         val downloadEntry = tagMangaDownloadEntries[thread.tid.value.toLong()]
         val downloadKey = tagMangaKey(thread)
-        BookMarkActionDialog(
+        CatalogThreadActionDialog(
             bookmarked = entry?.bookmarked == true,
             read = chapterState?.read == true,
             hasProgress = chapterState?.hasProgress == true,
@@ -763,13 +772,19 @@ internal fun TagDetailScreen(
             onClearHistory = {
                 actionThread = null
                 scope.launch {
-                    chapterStateRepository.clearTarget(
-                        targetType = ChapterStateRepository.TargetType.TagMangaThread,
-                        parentId = tagId.value.toLong(),
-                        targetId = thread.tid.value.toLong(),
-                    )
-                    if (mangaTagHistory?.threadId == thread.tid) {
-                        mangaTagHistory = null
+                    if (isMangaMode) {
+                        chapterStateRepository.clearTarget(
+                            targetType = ChapterStateRepository.TargetType.TagMangaThread,
+                            parentId = tagId.value.toLong(),
+                            targetId = thread.tid.value.toLong(),
+                        )
+                        if (mangaTagHistory?.threadId == thread.tid) {
+                            historyRepo.deleteMangaTagHistory(tagId)
+                            mangaTagHistory = null
+                        }
+                    } else if (tagCatalogHistory?.threadId == thread.tid) {
+                        historyRepo.deleteTagCatalogThreadHistory(tagId)
+                        tagCatalogHistory = null
                     }
                     reloadThreadChapterStates()
                     snackbarHostState.showSnackbar(i18n("已清除閱讀紀錄"), duration = SnackbarDuration.Short)
@@ -808,88 +823,6 @@ internal fun TagDetailScreen(
                     snackbarHostState.showSnackbar(i18n("已清除此章下載"), duration = SnackbarDuration.Short)
                 }
             },
-        )
-    }
-}
-
-@Composable
-private fun BookMarkActionDialog(
-    bookmarked: Boolean,
-    read: Boolean,
-    hasProgress: Boolean,
-    showDownloadActions: Boolean,
-    downloadStatus: DownloadStatus?,
-    onDismiss: () -> Unit,
-    onToggleBookMark: () -> Unit,
-    onMarkRead: () -> Unit,
-    onMarkUnread: () -> Unit,
-    onClearHistory: () -> Unit,
-    onDownloadChapter: () -> Unit,
-    onRefreshChapter: () -> Unit,
-    onRetryChapter: () -> Unit,
-    onClearChapterDownload: () -> Unit,
-) {
-    val colors = YamiboTheme.colors
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(i18n("閱讀標記"), color = colors.textStrong) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                YamiboActionRow(if (bookmarked) i18n("移除書籤") else i18n("新增書籤"), onToggleBookMark)
-                if (read) {
-                    YamiboActionRow(i18n("標為未讀"), onMarkUnread)
-                } else if (hasProgress) {
-                    YamiboActionRow(i18n("標為已讀"), onMarkRead)
-                    YamiboActionRow(i18n("標為未讀"), onMarkUnread)
-                } else {
-                    YamiboActionRow(i18n("標為已讀"), onMarkRead)
-                }
-                YamiboActionRow(i18n("清除閱讀紀錄"), onClearHistory)
-                if (showDownloadActions) {
-                    if (downloadStatus != null) {
-                        when (downloadStatus) {
-                            DownloadStatus.Failed -> {
-                                YamiboActionRow(i18n("重試下載"), onRetryChapter)
-                                YamiboActionRow(i18n("清除此章下載"), onClearChapterDownload)
-                            }
-                            DownloadStatus.Downloaded, DownloadStatus.UpdateAvailable -> {
-                                YamiboActionRow(i18n("重新整理此章"), onRefreshChapter)
-                                YamiboActionRow(i18n("清除此章下載"), onClearChapterDownload)
-                            }
-                            DownloadStatus.Queued, DownloadStatus.Downloading, DownloadStatus.Paused -> {
-                                YamiboActionRow(i18n("清除此章下載"), onClearChapterDownload)
-                            }
-                            DownloadStatus.NotDownloaded -> {
-                                YamiboActionRow(i18n("下載此章"), onDownloadChapter)
-                            }
-                        }
-                    } else {
-                        YamiboActionRow(i18n("下載此章"), onDownloadChapter)
-                    }
-                }
-            }
-        },
-        confirmButton = {},
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(i18n("取消"), color = colors.textStrong) }
-        },
-        containerColor = colors.creamSurface,
-    )
-}
-
-@Composable
-private fun YamiboActionRow(text: String, onClick: () -> Unit) {
-    val colors = YamiboTheme.colors
-    Surface(
-        onClick = onClick,
-        shape = RoundedCornerShape(12.dp),
-        color = colors.creamBackground,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Text(
-            text = text,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
-            color = colors.textDark,
         )
     }
 }

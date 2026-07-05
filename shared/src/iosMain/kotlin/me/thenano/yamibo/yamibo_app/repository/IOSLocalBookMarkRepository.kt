@@ -1,11 +1,11 @@
-package me.thenano.yamibo.yamibo_app.repository
+﻿package me.thenano.yamibo.yamibo_app.repository
 
 import me.thenano.yamibo.yamibo_app.Database
 import me.thenano.yamibo.yamibo_app.db.DatabaseFactory
-import me.thenano.yamibo.yamibo_app.repository.bookmark.LocalBookMarkRepositoryImpl
+import me.thenano.yamibo.yamibo_app.repository.bookmark.BookMarkRepositoryImpl
 
 class IOSLocalBookMarkRepository(
     dbFactory: DatabaseFactory,
-) : LocalBookMarkRepository by LocalBookMarkRepositoryImpl(
+) : BookMarkRepository by BookMarkRepositoryImpl(
     db = Database(dbFactory.createDriver()),
 )

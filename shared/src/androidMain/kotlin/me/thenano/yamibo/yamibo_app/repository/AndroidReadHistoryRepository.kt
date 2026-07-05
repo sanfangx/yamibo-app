@@ -11,6 +11,9 @@ import me.thenano.yamibo.yamibo_app.db.DatabaseFactory
 import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
 import me.thenano.yamibo.yamiboapp.MangaTagReadingHistory
 import me.thenano.yamibo.yamiboapp.ReadingHistory
+import me.thenano.yamibo.yamiboapp.RssCatalogReadingHistory
+import me.thenano.yamibo.yamiboapp.RssSearchReadingHistory
+import me.thenano.yamibo.yamiboapp.TagCatalogReadingHistory
 
 class AndroidReadHistoryRepository(dbFactory: DatabaseFactory) : ReadHistoryRepository {
     private companion object {
@@ -43,6 +46,7 @@ class AndroidReadHistoryRepository(dbFactory: DatabaseFactory) : ReadHistoryRepo
             viewportHeight = history.viewportHeight?.toLong(),
             firstVisibleItemIndex = history.firstVisibleItemIndex?.toLong(),
             firstVisibleItemOffset = history.firstVisibleItemOffset?.toLong(),
+            historyOrigin = history.historyOrigin.name,
             lastVisitTime = history.lastVisitTime,
             lastUpdatedTime = history.lastUpdatedTime
         )
@@ -141,6 +145,7 @@ class AndroidReadHistoryRepository(dbFactory: DatabaseFactory) : ReadHistoryRepo
             viewportHeight = viewportHeight?.toInt(),
             firstVisibleItemIndex = firstVisibleItemIndex?.toInt(),
             firstVisibleItemOffset = firstVisibleItemOffset?.toInt(),
+            historyOrigin = ReadHistoryRepository.ThreadHistoryOrigin.fromStorage(historyOrigin),
             lastVisitTime = lastVisitTime
         )
     }
@@ -175,6 +180,7 @@ class AndroidReadHistoryRepository(dbFactory: DatabaseFactory) : ReadHistoryRepo
     }
 
     private val mangaTagQueries = db.mangaTagReadingHistoryQueries
+    private val tagCatalogQueries = db.tagCatalogReadingHistoryQueries
 
     override suspend fun saveTagMangaReaderModeHistory(history: ReadHistoryRepository.TagMangaReadingHistory) {
         mangaTagQueries.upsert(
@@ -215,6 +221,161 @@ class AndroidReadHistoryRepository(dbFactory: DatabaseFactory) : ReadHistoryRepo
     override suspend fun deleteMangaTagHistory(tagId: TagId) {
         mangaTagQueries.deleteByTagId(tagId.value.toLong())
     }
+
+    override suspend fun saveTagCatalogThreadHistory(history: ReadHistoryRepository.TagCatalogReadingHistory) {
+        tagCatalogQueries.upsert(
+            tagId = history.tagId.value.toLong(),
+            tagName = history.tagName,
+            tagPage = history.tagPage.toLong(),
+            threadId = history.threadId.value.toLong(),
+            threadTitle = history.threadTitle,
+            threadPage = history.threadPage.toLong(),
+            postId = history.postId.value.toLong(),
+            postTitle = history.postTitle,
+            authorId = history.authorId?.value?.toLong(),
+            anchorPostId = history.anchorPostId,
+            anchorPostRatio = history.anchorPostRatio?.toDouble(),
+            anchorBlockId = history.anchorBlockId,
+            anchorBlockType = history.anchorBlockType,
+            anchorBlockRatio = history.anchorBlockRatio?.toDouble(),
+            viewportHeight = history.viewportHeight?.toLong(),
+            firstVisibleItemIndex = history.firstVisibleItemIndex?.toLong(),
+            firstVisibleItemOffset = history.firstVisibleItemOffset?.toLong(),
+            lastVisitTime = history.lastVisitTime,
+            coverUrl = history.coverUrl,
+        )
+        tagCatalogQueries.trimToLatest(MAX_HISTORY_ITEMS)
+    }
+
+    override suspend fun getTagCatalogThreadHistoryPosition(tagId: TagId): ReadHistoryRepository.TagCatalogReadingHistory? {
+        return tagCatalogQueries.getByTagId(tagId.value.toLong()).executeAsOneOrNull()?.toHistory()
+    }
+
+    override suspend fun deleteTagCatalogThreadHistory(tagId: TagId) {
+        tagCatalogQueries.getByTagId(tagId.value.toLong()).executeAsOneOrNull()?.let { history ->
+            queries.deleteByThreadOrigin(
+                threadId = history.threadId,
+                threadType = ReadHistoryRepository.ThreadEntryType.Normal.name,
+                authorId = history.authorId ?: 0L,
+                historyOrigin = ReadHistoryRepository.ThreadHistoryOrigin.TagCatalog.name,
+            )
+        }
+        tagCatalogQueries.deleteByTagId(tagId.value.toLong())
+    }
+
+    private val rssSearchQueries = db.rssSearchReadingHistoryQueries
+    private val rssCatalogQueries = db.rssCatalogReadingHistoryQueries
+
+    override suspend fun saveRssSearchReaderModeHistory(history: ReadHistoryRepository.RssSearchReadingHistory) {
+        rssSearchQueries.upsert(
+            subscriptionId = history.subscriptionId,
+            subscriptionTitle = history.subscriptionTitle,
+            subscriptionQuery = history.subscriptionQuery,
+            subscriptionPage = history.subscriptionPage.toLong(),
+            threadId = history.threadId.value.toLong(),
+            threadTitle = history.threadTitle,
+            threadImagePageIndex = history.threadImagePageIndex.toLong(),
+            threadImageTotalPages = history.threadImageTotalPages.toLong(),
+            firstVisibleItemIndex = history.firstVisibleItemIndex?.toLong(),
+            firstVisibleItemOffset = history.firstVisibleItemOffset?.toLong(),
+            lastVisitTime = history.lastVisitTime,
+            coverUrl = history.coverUrl,
+        )
+        rssSearchQueries.trimToLatest(MAX_HISTORY_ITEMS)
+    }
+
+    override suspend fun getRssSearchReaderModeHistoryPosition(subscriptionId: Long): ReadHistoryRepository.RssSearchReadingHistory? {
+        return rssSearchQueries.getBySubscriptionId(subscriptionId).executeAsOneOrNull()?.toHistory()
+    }
+
+    override suspend fun deleteRssSearchHistory(subscriptionId: Long) {
+        rssSearchQueries.deleteBySubscriptionId(subscriptionId)
+    }
+
+    override suspend fun saveRssCatalogThreadHistory(history: ReadHistoryRepository.RssCatalogReadingHistory) {
+        rssCatalogQueries.upsert(
+            subscriptionId = history.subscriptionId,
+            subscriptionTitle = history.subscriptionTitle,
+            subscriptionQuery = history.subscriptionQuery,
+            subscriptionPage = history.subscriptionPage.toLong(),
+            threadId = history.threadId.value.toLong(),
+            threadTitle = history.threadTitle,
+            threadPage = history.threadPage.toLong(),
+            postId = history.postId.value.toLong(),
+            postTitle = history.postTitle,
+            authorId = history.authorId?.value?.toLong(),
+            anchorPostId = history.anchorPostId,
+            anchorPostRatio = history.anchorPostRatio?.toDouble(),
+            anchorBlockId = history.anchorBlockId,
+            anchorBlockType = history.anchorBlockType,
+            anchorBlockRatio = history.anchorBlockRatio?.toDouble(),
+            viewportHeight = history.viewportHeight?.toLong(),
+            firstVisibleItemIndex = history.firstVisibleItemIndex?.toLong(),
+            firstVisibleItemOffset = history.firstVisibleItemOffset?.toLong(),
+            lastVisitTime = history.lastVisitTime,
+            coverUrl = history.coverUrl,
+        )
+        rssCatalogQueries.trimToLatest(MAX_HISTORY_ITEMS)
+    }
+
+    override suspend fun getRssCatalogThreadHistoryPosition(subscriptionId: Long): ReadHistoryRepository.RssCatalogReadingHistory? {
+        return rssCatalogQueries.getBySubscriptionId(subscriptionId).executeAsOneOrNull()?.toHistory()
+    }
+
+    override suspend fun deleteRssCatalogThreadHistory(subscriptionId: Long) {
+        rssCatalogQueries.getBySubscriptionId(subscriptionId).executeAsOneOrNull()?.let { history ->
+            queries.deleteByThreadOrigin(
+                threadId = history.threadId,
+                threadType = ReadHistoryRepository.ThreadEntryType.Normal.name,
+                authorId = history.authorId ?: 0L,
+                historyOrigin = ReadHistoryRepository.ThreadHistoryOrigin.RssCatalog.name,
+            )
+        }
+        rssCatalogQueries.deleteBySubscriptionId(subscriptionId)
+    }
+
+    private fun RssSearchReadingHistory.toHistory(): ReadHistoryRepository.RssSearchReadingHistory {
+        return ReadHistoryRepository.RssSearchReadingHistory(
+            subscriptionId = subscriptionId,
+            subscriptionTitle = subscriptionTitle,
+            subscriptionQuery = subscriptionQuery,
+            subscriptionPage = subscriptionPage.toInt(),
+            threadId = ThreadId(threadId.toInt()),
+            threadTitle = threadTitle,
+            threadImagePageIndex = threadImagePageIndex.toInt(),
+            threadImageTotalPages = threadImageTotalPages.toInt(),
+            firstVisibleItemIndex = firstVisibleItemIndex?.toInt(),
+            firstVisibleItemOffset = firstVisibleItemOffset?.toInt(),
+            lastVisitTime = lastVisitTime,
+            coverUrl = coverUrl,
+        )
+    }
+
+    private fun RssCatalogReadingHistory.toHistory(): ReadHistoryRepository.RssCatalogReadingHistory {
+        return ReadHistoryRepository.RssCatalogReadingHistory(
+            subscriptionId = subscriptionId,
+            subscriptionTitle = subscriptionTitle,
+            subscriptionQuery = subscriptionQuery,
+            subscriptionPage = subscriptionPage.toInt(),
+            threadId = ThreadId(threadId.toInt()),
+            threadTitle = threadTitle,
+            threadPage = threadPage.toInt(),
+            postId = PostId(postId.toInt()),
+            postTitle = postTitle,
+            authorId = authorId?.toInt()?.let { UserId(it) },
+            anchorPostId = anchorPostId.takeIf { it != 0L } ?: postId,
+            anchorPostRatio = anchorPostRatio?.toFloat(),
+            anchorBlockId = anchorBlockId,
+            anchorBlockType = anchorBlockType,
+            anchorBlockRatio = anchorBlockRatio?.toFloat(),
+            viewportHeight = viewportHeight?.toInt(),
+            firstVisibleItemIndex = firstVisibleItemIndex?.toInt(),
+            firstVisibleItemOffset = firstVisibleItemOffset?.toInt(),
+            lastVisitTime = lastVisitTime,
+            coverUrl = coverUrl,
+        )
+    }
+
     private fun MangaTagReadingHistory.toHistory(): ReadHistoryRepository.TagMangaReadingHistory {
         return ReadHistoryRepository.TagMangaReadingHistory(
             tagId = TagId(tagId.toInt()),
@@ -231,21 +392,48 @@ class AndroidReadHistoryRepository(dbFactory: DatabaseFactory) : ReadHistoryRepo
         )
     }
 
+    private fun TagCatalogReadingHistory.toHistory(): ReadHistoryRepository.TagCatalogReadingHistory {
+        return ReadHistoryRepository.TagCatalogReadingHistory(
+            tagId = TagId(tagId.toInt()),
+            tagName = tagName,
+            tagPage = tagPage.toInt(),
+            threadId = ThreadId(threadId.toInt()),
+            threadTitle = threadTitle,
+            threadPage = threadPage.toInt(),
+            postId = PostId(postId.toInt()),
+            postTitle = postTitle,
+            authorId = authorId?.toInt()?.let { UserId(it) },
+            anchorPostId = anchorPostId.takeIf { it != 0L } ?: postId,
+            anchorPostRatio = anchorPostRatio?.toFloat(),
+            anchorBlockId = anchorBlockId,
+            anchorBlockType = anchorBlockType,
+            anchorBlockRatio = anchorBlockRatio?.toFloat(),
+            viewportHeight = viewportHeight?.toInt(),
+            firstVisibleItemIndex = firstVisibleItemIndex?.toInt(),
+            firstVisibleItemOffset = firstVisibleItemOffset?.toInt(),
+            lastVisitTime = lastVisitTime,
+            coverUrl = coverUrl,
+        )
+    }
+
     override suspend fun getCombinedHistoryPage(
         page: Int,
         pageSize: Int
     ): List<ReadHistoryRepository.AnyReadingHistory> {
         val offset = (page - 1).coerceAtLeast(0) * pageSize
         val threads = loadAllThreadHistory()
-        val tags = loadAllTagHistory()
-        return (threads + tags)
+        val tags = loadLatestTagCatalogHistory()
+        val rss = loadLatestRssCatalogHistory()
+        return (threads + tags + rss)
             .sortedByDescending { it.lastVisitTime }
             .drop(offset)
             .take(pageSize)
     }
 
     override suspend fun getCombinedHistoryCount(): Long {
-        return queries.countAll().executeAsOne() + mangaTagQueries.countAll().executeAsOne()
+        return queries.countAll().executeAsOne() +
+            loadLatestTagCatalogHistory().size.toLong() +
+            loadLatestRssCatalogHistory().size.toLong()
     }
 
     override suspend fun getCombinedHistoryPageByFilter(
@@ -261,10 +449,12 @@ class AndroidReadHistoryRepository(dbFactory: DatabaseFactory) : ReadHistoryRepo
                 pageSize.toLong(),
                 offset.toLong(),
             ).executeAsList().map { it.toHistory() }
-            ReadHistoryRepository.HistoryFilter.Tag -> mangaTagQueries.getPage(
-                pageSize.toLong(),
-                offset.toLong(),
-            ).executeAsList().map { it.toHistory() }
+            ReadHistoryRepository.HistoryFilter.Tag -> loadLatestTagCatalogHistory()
+                .drop(offset)
+                .take(pageSize)
+            ReadHistoryRepository.HistoryFilter.Rss -> loadLatestRssCatalogHistory()
+                .drop(offset)
+                .take(pageSize)
         }
     }
 
@@ -272,20 +462,22 @@ class AndroidReadHistoryRepository(dbFactory: DatabaseFactory) : ReadHistoryRepo
         return when (filter) {
             ReadHistoryRepository.HistoryFilter.All -> getCombinedHistoryCount()
             is ReadHistoryRepository.HistoryFilter.Forum -> queries.countByForumId(filter.forumId.value.toLong()).executeAsOne()
-            ReadHistoryRepository.HistoryFilter.Tag -> mangaTagQueries.countAll().executeAsOne()
+            ReadHistoryRepository.HistoryFilter.Tag -> loadLatestTagCatalogHistory().size.toLong()
+            ReadHistoryRepository.HistoryFilter.Rss -> loadLatestRssCatalogHistory().size.toLong()
         }
     }
 
     override suspend fun getCombinedHistoryFilterCounts(): List<ReadHistoryRepository.HistoryFilterCount> {
         val forumCounts = queries.getForumCounts().executeAsList().mapNotNull { row ->
-            val forumId = row.forumId ?: return@mapNotNull null
+            val forumId = row.forumId
             ReadHistoryRepository.HistoryFilterCount(
                 filter = ReadHistoryRepository.HistoryFilter.Forum(ForumId(forumId.toInt())),
                 label = row.forumName?.takeIf { it.isNotBlank() } ?: "Forum ${forumId}",
                 count = row.count,
             )
         }
-        val tagCount = mangaTagQueries.countAll().executeAsOne()
+        val tagCount = loadLatestTagCatalogHistory().size.toLong()
+        val rssCount = loadLatestRssCatalogHistory().size.toLong()
         return buildList {
             add(
                 ReadHistoryRepository.HistoryFilterCount(
@@ -304,6 +496,15 @@ class AndroidReadHistoryRepository(dbFactory: DatabaseFactory) : ReadHistoryRepo
                     )
                 )
             }
+            if (rssCount > 0L) {
+                add(
+                    ReadHistoryRepository.HistoryFilterCount(
+                        filter = ReadHistoryRepository.HistoryFilter.Rss,
+                        label = "RSS",
+                        count = rssCount,
+                    )
+                )
+            }
         }
     }
 
@@ -314,19 +515,27 @@ class AndroidReadHistoryRepository(dbFactory: DatabaseFactory) : ReadHistoryRepo
     ): List<ReadHistoryRepository.AnyReadingHistory> {
         val offset = (page - 1).coerceAtLeast(0) * pageSize
         val threads = loadAllThreadHistory(query)
-        val tags = loadAllTagHistory(query)
-        return (threads + tags)
+        val tags = loadLatestTagCatalogHistory(query)
+        val rss = loadLatestRssCatalogHistory(query)
+        return (threads + tags + rss)
             .sortedByDescending { it.lastVisitTime }
             .drop(offset)
             .take(pageSize)
     }
 
     override suspend fun searchCombinedHistoryCount(query: String): Long {
-        return queries.countByName(query).executeAsOne() + mangaTagQueries.countByName(query, query).executeAsOne()
+        return queries.countByName(query).executeAsOne() +
+            loadLatestTagCatalogHistory(query).size.toLong() +
+            loadLatestRssCatalogHistory(query).size.toLong()
     }
 
     override suspend fun deleteCombinedHistoryBatch(items: List<ReadHistoryRepository.AnyReadingHistory>) {
         val tagIds = items.filterIsInstance<ReadHistoryRepository.TagMangaReadingHistory>().map { it.tagId.value.toLong() }
+            .plus(items.filterIsInstance<ReadHistoryRepository.TagCatalogReadingHistory>().map { it.tagId.value.toLong() })
+            .distinct()
+        val rssIds = items.filterIsInstance<ReadHistoryRepository.RssSearchReadingHistory>().map { it.subscriptionId }
+            .plus(items.filterIsInstance<ReadHistoryRepository.RssCatalogReadingHistory>().map { it.subscriptionId })
+            .distinct()
 
         items.filterIsInstance<ReadHistoryRepository.ThreadReadingHistory>().forEach { item ->
             queries.deleteByThreadKey(
@@ -337,12 +546,20 @@ class AndroidReadHistoryRepository(dbFactory: DatabaseFactory) : ReadHistoryRepo
         }
         if (tagIds.isNotEmpty()) {
             mangaTagQueries.deleteByTagIds(tagIds)
+            tagCatalogQueries.deleteByTagIds(tagIds)
+        }
+        if (rssIds.isNotEmpty()) {
+            rssSearchQueries.deleteBySubscriptionIds(rssIds)
+            rssCatalogQueries.deleteBySubscriptionIds(rssIds)
         }
     }
 
     override suspend fun deleteAllCombinedHistory() {
         queries.deleteAll()
         mangaTagQueries.deleteAll()
+        tagCatalogQueries.deleteAll()
+        rssSearchQueries.deleteAll()
+        rssCatalogQueries.deleteAll()
     }
 
     override suspend fun recordReadingDuration(dateKey: String, durationMillis: Long) {
@@ -406,5 +623,87 @@ class AndroidReadHistoryRepository(dbFactory: DatabaseFactory) : ReadHistoryRepo
         }
 
         return histories
+    }
+
+    private fun loadAllTagCatalogHistory(query: String? = null): List<ReadHistoryRepository.TagCatalogReadingHistory> {
+        val histories = mutableListOf<ReadHistoryRepository.TagCatalogReadingHistory>()
+        var offset = 0L
+
+        while (true) {
+            val batch = if (query.isNullOrBlank()) {
+                tagCatalogQueries.getPage(COMBINED_HISTORY_BATCH_SIZE, offset).executeAsList()
+            } else {
+                tagCatalogQueries.searchByName(query, query, COMBINED_HISTORY_BATCH_SIZE, offset).executeAsList()
+            }
+
+            if (batch.isEmpty()) break
+            histories += batch.map { it.toHistory() }
+            if (batch.size < COMBINED_HISTORY_BATCH_SIZE.toInt()) break
+            offset += batch.size
+        }
+
+        return histories
+    }
+
+    private fun loadLatestTagCatalogHistory(query: String? = null): List<ReadHistoryRepository.AnyReadingHistory> {
+        return (loadAllTagHistory(query) + loadAllTagCatalogHistory(query)).latestByCatalogKey()
+    }
+
+    private fun loadAllRssSearchHistory(query: String? = null): List<ReadHistoryRepository.RssSearchReadingHistory> {
+        val histories = mutableListOf<ReadHistoryRepository.RssSearchReadingHistory>()
+        var offset = 0L
+
+        while (true) {
+            val batch = if (query.isNullOrBlank()) {
+                rssSearchQueries.getPage(COMBINED_HISTORY_BATCH_SIZE, offset).executeAsList()
+            } else {
+                rssSearchQueries.searchByName(query, query, query, COMBINED_HISTORY_BATCH_SIZE, offset).executeAsList()
+            }
+
+            if (batch.isEmpty()) break
+            histories += batch.map { it.toHistory() }
+            if (batch.size < COMBINED_HISTORY_BATCH_SIZE.toInt()) break
+            offset += batch.size
+        }
+
+        return histories
+    }
+
+    private fun loadAllRssCatalogHistory(query: String? = null): List<ReadHistoryRepository.RssCatalogReadingHistory> {
+        val histories = mutableListOf<ReadHistoryRepository.RssCatalogReadingHistory>()
+        var offset = 0L
+
+        while (true) {
+            val batch = if (query.isNullOrBlank()) {
+                rssCatalogQueries.getPage(COMBINED_HISTORY_BATCH_SIZE, offset).executeAsList()
+            } else {
+                rssCatalogQueries.searchByName(query, query, query, COMBINED_HISTORY_BATCH_SIZE, offset).executeAsList()
+            }
+
+            if (batch.isEmpty()) break
+            histories += batch.map { it.toHistory() }
+            if (batch.size < COMBINED_HISTORY_BATCH_SIZE.toInt()) break
+            offset += batch.size
+        }
+
+        return histories
+    }
+
+    private fun loadLatestRssCatalogHistory(query: String? = null): List<ReadHistoryRepository.AnyReadingHistory> {
+        return (loadAllRssSearchHistory(query) + loadAllRssCatalogHistory(query)).latestByCatalogKey()
+    }
+
+    private fun List<ReadHistoryRepository.AnyReadingHistory>.latestByCatalogKey(): List<ReadHistoryRepository.AnyReadingHistory> {
+        return groupBy { history ->
+            when (history) {
+                is ReadHistoryRepository.TagMangaReadingHistory -> "tag:${history.tagId.value}"
+                is ReadHistoryRepository.TagCatalogReadingHistory -> "tag:${history.tagId.value}"
+                is ReadHistoryRepository.RssSearchReadingHistory -> "rss:${history.subscriptionId}"
+                is ReadHistoryRepository.RssCatalogReadingHistory -> "rss:${history.subscriptionId}"
+                else -> "other:${history.lastVisitTime}"
+            }
+        }.values
+            .mapNotNull { it.maxByOrNull(ReadHistoryRepository.AnyReadingHistory::lastVisitTime) }
+            .sortedByDescending { it.lastVisitTime }
     }
 }

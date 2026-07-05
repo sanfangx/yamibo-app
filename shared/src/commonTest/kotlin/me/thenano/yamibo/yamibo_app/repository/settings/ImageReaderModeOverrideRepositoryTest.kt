@@ -14,10 +14,10 @@ class ImageReaderModeOverrideRepositoryTest {
     @Test
     fun effectiveReadingModePriorityIsTagThenThreadThenGlobal() {
         assertEquals(
-            EffectiveReadingMode(ReadingMode.SCROLL_CONTINUOUS, EffectiveReadingModeSource.TagLongStrip),
+            EffectiveReadingMode(ReadingMode.SCROLL_CONTINUOUS, EffectiveReadingModeSource.CatalogLongStrip),
             resolveEffectiveReadingMode(
                 global = ReadingMode.SINGLE_RTL,
-                tagLongStrip = true,
+                catalogLongStrip = true,
                 threadOverride = ReadingMode.SINGLE_LTR,
             ),
         )
@@ -25,7 +25,7 @@ class ImageReaderModeOverrideRepositoryTest {
             EffectiveReadingMode(ReadingMode.SINGLE_TTB, EffectiveReadingModeSource.ThreadOverride),
             resolveEffectiveReadingMode(
                 global = ReadingMode.SINGLE_RTL,
-                tagLongStrip = false,
+                catalogLongStrip = false,
                 threadOverride = ReadingMode.SINGLE_TTB,
             ),
         )
@@ -33,7 +33,7 @@ class ImageReaderModeOverrideRepositoryTest {
             EffectiveReadingMode(ReadingMode.SCROLL_GAP, EffectiveReadingModeSource.Global),
             resolveEffectiveReadingMode(
                 global = ReadingMode.SCROLL_GAP,
-                tagLongStrip = false,
+                catalogLongStrip = false,
                 threadOverride = null,
             ),
         )
@@ -52,6 +52,21 @@ class ImageReaderModeOverrideRepositoryTest {
 
         repo.setTagLongStrip(tagId, false)
         assertFalse(SettingsImageReaderModeOverrideRepository(store).isTagLongStripEnabled(tagId))
+    }
+
+    @Test
+    fun rssLongStripDefaultsOffAndPersists() {
+        val store = MemorySettingsStore()
+        val repo = SettingsImageReaderModeOverrideRepository(store)
+        val subscriptionId = 42L
+
+        assertFalse(repo.isRssLongStripEnabled(subscriptionId))
+
+        repo.setRssLongStrip(subscriptionId, true)
+        assertTrue(SettingsImageReaderModeOverrideRepository(store).isRssLongStripEnabled(subscriptionId))
+
+        repo.setRssLongStrip(subscriptionId, false)
+        assertFalse(SettingsImageReaderModeOverrideRepository(store).isRssLongStripEnabled(subscriptionId))
     }
 
     @Test

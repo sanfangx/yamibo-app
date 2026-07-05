@@ -654,3 +654,51 @@ Thread 頁數,Thread 頁數,Thread 頁數,Thread 頁數
 顯示收藏數量,顯示收藏數量,顯示收藏數量,顯示收藏數量
 點擊選擇字體並預覽效果,點擊選擇字體並預覽效果,點擊選擇字體並預覽效果,點擊選擇字體並預覽效果
 點擊開屏簽到提醒後，跳過個人中心，直接打開簽到網頁。,點擊開屏簽到提醒後，跳過個人中心，直接打開簽到網頁。,點擊開屏簽到提醒後，跳過個人中心，直接打開簽到網頁。,點擊開屏簽到提醒後，跳過個人中心，直接打開簽到網頁。
+RSS,RSS,RSS,RSS
+RSS 訂閱,RSS subscriptions,RSS 訂閱,RSS 订阅
+全部刷新,Refresh all,全部刷新,全部刷新
+RSS 訂閱已刷新,RSS subscriptions refreshed,RSS 訂閱已刷新,RSS 订阅已刷新
+尚未保存任何搜尋目錄,No saved search directories yet,尚未保存任何搜尋目錄,尚未保存任何搜寻目录
+RSS 已刷新，新增 {} 筆,RSS refreshed with {} new results,RSS 已刷新，新增 {} 筆,RSS 已刷新，新增 {} 笔
+RSS 訂閱已刪除,RSS subscription deleted,RSS 訂閱已刪除,RSS 订阅已删除
+{} 新,{} new,{} 新,{} 新
+啟用,Enable,啟用,启用
+刷新中,Refreshing,刷新中,刷新中
+上次刷新成功,Last refresh succeeded,上次刷新成功,上次刷新成功
+上次刷新失敗,Last refresh failed,上次刷新失敗,上次刷新失败
+尚未刷新,Not refreshed yet,尚未刷新,尚未刷新
+共 {} 筆,{} total,共 {} 筆,共 {} 笔
+保存搜尋為 RSS 目錄,Save search as RSS directory,保存搜尋為 RSS 目錄,保存搜寻为 RSS 目录
+收藏搜尋為 RSS 訂閱,Favorite search as RSS subscription,收藏搜尋為 RSS 訂閱,收藏搜寻为 RSS 订阅
+目錄名稱,Directory name,目錄名稱,目录名称
+訂閱名稱,Subscription name,訂閱名稱,订阅名称
+RSS 目錄已保存,RSS directory saved,RSS 目錄已保存,RSS 目录已保存
+已收藏為 RSS 訂閱,Favorited as RSS subscription,已收藏為 RSS 訂閱,已收藏为 RSS 订阅
+已收藏此 RSS 訂閱,This RSS subscription is already favorited,已收藏此 RSS 訂閱,已收藏此 RSS 订阅
+保存為目錄,Save as directory,保存為目錄,保存为目录
+收藏為 RSS 訂閱,Favorite as RSS subscription,收藏為 RSS 訂閱,收藏为 RSS 订阅
+RSS 訂閱不存在,RSS subscription does not exist,RSS 訂閱不存在,RSS 订阅不存在
+RSS 目錄,RSS directory,RSS 目錄,RSS 目录
+RSS 搜尋目錄,RSS search directory,RSS 搜尋目錄,RSS 搜寻目录
+RSS搜尋目錄,RSS search directory,RSS搜尋目錄,RSS搜索目录
+RSS搜尋目錄(#{}),RSS search directory (#{}),RSS搜尋目錄(#{}),RSS搜索目录(#{})
+RSS 已刷新,RSS refreshed,RSS 已刷新,RSS 已刷新
+RSS 有新的帖子,RSS has new threads,RSS 有新的帖子,RSS 有新的帖子
+RSS 內容已更新,RSS content updated,RSS 內容已更新,RSS 内容已更新
+RSS 新增 {} 個帖子,RSS added {} threads,RSS 新增 {} 個帖子,RSS 新增 {} 个帖子
+搜尋關鍵字不能為空白,Search keyword cannot be blank,搜尋關鍵字不能為空白,搜索关键字不能为空
+{} 個新搜尋結果,{} new search results,{} 個新搜尋結果,{} 个新搜寻结果
+{} 個訂閱目錄,{} subscription directories,{} 個訂閱目錄,{} 个订阅目录
+重新命名 RSS 目錄,Rename RSS directory,重新命名 RSS 目錄,重新命名 RSS 目录
+RSS 目錄已重新命名,RSS directory renamed,RSS 目錄已重新命名,RSS 目录已重新命名
+RSS 訂閱不存在或無法載入,RSS subscription does not exist or cannot be loaded,RSS 訂閱不存在或無法載入,RSS 订阅不存在或无法载入
+RSS 漫畫下載,RSS manga download,RSS 漫畫下載,RSS 漫画下载
+RSS 漫畫章節,RSS manga chapter,RSS 漫畫章節,RSS 漫画章节
+清除整個 RSS 下載,Clear all RSS downloads,清除整個 RSS 下載,清除整个 RSS 下载
+已清除整個 RSS 下載,Cleared all RSS downloads,已清除整個 RSS 下載,已清除整个 RSS 下载
+已重新整理此章,Chapter refreshed,已重新整理此章,已重新整理此章
+重新命名,Rename,重新命名,重新命名
+設為標籤封面,Set as tag cover,設為標籤封面,设为标签封面
+設為RSS封面,Set as RSS cover,設為RSS封面,设为RSS封面
+已設為標籤封面,Set as tag cover,已設為標籤封面,已设为标签封面
+已設為RSS封面,Set as RSS cover,已設為RSS封面,已设为RSS封面

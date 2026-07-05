@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.thread.detail.tag.components
+package me.thenano.yamibo.yamibo_app.thread.detail.components
 
 import YamiboIcons
 import androidx.compose.foundation.BorderStroke
@@ -23,6 +23,7 @@ import io.github.littlesurvival.YamiboForum
 import io.github.littlesurvival.dto.model.AttachmentType
 import io.github.littlesurvival.dto.model.ThreadSummary
 import me.thenano.yamibo.yamibo_app.forum.components.StatBadge
+import me.thenano.yamibo.yamibo_app.components.user.UserAvatar
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.i18n.i18n
@@ -33,7 +34,7 @@ import me.thenano.yamibo.yamibo_app.userspace.IUserSpaceScreen
 
 /** Thread card for the Tag Detail page */
 @Composable
-fun TagThreadCard(
+fun CatalogThreadCard(
     thread: ThreadSummary,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -81,6 +82,12 @@ fun TagThreadCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 var hasLeadingMetadata = false
                 if (thread.author != null) {
+                    UserAvatar(
+                        thread.author!!.avatarUrl,
+                        size = 22,
+                        contentDescription = "Avatar",
+                    )
+                    Spacer(Modifier.width(6.dp))
                     Text(
                         text = thread.author!!.name,
                         fontSize = 12.sp,
@@ -113,7 +120,7 @@ fun TagThreadCard(
                 if (downloadEntry != null) {
                     val prefix = if (hasLeadingMetadata || readingProgressText != null) " · " else ""
                     Text(
-                        text = prefix + tagMangaDownloadLabel(downloadEntry),
+                        text = prefix + catalogDownloadLabel(downloadEntry),
                         fontSize = 12.sp,
                         color = if (downloadEntry.status == DownloadStatus.Failed) colors.redAccent else colors.orangeAccent,
                         fontWeight = FontWeight.Medium,
@@ -200,7 +207,7 @@ fun TagThreadCard(
                 Spacer(Modifier.weight(1f))
                 
                 // Forum Name (Right)
-                val forumName = thread.fid?.let { YamiboForum.toForumName(it) }
+                val forumName = thread.fid?.let { YamiboForum.toForumName(it) } ?: thread.tag
                 if (forumName != null) {
                     Surface(
                         shape = RoundedCornerShape(10.dp),
@@ -220,7 +227,7 @@ fun TagThreadCard(
     }
 }
 
-private fun tagMangaDownloadLabel(entry: DownloadQueueEntry): String = when {
+private fun catalogDownloadLabel(entry: DownloadQueueEntry): String = when {
     entry.status == DownloadStatus.Downloading && entry.stage != null -> when (entry.stage) {
         DownloadStage.Preparing -> i18n("準備中")
         DownloadStage.FetchingContent -> i18n("正在取得內容")

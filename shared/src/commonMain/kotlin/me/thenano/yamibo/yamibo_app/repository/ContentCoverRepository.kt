@@ -7,6 +7,7 @@ interface ContentCoverRepository {
         ThreadNormal,
         ThreadNovel,
         TagManga,
+        RssSearch,
     }
 
     data class Key(

@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.history
+﻿package me.thenano.yamibo.yamibo_app.history
 
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 
@@ -30,13 +30,16 @@ import me.thenano.yamibo.yamibo_app.favorite.FavoriteTargetPayload
 import me.thenano.yamibo.yamibo_app.favorite.getFavoriteLocationSelection
 import me.thenano.yamibo.yamibo_app.history.components.PageMode
 import me.thenano.yamibo.yamibo_app.history.components.ReadHistoryCard
+import me.thenano.yamibo.yamibo_app.history.components.RssSearchHistoryCard
 import me.thenano.yamibo.yamibo_app.history.components.TagMangaHistoryCard
 import me.thenano.yamibo.yamibo_app.history.components.formatTime
 import me.thenano.yamibo.yamibo_app.navigation.ComposableNavigator
+import me.thenano.yamibo.yamibo_app.repository.ContentCoverRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository.ThreadReadingHistory
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.INovelThreadDetailScreen
+import me.thenano.yamibo.yamibo_app.thread.detail.rss.IRssSearchSubscriptionDetailScreen
 import me.thenano.yamibo.yamibo_app.thread.detail.tag.ITagDetailScreen
 import me.thenano.yamibo.yamibo_app.thread.reader.IImageReaderScreen
 import me.thenano.yamibo.yamibo_app.thread.reader.IThreadReaderScreen
@@ -209,6 +212,7 @@ internal fun TagHistoryItem(
     TagMangaHistoryCard(
         history = history,
         timeLabel = formatTime(history.lastVisitTime),
+        modeLabel = i18n("漫畫模式"),
         isSelectMode = pageMode == PageMode.Select,
         isSelected = history in selectedItems,
         isFavorited = favoriteSelection?.item != null,
@@ -244,6 +248,247 @@ internal fun TagHistoryItem(
                         page = history.tagPage,
                     )
                 )
+            }
+        },
+        onDelete = onDelete,
+        onFavorite = onFavorite,
+        onFavoriteLongPress = onFavoriteLongPress,
+    )
+}
+
+@Composable
+internal fun TagCatalogHistoryItem(
+    history: ReadHistoryRepository.TagCatalogReadingHistory,
+    pageMode: PageMode,
+    selectedItems: Set<ReadHistoryRepository.AnyReadingHistory>,
+    onToggleSelection: () -> Unit,
+    onDelete: () -> Unit,
+    onFavorite: () -> Unit,
+    onFavoriteLongPress: () -> Unit,
+    favoriteRefreshToken: Int,
+    navigator: ComposableNavigator,
+) {
+    val favoriteRepository = LocalFavoriteRepository.current
+    val target = remember(history) {
+        FavoriteTargetPayload.TagManga(
+            tagId = history.tagId,
+            tagName = history.tagName,
+            coverUrl = history.coverUrl,
+        )
+    }
+    val favoriteSelection by produceState<FavoriteLocationSelection?>(
+        initialValue = null,
+        target,
+        favoriteRefreshToken,
+    ) {
+        value = favoriteRepository.getFavoriteLocationSelection(target)
+    }
+    val displayHistory = remember(history) {
+        ReadHistoryRepository.TagMangaReadingHistory(
+            tagId = history.tagId,
+            tagName = history.tagName,
+            tagPage = history.tagPage,
+            threadId = history.threadId,
+            threadTitle = history.threadTitle,
+            threadImagePageIndex = 0,
+            threadImageTotalPages = 1,
+            lastVisitTime = history.lastVisitTime,
+            coverUrl = history.coverUrl,
+        )
+    }
+
+    TagMangaHistoryCard(
+        history = displayHistory,
+        timeLabel = formatTime(history.lastVisitTime),
+        progressText = i18n("第{} ‧ {}", history.threadPage, history.postTitle.ifBlank { history.threadTitle }),
+        isSelectMode = pageMode == PageMode.Select,
+        isSelected = history in selectedItems,
+        isFavorited = favoriteSelection?.item != null,
+        onClick = {
+            if (pageMode == PageMode.Select) {
+                onToggleSelection()
+            } else {
+                navigator.navigate(
+                    IThreadReaderScreen(
+                        tid = history.threadId,
+                        title = history.threadTitle,
+                        threadType = ReadHistoryRepository.ThreadEntryType.Normal,
+                        authorId = history.authorId,
+                        initialPage = history.threadPage,
+                        targetPid = history.postId,
+                        catalogCoverTargetType = ContentCoverRepository.TargetType.TagManga,
+                        catalogCoverTargetId = history.tagId.value.toLong(),
+                        catalogTagId = history.tagId,
+                        catalogTagName = history.tagName,
+                        catalogTagPage = history.tagPage,
+                    )
+                )
+            }
+        },
+        onCoverClick = {
+            if (pageMode == PageMode.Select) {
+                onToggleSelection()
+            } else {
+                navigator.navigate(ITagDetailScreen(history.tagId, history.tagName, history.tagPage))
+            }
+        },
+        onDelete = onDelete,
+        onFavorite = onFavorite,
+        onFavoriteLongPress = onFavoriteLongPress,
+    )
+}
+
+@Composable
+internal fun RssHistoryItem(
+    history: ReadHistoryRepository.RssSearchReadingHistory,
+    pageMode: PageMode,
+    selectedItems: Set<ReadHistoryRepository.AnyReadingHistory>,
+    onToggleSelection: () -> Unit,
+    onDelete: () -> Unit,
+    onFavorite: () -> Unit,
+    onFavoriteLongPress: () -> Unit,
+    favoriteRefreshToken: Int,
+    navigator: ComposableNavigator,
+) {
+    val favoriteRepository = LocalFavoriteRepository.current
+    val target = remember(history) {
+        FavoriteTargetPayload.RssSearch(
+            subscriptionId = history.subscriptionId,
+            title = history.subscriptionTitle,
+            coverUrl = history.coverUrl,
+        )
+    }
+    val favoriteSelection by produceState<FavoriteLocationSelection?>(
+        initialValue = null,
+        target,
+        favoriteRefreshToken,
+    ) {
+        value = favoriteRepository.getFavoriteLocationSelection(target)
+    }
+
+    RssSearchHistoryCard(
+        history = history,
+        timeLabel = formatTime(history.lastVisitTime),
+        modeLabel = i18n("漫畫模式"),
+        isSelectMode = pageMode == PageMode.Select,
+        isSelected = history in selectedItems,
+        isFavorited = favoriteSelection?.item != null,
+        onClick = {
+            if (pageMode == PageMode.Select) {
+                onToggleSelection()
+            } else {
+                navigator.navigate(
+                    IImageReaderScreen(
+                        tid = history.threadId,
+                        postId = null,
+                        fid = null,
+                        threadTitle = history.threadTitle,
+                        authorId = null,
+                        imageList = emptyList(),
+                        initialPage = history.threadImagePageIndex + 1,
+                        rssSubscriptionId = history.subscriptionId,
+                        rssTitle = history.subscriptionTitle,
+                        rssQuery = history.subscriptionQuery,
+                        rssPage = history.subscriptionPage,
+                        rssThreads = emptyList(),
+                    )
+                )
+            }
+        },
+        onCoverClick = {
+            if (pageMode == PageMode.Select) {
+                onToggleSelection()
+            } else {
+                navigator.navigate(
+                    IRssSearchSubscriptionDetailScreen(
+                        subscriptionId = history.subscriptionId,
+                        page = history.subscriptionPage,
+                    )
+                )
+            }
+        },
+        onDelete = onDelete,
+        onFavorite = onFavorite,
+        onFavoriteLongPress = onFavoriteLongPress,
+    )
+}
+
+@Composable
+internal fun RssCatalogHistoryItem(
+    history: ReadHistoryRepository.RssCatalogReadingHistory,
+    pageMode: PageMode,
+    selectedItems: Set<ReadHistoryRepository.AnyReadingHistory>,
+    onToggleSelection: () -> Unit,
+    onDelete: () -> Unit,
+    onFavorite: () -> Unit,
+    onFavoriteLongPress: () -> Unit,
+    favoriteRefreshToken: Int,
+    navigator: ComposableNavigator,
+) {
+    val favoriteRepository = LocalFavoriteRepository.current
+    val target = remember(history) {
+        FavoriteTargetPayload.RssSearch(
+            subscriptionId = history.subscriptionId,
+            title = history.subscriptionTitle,
+            coverUrl = history.coverUrl,
+        )
+    }
+    val favoriteSelection by produceState<FavoriteLocationSelection?>(
+        initialValue = null,
+        target,
+        favoriteRefreshToken,
+    ) {
+        value = favoriteRepository.getFavoriteLocationSelection(target)
+    }
+    val displayHistory = remember(history) {
+        ReadHistoryRepository.RssSearchReadingHistory(
+            subscriptionId = history.subscriptionId,
+            subscriptionTitle = history.subscriptionTitle,
+            subscriptionQuery = history.subscriptionQuery,
+            subscriptionPage = history.subscriptionPage,
+            threadId = history.threadId,
+            threadTitle = history.threadTitle,
+            threadImagePageIndex = 0,
+            threadImageTotalPages = 1,
+            lastVisitTime = history.lastVisitTime,
+            coverUrl = history.coverUrl,
+        )
+    }
+
+    RssSearchHistoryCard(
+        history = displayHistory,
+        timeLabel = formatTime(history.lastVisitTime),
+        progressText = i18n("第{} ‧ {}", history.threadPage, history.postTitle.ifBlank { history.threadTitle }),
+        isSelectMode = pageMode == PageMode.Select,
+        isSelected = history in selectedItems,
+        isFavorited = favoriteSelection?.item != null,
+        onClick = {
+            if (pageMode == PageMode.Select) {
+                onToggleSelection()
+            } else {
+                navigator.navigate(
+                    IThreadReaderScreen(
+                        tid = history.threadId,
+                        title = history.threadTitle,
+                        threadType = ReadHistoryRepository.ThreadEntryType.Normal,
+                        authorId = history.authorId,
+                        initialPage = history.threadPage,
+                        targetPid = history.postId,
+                        catalogCoverTargetType = ContentCoverRepository.TargetType.RssSearch,
+                        catalogCoverTargetId = history.subscriptionId,
+                        catalogRssSubscriptionId = history.subscriptionId,
+                        catalogRssTitle = history.subscriptionTitle,
+                        catalogRssQuery = history.subscriptionQuery,
+                        catalogRssPage = history.subscriptionPage,
+                    )
+                )
+            }
+        },
+        onCoverClick = {
+            if (pageMode == PageMode.Select) {
+                onToggleSelection()
+            } else {
+                navigator.navigate(IRssSearchSubscriptionDetailScreen(history.subscriptionId, history.subscriptionPage))
             }
         },
         onDelete = onDelete,

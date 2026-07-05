@@ -37,7 +37,7 @@ import me.thenano.yamibo.yamibo_app.favorite.components.collectionColor
 import me.thenano.yamibo.yamibo_app.repository.FavoriteSyncRepository
 import me.thenano.yamibo.yamibo_app.repository.FavoriteSyncRepository.FavoriteSyncActionResult
 import me.thenano.yamibo.yamibo_app.repository.FavoriteSyncRepository.FavoriteSyncDeleteResult
-import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository
+import me.thenano.yamibo.yamibo_app.repository.FavoriteStoreRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
 
@@ -58,16 +58,23 @@ sealed interface FavoriteTargetPayload {
         val tagName: String,
         val coverUrl: String?,
     ) : FavoriteTargetPayload
+
+    data class RssSearch(
+        val subscriptionId: Long,
+        val title: String,
+        val coverUrl: String? = null,
+        val lastUpdatedTime: Long? = null,
+    ) : FavoriteTargetPayload
 }
 
 private data class FavoritePickerCategory(
     val categoryId: Long,
     val categoryName: String,
-    val collections: List<LocalFavoriteRepository.FavoriteCollectionOption>,
+    val collections: List<FavoriteStoreRepository.FavoriteCollectionOption>,
 )
 
 data class FavoriteLocationSelection(
-    val item: LocalFavoriteRepository.FavoriteItem?,
+    val item: FavoriteStoreRepository.FavoriteItem?,
     val categoryIds: Set<Long>,
     val collectionIds: Set<Long>,
     val paths: List<String>,
@@ -76,7 +83,7 @@ data class FavoriteLocationSelection(
 internal fun FavoriteTargetPayload.supportsRemoteWebsiteSync(): Boolean = this is FavoriteTargetPayload.Thread
 
 internal suspend fun addFavoriteAndMaybeSync(
-    favoriteRepository: LocalFavoriteRepository,
+    favoriteRepository: FavoriteStoreRepository,
     favoriteSyncRepository: FavoriteSyncRepository,
     target: FavoriteTargetPayload,
     syncToRemote: Boolean,
@@ -91,7 +98,7 @@ internal suspend fun addFavoriteAndMaybeSync(
 }
 
 internal suspend fun syncExistingFavoriteIfRequested(
-    favoriteRepository: LocalFavoriteRepository,
+    favoriteRepository: FavoriteStoreRepository,
     favoriteSyncRepository: FavoriteSyncRepository,
     target: FavoriteTargetPayload,
     syncToRemote: Boolean,
@@ -103,7 +110,7 @@ internal suspend fun syncExistingFavoriteIfRequested(
 }
 
 internal suspend fun hasRemoteFavoriteForTarget(
-    favoriteRepository: LocalFavoriteRepository,
+    favoriteRepository: FavoriteStoreRepository,
     favoriteSyncRepository: FavoriteSyncRepository,
     target: FavoriteTargetPayload,
 ): Boolean {
@@ -112,7 +119,7 @@ internal suspend fun hasRemoteFavoriteForTarget(
 }
 
 internal suspend fun completeFavoriteAddWithFeedback(
-    favoriteRepository: LocalFavoriteRepository,
+    favoriteRepository: FavoriteStoreRepository,
     favoriteSyncRepository: FavoriteSyncRepository,
     target: FavoriteTargetPayload,
     syncToRemote: Boolean,
@@ -132,7 +139,7 @@ internal suspend fun completeFavoriteAddWithFeedback(
 }
 
 internal suspend fun completeSavedFavoriteSyncWithFeedback(
-    favoriteRepository: LocalFavoriteRepository,
+    favoriteRepository: FavoriteStoreRepository,
     favoriteSyncRepository: FavoriteSyncRepository,
     target: FavoriteTargetPayload,
     syncToRemote: Boolean,
@@ -165,7 +172,7 @@ internal suspend fun completeSavedFavoriteSyncWithFeedback(
 }
 
 internal suspend fun completeFavoriteRemovalWithFeedback(
-    favoriteRepository: LocalFavoriteRepository,
+    favoriteRepository: FavoriteStoreRepository,
     favoriteSyncRepository: FavoriteSyncRepository,
     target: FavoriteTargetPayload,
     removeRemote: Boolean,
@@ -201,7 +208,7 @@ internal suspend fun completeFavoriteRemovalWithFeedback(
     )
 }
 
-suspend fun LocalFavoriteRepository.saveFavorite(
+suspend fun FavoriteStoreRepository.saveFavorite(
     target: FavoriteTargetPayload,
     categoryIds: List<Long> = emptyList(),
     collectionIds: List<Long> = emptyList(),
@@ -239,6 +246,17 @@ suspend fun LocalFavoriteRepository.saveFavorite(
                 tagId = target.tagId,
                 tagName = target.tagName,
                 coverUrl = target.coverUrl,
+                categoryIds = categoryIds,
+                collectionIds = collectionIds,
+            )
+        }
+
+        is FavoriteTargetPayload.RssSearch -> {
+            addRssSearchFavorite(
+                subscriptionId = target.subscriptionId,
+                title = target.title,
+                coverUrl = target.coverUrl,
+                lastUpdatedTime = target.lastUpdatedTime,
                 categoryIds = categoryIds,
                 collectionIds = collectionIds,
             )
@@ -281,8 +299,8 @@ fun FavoriteActionButton(
 
 @Composable
 fun FavoriteCollectionPickerDialog(
-    categories: List<LocalFavoriteRepository.FavoriteCategory>,
-    options: List<LocalFavoriteRepository.FavoriteCollectionOption>,
+    categories: List<FavoriteStoreRepository.FavoriteCategory>,
+    options: List<FavoriteStoreRepository.FavoriteCollectionOption>,
     initialCategorySelection: Set<Long>,
     initialCollectionSelection: Set<Long>,
     initialOpenedCategoryId: Long? = null,
@@ -300,7 +318,7 @@ fun FavoriteCollectionPickerDialog(
     val groupedCategories = remember(categories, options) {
         val collectionsByCategory = options.groupBy { it.categoryId }
         categories
-            .sortedWith(compareBy<LocalFavoriteRepository.FavoriteCategory> { it.sortOrder }.thenBy { it.id })
+            .sortedWith(compareBy<FavoriteStoreRepository.FavoriteCategory> { it.sortOrder }.thenBy { it.id })
             .map { category ->
                 FavoritePickerCategory(
                     categoryId = category.id,
@@ -605,7 +623,7 @@ private fun FavoriteCategoryRootRow(
 
 @Composable
 private fun FavoriteCollectionRow(
-    option: LocalFavoriteRepository.FavoriteCollectionOption,
+    option: FavoriteStoreRepository.FavoriteCollectionOption,
     checked: Boolean,
     checkboxColors: CheckboxColors,
     onToggle: () -> Unit,
@@ -680,32 +698,35 @@ internal fun FavoriteDialogButton(
     }
 }
 
-internal suspend fun LocalFavoriteRepository.findFavoriteItem(
+internal suspend fun FavoriteStoreRepository.findFavoriteItem(
     target: FavoriteTargetPayload,
-): LocalFavoriteRepository.FavoriteItem? {
+): FavoriteStoreRepository.FavoriteItem? {
     val targetType = when (target) {
         is FavoriteTargetPayload.Thread -> {
             if (target.threadType == ReadHistoryRepository.ThreadEntryType.Novel) {
-                LocalFavoriteRepository.FavoriteTargetType.ThreadNovel
+                FavoriteStoreRepository.FavoriteTargetType.ThreadNovel
             } else {
-                LocalFavoriteRepository.FavoriteTargetType.ThreadNormal
+                FavoriteStoreRepository.FavoriteTargetType.ThreadNormal
             }
         }
 
-        is FavoriteTargetPayload.TagManga -> LocalFavoriteRepository.FavoriteTargetType.TagManga
+        is FavoriteTargetPayload.TagManga -> FavoriteStoreRepository.FavoriteTargetType.TagManga
+        is FavoriteTargetPayload.RssSearch -> FavoriteStoreRepository.FavoriteTargetType.RssSearch
     }
     val targetId = when (target) {
         is FavoriteTargetPayload.Thread -> target.tid.value.toLong()
         is FavoriteTargetPayload.TagManga -> target.tagId.value.toLong()
+        is FavoriteTargetPayload.RssSearch -> target.subscriptionId
     }
     val authorId = when (target) {
         is FavoriteTargetPayload.Thread -> target.authorId
         is FavoriteTargetPayload.TagManga -> null
+        is FavoriteTargetPayload.RssSearch -> null
     }
     return getFavoriteItem(targetType, targetId, authorId)
 }
 
-internal suspend fun LocalFavoriteRepository.getFavoriteLocationSelection(
+internal suspend fun FavoriteStoreRepository.getFavoriteLocationSelection(
     target: FavoriteTargetPayload,
 ): FavoriteLocationSelection {
     val item = findFavoriteItem(target) ?: return FavoriteLocationSelection(
@@ -723,7 +744,7 @@ internal suspend fun LocalFavoriteRepository.getFavoriteLocationSelection(
     )
 }
 
-internal suspend fun LocalFavoriteRepository.syncFavoriteMetadata(
+internal suspend fun FavoriteStoreRepository.syncFavoriteMetadata(
     target: FavoriteTargetPayload,
 ) {
     val selection = getFavoriteLocationSelection(target)
@@ -743,7 +764,7 @@ internal suspend fun LocalFavoriteRepository.syncFavoriteMetadata(
 }
 
 internal suspend fun removeFavoriteWithSync(
-    favoriteRepository: LocalFavoriteRepository,
+    favoriteRepository: FavoriteStoreRepository,
     favoriteSyncRepository: FavoriteSyncRepository,
     target: FavoriteTargetPayload,
     removeRemote: Boolean = true,

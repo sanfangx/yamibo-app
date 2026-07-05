@@ -12,6 +12,9 @@ internal fun itemKey(history: ReadHistoryRepository.AnyReadingHistory): String {
     return when (history) {
         is ThreadReadingHistory -> "thread_${history.threadType}_${history.threadId.value}_${history.authorId?.value ?: 0}"
         is ReadHistoryRepository.TagMangaReadingHistory -> "tag_${history.tagId.value}_${history.threadId.value}"
+        is ReadHistoryRepository.TagCatalogReadingHistory -> "tag_catalog_${history.tagId.value}_${history.threadId.value}"
+        is ReadHistoryRepository.RssSearchReadingHistory -> "rss_${history.subscriptionId}_${history.threadId.value}"
+        is ReadHistoryRepository.RssCatalogReadingHistory -> "rss_catalog_${history.subscriptionId}_${history.threadId.value}"
         else -> "history_${history.lastVisitTime}"
     }
 }

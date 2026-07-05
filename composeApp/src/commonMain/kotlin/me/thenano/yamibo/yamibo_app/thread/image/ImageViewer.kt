@@ -38,6 +38,8 @@ val LocalReaderOverlayVisible = compositionLocalOf { false }
 val LocalImageClickListener = compositionLocalOf<(() -> Unit)?> { null }
 val LocalImageDoubleClickListener = compositionLocalOf<((String) -> Unit)?> { null }
 val LocalImageSetCoverListener = compositionLocalOf<((String) -> Unit)?> { null }
+val LocalImageSetCatalogCoverListener = compositionLocalOf<((String) -> Unit)?> { null }
+val LocalImageSetCatalogCoverLabel = compositionLocalOf<String?> { null }
 
 /**
  * A unified image viewer for posts and manga reading.
@@ -80,6 +82,8 @@ fun ImageViewer(
     val onSingleTap = LocalImageClickListener.current
     val onDoubleTap = LocalImageDoubleClickListener.current
     val onSetCover = LocalImageSetCoverListener.current
+    val onSetCatalogCover = LocalImageSetCatalogCoverListener.current
+    val catalogCoverLabel = LocalImageSetCatalogCoverLabel.current
 
     val hasGestures = enableContextMenu || onSingleTap != null || onDoubleTap != null
 
@@ -237,6 +241,8 @@ fun ImageViewer(
                 visible = enableContextMenu && showMenu,
                 imageUrl = fullUrl,
                 onSetAsCover = onSetCover,
+                onSetAsCatalogCover = onSetCatalogCover,
+                catalogCoverLabel = catalogCoverLabel,
                 onDismiss = { showMenu = false }
             )
         }

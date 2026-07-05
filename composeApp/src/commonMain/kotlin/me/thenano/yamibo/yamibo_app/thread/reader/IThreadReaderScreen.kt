@@ -2,6 +2,7 @@
 
 import androidx.compose.runtime.Composable
 import io.github.littlesurvival.dto.value.PostId
+import io.github.littlesurvival.dto.value.TagId
 import io.github.littlesurvival.dto.value.ThreadId
 import io.github.littlesurvival.dto.value.UserId
 import kotlinx.serialization.Serializable
@@ -11,6 +12,7 @@ import me.thenano.yamibo.yamibo_app.navigation.RestorableScreenSnapshot
 import me.thenano.yamibo.yamibo_app.navigation.TypedRestorableNavigatableDecoder
 import me.thenano.yamibo.yamibo_app.navigation.decodeRestorePayload
 import me.thenano.yamibo.yamibo_app.navigation.restoreSnapshot
+import me.thenano.yamibo.yamibo_app.repository.ContentCoverRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 
 @Serializable
@@ -21,6 +23,15 @@ private data class ThreadReaderRestorePayload(
     val authorId: Int? = null,
     val initialPage: Int = 1,
     val targetPid: Int? = null,
+    val catalogCoverTargetTypeName: String? = null,
+    val catalogCoverTargetId: Long? = null,
+    val catalogTagId: Int? = null,
+    val catalogTagName: String? = null,
+    val catalogTagPage: Int? = null,
+    val catalogRssSubscriptionId: Long? = null,
+    val catalogRssTitle: String? = null,
+    val catalogRssQuery: String? = null,
+    val catalogRssPage: Int? = null,
 )
 
 /** Navigatable screen for reading a novel thread in continuous mode. */
@@ -31,9 +42,24 @@ class IThreadReaderScreen(
     val threadType: ReadHistoryRepository.ThreadEntryType = ReadHistoryRepository.ThreadEntryType.Normal,
     val authorId: UserId? = null,
     val initialPage: Int = 1,
-    val targetPid: PostId? = null
+    val targetPid: PostId? = null,
+    val catalogCoverTargetType: ContentCoverRepository.TargetType? = null,
+    val catalogCoverTargetId: Long? = null,
+    val catalogTagId: TagId? = null,
+    val catalogTagName: String? = null,
+    val catalogTagPage: Int? = null,
+    val catalogRssSubscriptionId: Long? = null,
+    val catalogRssTitle: String? = null,
+    val catalogRssQuery: String? = null,
+    val catalogRssPage: Int? = null,
 ) : RestorableNavigatable {
-    override val id = buildId(tid.value, threadType.name, authorId?.value ?: "all")
+    override val id = buildId(
+        tid.value,
+        threadType.name,
+        authorId?.value ?: "all",
+        catalogCoverTargetType?.name ?: "none",
+        catalogCoverTargetId ?: "none",
+    )
     override val restoreDecoder = Decoder
 
     override fun toRestoreSnapshot(): RestorableScreenSnapshot = restoreSnapshot(
@@ -45,6 +71,15 @@ class IThreadReaderScreen(
             authorId = authorId?.value,
             initialPage = initialPage,
             targetPid = targetPid?.value,
+            catalogCoverTargetTypeName = catalogCoverTargetType?.name,
+            catalogCoverTargetId = catalogCoverTargetId,
+            catalogTagId = catalogTagId?.value,
+            catalogTagName = catalogTagName,
+            catalogTagPage = catalogTagPage,
+            catalogRssSubscriptionId = catalogRssSubscriptionId,
+            catalogRssTitle = catalogRssTitle,
+            catalogRssQuery = catalogRssQuery,
+            catalogRssPage = catalogRssPage,
         ),
     )
 
@@ -56,7 +91,16 @@ class IThreadReaderScreen(
             threadType = threadType,
             authorId = authorId,
             initialPage = initialPage,
-            targetPid = targetPid
+            targetPid = targetPid,
+            catalogCoverTargetType = catalogCoverTargetType,
+            catalogCoverTargetId = catalogCoverTargetId,
+            catalogTagId = catalogTagId,
+            catalogTagName = catalogTagName,
+            catalogTagPage = catalogTagPage,
+            catalogRssSubscriptionId = catalogRssSubscriptionId,
+            catalogRssTitle = catalogRssTitle,
+            catalogRssQuery = catalogRssQuery,
+            catalogRssPage = catalogRssPage,
         )
     }
 
@@ -70,6 +114,16 @@ class IThreadReaderScreen(
                 authorId = data.authorId?.let(::UserId),
                 initialPage = data.initialPage,
                 targetPid = data.targetPid?.let(::PostId),
+                catalogCoverTargetType = data.catalogCoverTargetTypeName
+                    ?.let(ContentCoverRepository.TargetType::valueOf),
+                catalogCoverTargetId = data.catalogCoverTargetId,
+                catalogTagId = data.catalogTagId?.let(::TagId),
+                catalogTagName = data.catalogTagName,
+                catalogTagPage = data.catalogTagPage,
+                catalogRssSubscriptionId = data.catalogRssSubscriptionId,
+                catalogRssTitle = data.catalogRssTitle,
+                catalogRssQuery = data.catalogRssQuery,
+                catalogRssPage = data.catalogRssPage,
             )
         }
     }

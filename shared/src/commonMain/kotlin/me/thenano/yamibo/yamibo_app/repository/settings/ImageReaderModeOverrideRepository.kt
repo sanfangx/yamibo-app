@@ -14,7 +14,7 @@ import me.thenano.yamibo.yamibo_app.store.settings.SettingsStore
 enum class EffectiveReadingModeSource {
     Global,
     ThreadOverride,
-    TagLongStrip,
+    CatalogLongStrip,
 }
 
 data class EffectiveReadingMode(
@@ -24,11 +24,11 @@ data class EffectiveReadingMode(
 
 fun resolveEffectiveReadingMode(
     global: ReadingMode,
-    tagLongStrip: Boolean,
+    catalogLongStrip: Boolean,
     threadOverride: ReadingMode?,
 ): EffectiveReadingMode {
     return when {
-        tagLongStrip -> EffectiveReadingMode(ReadingMode.SCROLL_CONTINUOUS, EffectiveReadingModeSource.TagLongStrip)
+        catalogLongStrip -> EffectiveReadingMode(ReadingMode.SCROLL_CONTINUOUS, EffectiveReadingModeSource.CatalogLongStrip)
         threadOverride != null -> EffectiveReadingMode(threadOverride, EffectiveReadingModeSource.ThreadOverride)
         else -> EffectiveReadingMode(global, EffectiveReadingModeSource.Global)
     }
@@ -38,6 +38,10 @@ interface ImageReaderModeOverrideRepository {
     fun observeTagLongStrip(tagId: TagId): Flow<Boolean>
     fun isTagLongStripEnabled(tagId: TagId): Boolean
     fun setTagLongStrip(tagId: TagId, enabled: Boolean)
+
+    fun observeRssLongStrip(subscriptionId: Long): Flow<Boolean>
+    fun isRssLongStripEnabled(subscriptionId: Long): Boolean
+    fun setRssLongStrip(subscriptionId: Long, enabled: Boolean)
 
     fun observeThreadMode(tid: ThreadId, authorId: UserId?): Flow<ReadingMode?>
     fun getThreadMode(tid: ThreadId, authorId: UserId?): ReadingMode?
@@ -67,6 +71,25 @@ class SettingsImageReaderModeOverrideRepository(
                     current.longStripTagKeys + key
                 } else {
                     current.longStripTagKeys - key
+                },
+            )
+        }
+    }
+
+    override fun observeRssLongStrip(subscriptionId: Long): Flow<Boolean> =
+        state.map { rssKey(subscriptionId) in it.longStripRssKeys }
+
+    override fun isRssLongStripEnabled(subscriptionId: Long): Boolean =
+        rssKey(subscriptionId) in state.value.longStripRssKeys
+
+    override fun setRssLongStrip(subscriptionId: Long, enabled: Boolean) {
+        update { current ->
+            val key = rssKey(subscriptionId)
+            current.copy(
+                longStripRssKeys = if (enabled) {
+                    current.longStripRssKeys + key
+                } else {
+                    current.longStripRssKeys - key
                 },
             )
         }
@@ -111,6 +134,7 @@ class SettingsImageReaderModeOverrideRepository(
     private fun StoredOverrides.normalized(): StoredOverrides =
         copy(
             longStripTagKeys = longStripTagKeys.distinct().sorted(),
+            longStripRssKeys = longStripRssKeys.distinct().sorted(),
             threadModes = threadModes
                 .filterValues { it.toReadingModeOrNull() != null }
                 .entries
@@ -123,6 +147,8 @@ class SettingsImageReaderModeOverrideRepository(
 
         fun tagKey(tagId: TagId): String = tagId.value.toString()
 
+        fun rssKey(subscriptionId: Long): String = subscriptionId.toString()
+
         fun threadKey(tid: ThreadId, authorId: UserId?): String =
             "${tid.value}:${authorId?.value ?: "all"}"
     }
@@ -131,5 +157,6 @@ class SettingsImageReaderModeOverrideRepository(
 @Serializable
 private data class StoredOverrides(
     val longStripTagKeys: List<String> = emptyList(),
+    val longStripRssKeys: List<String> = emptyList(),
     val threadModes: Map<String, String> = emptyMap(),
 )
