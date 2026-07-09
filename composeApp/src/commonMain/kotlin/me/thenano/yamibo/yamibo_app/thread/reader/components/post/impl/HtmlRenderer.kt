@@ -179,6 +179,8 @@ private data class LinkMenuState(
     val canOpenInApp: Boolean,
 )
 
+private const val SPOILER_ANNOTATION_TAG = "YAMIBO_SPOILER"
+
 private fun normalizeYamiboLink(url: String): String {
     val cleaned = url.trim().replace("&amp;", "&")
     return when {
@@ -201,6 +203,84 @@ private fun applyThemedLinkStyle(text: AnnotatedString, linkColor: Color): Annot
         )
     }
     return builder.toAnnotatedString()
+}
+
+private fun applySpoilerAnnotations(
+    text: AnnotatedString,
+    revealedKeys: Set<String>,
+    defaultTextColor: Color,
+): AnnotatedString {
+    val spoilerRanges = findSpoilerRanges(text)
+    if (spoilerRanges.isEmpty()) return text
+
+    val builder = AnnotatedString.Builder(text)
+    spoilerRanges.forEach { range ->
+        val key = spoilerKey(range.start, range.end)
+        builder.addStringAnnotation(SPOILER_ANNOTATION_TAG, key, range.start, range.end)
+        if (key in revealedKeys) {
+            builder.addStyle(
+                SpanStyle(color = readableSpoilerTextColor(range.background, defaultTextColor)),
+                range.start,
+                range.end,
+            )
+        }
+    }
+    return builder.toAnnotatedString()
+}
+
+private data class SpoilerRange(
+    val start: Int,
+    val end: Int,
+    val background: Color,
+)
+
+private fun findSpoilerRanges(text: AnnotatedString): List<SpoilerRange> {
+    val directRanges = text.spanStyles.mapNotNull { range ->
+        val color = range.item.color
+        val background = range.item.background
+        if (
+            range.start < range.end &&
+            color != Color.Unspecified &&
+            background != Color.Unspecified &&
+            color.isVisuallySameAs(background)
+        ) {
+            SpoilerRange(range.start, range.end, background)
+        } else {
+            null
+        }
+    }
+
+    val colorRanges = text.spanStyles.filter { it.item.color != Color.Unspecified && it.start < it.end }
+    val backgroundRanges = text.spanStyles.filter { it.item.background != Color.Unspecified && it.start < it.end }
+    val overlapRanges = colorRanges.flatMap { colorRange ->
+        backgroundRanges.mapNotNull { backgroundRange ->
+            if (!colorRange.item.color.isVisuallySameAs(backgroundRange.item.background)) {
+                return@mapNotNull null
+            }
+            val start = maxOf(colorRange.start, backgroundRange.start)
+            val end = minOf(colorRange.end, backgroundRange.end)
+            if (start < end) SpoilerRange(start, end, backgroundRange.item.background) else null
+        }
+    }
+
+    return (directRanges + overlapRanges)
+        .distinctBy { spoilerKey(it.start, it.end) }
+        .sortedWith(compareBy<SpoilerRange> { it.start }.thenBy { it.end })
+}
+
+private fun spoilerKey(start: Int, end: Int): String = "$start:$end"
+
+private fun Color.isVisuallySameAs(other: Color): Boolean {
+    return alpha > 0.01f &&
+        other.alpha > 0.01f &&
+        kotlin.math.abs(red - other.red) < 0.015f &&
+        kotlin.math.abs(green - other.green) < 0.015f &&
+        kotlin.math.abs(blue - other.blue) < 0.015f
+}
+
+private fun readableSpoilerTextColor(background: Color, fallback: Color): Color {
+    val luminance = (0.299f * background.red) + (0.587f * background.green) + (0.114f * background.blue)
+    return if (luminance < 0.45f) Color.White else fallback
 }
 
 private fun htmlTextLineHeightSp(
@@ -606,10 +686,20 @@ private fun HtmlBlockRenderer(
     when (block) {
         is HtmlBlock.Text -> {
             var showLongPressMenu by remember { mutableStateOf<LinkMenuState?>(null) }
+            var revealedSpoilerKeys by remember(block.anchorId, block.annotatedString.text) {
+                mutableStateOf(emptySet<String>())
+            }
             val layoutResult = remember { mutableStateOf<TextLayoutResult?>(null) }
             val baseAdjustedAnnotatedString = adjustAnnotatedString(block.annotatedString)
-            val adjustedAnnotatedString = remember(baseAdjustedAnnotatedString, colors.htmlTextDark) {
+            val linkedAnnotatedString = remember(baseAdjustedAnnotatedString, colors.htmlTextDark) {
                 applyThemedLinkStyle(baseAdjustedAnnotatedString, colors.htmlTextDark)
+            }
+            val adjustedAnnotatedString = remember(linkedAnnotatedString, revealedSpoilerKeys, colors.htmlTextDark) {
+                applySpoilerAnnotations(
+                    text = linkedAnnotatedString,
+                    revealedKeys = revealedSpoilerKeys,
+                    defaultTextColor = colors.htmlTextDark,
+                )
             }
             val lineHeightSp = remember(adjustedAnnotatedString, fontSize, lineSpacing) {
                 htmlTextLineHeightSp(
@@ -626,12 +716,16 @@ private fun HtmlBlockRenderer(
             val hasLinks = remember(adjustedAnnotatedString) {
                 adjustedAnnotatedString.getStringAnnotations("URL", 0, adjustedAnnotatedString.length).isNotEmpty()
             }
+            val hasSpoilers = remember(adjustedAnnotatedString) {
+                adjustedAnnotatedString.getStringAnnotations(SPOILER_ANNOTATION_TAG, 0, adjustedAnnotatedString.length)
+                    .isNotEmpty()
+            }
             val textModifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 0.dp)
                 .then(
-                    if (hasLinks) {
-                        Modifier.pointerInput(adjustedAnnotatedString, linkContext) {
+                    if (hasLinks || hasSpoilers) {
+                        Modifier.pointerInput(adjustedAnnotatedString, linkContext, hasLinks, hasSpoilers) {
                             awaitPointerEventScope {
                                 while (true) {
                                     // 1. Initial Pass: Intercept 'down' on links to disable global selection
@@ -642,8 +736,18 @@ private fun HtmlBlockRenderer(
                                         val layout = layoutResult.value
                                         if (layout != null) {
                                             val offset = layout.getOffsetForPosition(down.position)
-                                            val hasLink = adjustedAnnotatedString.getStringAnnotations("URL", offset, offset)
-                                                .isNotEmpty()
+                                            if (hasSpoilers) {
+                                                val spoiler = adjustedAnnotatedString
+                                                    .getStringAnnotations(SPOILER_ANNOTATION_TAG, offset, offset)
+                                                    .firstOrNull()
+                                                if (spoiler != null && spoiler.item !in revealedSpoilerKeys) {
+                                                    revealedSpoilerKeys = revealedSpoilerKeys + spoiler.item
+                                                }
+                                            }
+
+                                            val hasLink = hasLinks &&
+                                                adjustedAnnotatedString.getStringAnnotations("URL", offset, offset)
+                                                    .isNotEmpty()
                                             if (hasLink) {
                                                 // Consume down in Initial pass -> Parents/Selection internal won't see it (prevents selection)
                                                 down.consume()
