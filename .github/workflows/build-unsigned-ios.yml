@@ -2,6 +2,12 @@ name: Build Unsigned iOS IPA
 
 on:
   workflow_dispatch:
+    inputs:
+      run_tmate:
+        description: 'Run tmate session for debugging (always)'
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   build-ios:
@@ -50,3 +56,7 @@ jobs:
           name: yamibo-app-unsigned-ipa
           path: yamibo-app-unsigned.ipa
           if-no-files-found: error
+
+      - name: Setup tmate session on failure or request
+        if: ${{ failure() || inputs.run_tmate == true }}
+        uses: mxschmitt/action-tmate@v3
