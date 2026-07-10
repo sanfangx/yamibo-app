@@ -31,18 +31,111 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x gradlew
 
-      - name: Build Xcode Archive (Unsigned)
+      - name: Build Kotlin framework for iOS
         run: |
-          xcodebuild -project iosApp/iosApp.xcodeproj \
+          ./gradlew :composeApp:linkReleaseFrameworkIosArm64 --console=plain
+
+      - name: Create shared xcscheme for CI
+        run: |
+          mkdir -p iosApp/iosApp.xcodeproj/xcshareddata/xcschemes
+          cat > iosApp/iosApp.xcodeproj/xcshareddata/xcschemes/iosApp.xcscheme << 'XCS'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <Scheme
+             LastUpgradeVersion = "1620"
+             version = "1.3">
+             <BuildAction
+                parallelizeBuildables = "YES"
+                buildImplicitDependencies = "YES">
+                <BuildActionEntries>
+                   <BuildActionEntry
+                      buildForTesting = "YES"
+                      buildForRunning = "YES"
+                      buildForProfiling = "YES"
+                      buildForArchiving = "YES"
+                      buildForAnalyzing = "YES">
+                      <BuildableReference
+                         BuildableIdentifier = "primary"
+                         BlueprintIdentifier = "FF31D3AF523983E277DF61E8"
+                         BuildableName = "yamibo_app.app"
+                         BlueprintName = "iosApp"
+                         ReferencedContainer = "container:iosApp.xcodeproj">
+                      </BuildableReference>
+                   </BuildActionEntry>
+                </BuildActionEntries>
+             </BuildAction>
+             <TestAction
+                buildConfiguration = "Debug"
+                selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
+                selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
+                shouldUseLaunchSchemeArgsEnv = "YES">
+                <Testables>
+                </Testables>
+             </TestAction>
+             <LaunchAction
+                buildConfiguration = "Debug"
+                selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
+                selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
+                launchStyle = "0"
+                useCustomWorkingDirectory = "NO"
+                ignoresPersistentStateOnLaunch = "NO"
+                debugDocumentVersioning = "YES"
+                debugServiceExtension = "internal"
+                allowLocationSimulation = "YES">
+                <BuildableProductRunnable
+                   runnableDebuggingMode = "0">
+                   <BuildableReference
+                      BuildableIdentifier = "primary"
+                      BlueprintIdentifier = "FF31D3AF523983E277DF61E8"
+                      BuildableName = "yamibo_app.app"
+                      BlueprintName = "iosApp"
+                      ReferencedContainer = "container:iosApp.xcodeproj">
+                   </BuildableReference>
+                </BuildableProductRunnable>
+             </LaunchAction>
+             <ProfileAction
+                buildConfiguration = "Release"
+                shouldUseLaunchSchemeArgsEnv = "YES"
+                savedToolIdentifier = ""
+                useCustomWorkingDirectory = "NO"
+                debugDocumentVersioning = "YES">
+                <BuildableProductRunnable
+                   runnableDebuggingMode = "0">
+                   <BuildableReference
+                      BuildableIdentifier = "primary"
+                      BlueprintIdentifier = "FF31D3AF523983E277DF61E8"
+                      BuildableName = "yamibo_app.app"
+                      BlueprintName = "iosApp"
+                      ReferencedContainer = "container:iosApp.xcodeproj">
+                   </BuildableReference>
+                </BuildableProductRunnable>
+             </ProfileAction>
+             <AnalyzeAction
+                buildConfiguration = "Debug">
+             </AnalyzeAction>
+             <ArchiveAction
+                buildConfiguration = "Release"
+                revealArchiveInOrganizer = "YES">
+             </ArchiveAction>
+          </Scheme>
+          XCS
+
+      - name: Build Xcode Archive (Unsigned)
+        env:
+          OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED: "YES"
+        run: |
+          xcodebuild archive \
+            -project iosApp/iosApp.xcodeproj \
             -scheme iosApp \
-            -sdk iphoneos \
             -configuration Release \
+            -destination "generic/platform=iOS" \
             -archivePath build/iosApp.xcarchive \
-            archive \
+            ONLY_ACTIVE_ARCH=NO \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
-            PROVISIONING_PROFILE_SPECIFIER=""
+            PROVISIONING_PROFILE_SPECIFIER="" \
+            FRAMEWORK_SEARCH_PATHS="\$(SRCROOT)/../composeApp/build/bin/iosArm64/releaseFramework" \
+            IPHONEOS_DEPLOYMENT_TARGET="16.0"
 
       - name: Package Unsigned IPA
         run: |
