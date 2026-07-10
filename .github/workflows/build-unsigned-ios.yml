@@ -1,0 +1,52 @@
+name: Build Unsigned iOS IPA
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-ios:
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout source repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      - name: Build Xcode Archive (Unsigned)
+        run: |
+          xcodebuild -project iosApp/iosApp.xcodeproj \
+            -scheme iosApp \
+            -sdk iphoneos \
+            -configuration Release \
+            -archivePath build/iosApp.xcarchive \
+            archive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            PROVISIONING_PROFILE_SPECIFIER=""
+
+      - name: Package Unsigned IPA
+        run: |
+          mkdir -p Payload
+          cp -r build/iosApp.xcarchive/Products/Applications/yamibo_app.app Payload/
+          zip -r yamibo-app-unsigned.ipa Payload
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: yamibo-app-unsigned-ipa
+          path: yamibo-app-unsigned.ipa
+          if-no-files-found: error
