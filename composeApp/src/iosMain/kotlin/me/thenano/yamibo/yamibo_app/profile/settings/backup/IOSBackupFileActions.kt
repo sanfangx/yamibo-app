@@ -51,7 +51,7 @@ actual fun rememberBackupFileActions(
             selectFolder = {
                 try {
                     val picker = UIDocumentPickerViewController(
-                        forOpeningContentTypes = listOf(UTType.folder),
+                        forOpeningContentTypes = listOf(UTType.folderType),
                         asCopy = false
                     )
                     picker.delegate = folderDelegate
@@ -67,7 +67,7 @@ actual fun rememberBackupFileActions(
             pickBackupFile = {
                 try {
                     val picker = UIDocumentPickerViewController(
-                        forOpeningContentTypes = listOf(UTType.item),
+                        forOpeningContentTypes = listOf(UTType.itemType),
                         asCopy = true
                     )
                     picker.delegate = fileDelegate

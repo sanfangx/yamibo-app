@@ -9,11 +9,11 @@ import platform.UIKit.UIDocumentPickerDelegateProtocol
 import platform.Foundation.NSTemporaryDirectory
 import platform.Foundation.NSURL
 import platform.Foundation.NSString
-import platform.Foundation.NSUTF8StringEncoding
+import platform.Foundation.NSData
+import platform.Foundation.dataWithContentsOfURL
+import platform.Foundation.dataUsingEncoding
 import platform.Foundation.writeToURL
-import platform.Foundation.create
-import platform.Foundation.stringWithContentsOfURL
-import platform.Foundation.NSError
+import platform.Foundation.NSUTF8StringEncoding
 import platform.UniformTypeIdentifiers.UTType
 import platform.darwin.NSObject
 import platform.UIKit.UIViewController
@@ -40,9 +40,10 @@ class FavoriteDocumentPickerDelegate(
         
         val shouldRelease = url.startAccessingSecurityScopedResource()
         try {
-            val content = NSString.stringWithContentsOfURL(url, NSUTF8StringEncoding, null)
-            if (content != null) {
-                onImportPicked(content)
+            val data = NSData.dataWithContentsOfURL(url)
+            if (data != null) {
+                val nsString = NSString(data = data, encoding = NSUTF8StringEncoding)
+                onImportPicked(nsString.toString())
             } else {
                 onImportFailed("無法讀取檔案內容")
             }
@@ -75,9 +76,12 @@ actual fun rememberFavoriteShareFileActions(
                 val tempDir = NSTemporaryDirectory()
                 val filePath = tempDir + fileName
                 val fileUrl = NSURL.fileURLWithPath(filePath)
-                val nsString = NSString.create(string = jsonText)
-                val success = nsString.writeToURL(fileUrl, true, NSUTF8StringEncoding, null)
-                if (success) {
+                
+                @Suppress("CAST_NEVER_SUCCEEDS")
+                val nsString = jsonText as NSString
+                val data = nsString.dataUsingEncoding(NSUTF8StringEncoding)
+                
+                if (data != null && data.writeToURL(fileUrl, true)) {
                     val activityViewController = UIActivityViewController(
                         activityItems = listOf(fileUrl),
                         applicationActivities = null
@@ -111,7 +115,7 @@ actual fun rememberFavoriteShareFileActions(
             pickJson = {
                 try {
                     val picker = UIDocumentPickerViewController(
-                        forOpeningContentTypes = listOf(UTType.json),
+                        forOpeningContentTypes = listOf(UTType.jsonType),
                         asCopy = true
                     )
                     picker.delegate = delegate
