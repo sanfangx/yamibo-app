@@ -3,6 +3,11 @@ name: Build Unsigned iOS IPA
 on:
   workflow_dispatch:
     inputs:
+      publish_release:
+        description: 'Publish IPA directly to GitHub Releases (tag: ios-unsigned-latest)'
+        required: false
+        type: boolean
+        default: false
       run_tmate:
         description: 'Run tmate session for debugging (always)'
         required: false
@@ -12,6 +17,8 @@ on:
 jobs:
   build-ios:
     runs-on: macos-14
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout source repository
@@ -149,6 +156,18 @@ jobs:
           name: yamibo-app-unsigned-ipa
           path: yamibo-app-unsigned.ipa
           if-no-files-found: error
+
+      - name: Publish to GitHub Release
+        if: ${{ inputs.publish_release == true }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG_NAME="ios-unsigned-latest"
+          gh release create "$TAG_NAME" yamibo-app-unsigned.ipa \
+            --title "iOS Unsigned IPA (Latest)" \
+            --notes "Automated build of unsigned iOS IPA for sideloading (iOS 16.0+). Compatible with TrollStore / Sideloadly / AltStore." \
+            --prerelease || \
+          gh release upload "$TAG_NAME" yamibo-app-unsigned.ipa --clobber
 
       - name: Setup tmate session on failure or request
         if: ${{ failure() || inputs.run_tmate == true }}
