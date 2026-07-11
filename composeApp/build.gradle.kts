@@ -79,6 +79,7 @@ kotlin {
             implementation(libs.coil3.gif)
             implementation(libs.coil3.network.ktor3)
             implementation(libs.kotlinx.serialization.json)
+            implementation(libs.kotlinx.datetime)
             implementation(libs.yamibo.api)
             implementation(libs.ksoup)
             implementation(projects.shared)

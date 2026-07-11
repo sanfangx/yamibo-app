@@ -25,7 +25,8 @@ kotlin {
             implementation(libs.ksoup)
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.serialization.json)
-            implementation(libs.yamibo.api)
+            api(libs.kotlinx.datetime)
+            api(libs.yamibo.api)
             implementation(libs.sqldelight.coroutines)
             implementation(libs.okio)
         }
