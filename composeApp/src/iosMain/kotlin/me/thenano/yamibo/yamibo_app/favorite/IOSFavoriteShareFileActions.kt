@@ -14,7 +14,6 @@ import platform.Foundation.dataWithContentsOfURL
 import platform.Foundation.dataUsingEncoding
 import platform.Foundation.writeToURL
 import platform.Foundation.NSUTF8StringEncoding
-import platform.UniformTypeIdentifiers.UTType
 import platform.darwin.NSObject
 import platform.UIKit.UIViewController
 
@@ -114,9 +113,10 @@ actual fun rememberFavoriteShareFileActions(
             shareJson = { fileName, jsonText -> exportOrShare(fileName, jsonText, true) },
             pickJson = {
                 try {
+                    @Suppress("DEPRECATION")
                     val picker = UIDocumentPickerViewController(
-                        forOpeningContentTypes = listOf(UTType.jsonType),
-                        asCopy = true
+                        documentTypes = listOf("public.json"),
+                        inMode = 0L // UIDocumentPickerModeImport
                     )
                     picker.delegate = delegate
                     val rootViewController = UIApplication.sharedApplication.keyWindow?.rootViewController

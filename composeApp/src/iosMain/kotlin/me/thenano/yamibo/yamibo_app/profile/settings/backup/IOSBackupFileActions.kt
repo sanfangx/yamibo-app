@@ -7,7 +7,6 @@ import platform.UIKit.UIDocumentPickerDelegateProtocol
 import platform.UIKit.UIApplication
 import platform.Foundation.NSURL
 import platform.darwin.NSObject
-import platform.UniformTypeIdentifiers.UTType
 import platform.UIKit.UIViewController
 
 private fun UIViewController.topMostViewController(): UIViewController {
@@ -50,9 +49,10 @@ actual fun rememberBackupFileActions(
         BackupFileActions(
             selectFolder = {
                 try {
+                    @Suppress("DEPRECATION")
                     val picker = UIDocumentPickerViewController(
-                        forOpeningContentTypes = listOf(UTType.folderType),
-                        asCopy = false
+                        documentTypes = listOf("public.folder"),
+                        inMode = 1L // UIDocumentPickerModeOpen
                     )
                     picker.delegate = folderDelegate
                     val rootViewController = UIApplication.sharedApplication.keyWindow?.rootViewController
@@ -66,9 +66,10 @@ actual fun rememberBackupFileActions(
             },
             pickBackupFile = {
                 try {
+                    @Suppress("DEPRECATION")
                     val picker = UIDocumentPickerViewController(
-                        forOpeningContentTypes = listOf(UTType.itemType),
-                        asCopy = true
+                        documentTypes = listOf("public.item"),
+                        inMode = 0L // UIDocumentPickerModeImport
                     )
                     picker.delegate = fileDelegate
                     val rootViewController = UIApplication.sharedApplication.keyWindow?.rootViewController
