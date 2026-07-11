@@ -6,6 +6,8 @@ import platform.UIKit.UIActivityViewController
 import platform.UIKit.UIApplication
 import platform.UIKit.UIDocumentPickerViewController
 import platform.UIKit.UIDocumentPickerDelegateProtocol
+import platform.UIKit.UIDocumentPickerMode
+import platform.UIKit.popoverPresentationController
 import platform.Foundation.NSTemporaryDirectory
 import platform.Foundation.NSURL
 import platform.Foundation.NSString
@@ -13,9 +15,11 @@ import platform.Foundation.NSData
 import platform.Foundation.dataWithContentsOfURL
 import platform.Foundation.dataUsingEncoding
 import platform.Foundation.writeToURL
+import platform.Foundation.create
 import platform.Foundation.NSUTF8StringEncoding
 import platform.darwin.NSObject
 import platform.UIKit.UIViewController
+import kotlinx.cinterop.ExperimentalForeignApi
 
 private fun UIViewController.topMostViewController(): UIViewController {
     var current = this
@@ -41,8 +45,12 @@ class FavoriteDocumentPickerDelegate(
         try {
             val data = NSData.dataWithContentsOfURL(url)
             if (data != null) {
-                val nsString = NSString(data = data, encoding = NSUTF8StringEncoding)
-                onImportPicked(nsString.toString())
+                val nsString = NSString.create(data = data, encoding = NSUTF8StringEncoding)
+                if (nsString != null) {
+                    onImportPicked(nsString.toString())
+                } else {
+                    onImportFailed("無法解碼檔案內容")
+                }
             } else {
                 onImportFailed("無法讀取檔案內容")
             }
@@ -60,6 +68,7 @@ class FavoriteDocumentPickerDelegate(
     }
 }
 
+@OptIn(ExperimentalForeignApi::class)
 @Composable
 actual fun rememberFavoriteShareFileActions(
     onExported: (String) -> Unit,
@@ -88,13 +97,6 @@ actual fun rememberFavoriteShareFileActions(
                     val rootViewController = UIApplication.sharedApplication.keyWindow?.rootViewController
                     if (rootViewController != null) {
                         val topViewController = rootViewController.topMostViewController()
-                        
-                        activityViewController.popoverPresentationController?.apply {
-                            sourceView = topViewController.view
-                            sourceRect = topViewController.view.bounds
-                            permittedArrowDirections = 0u
-                        }
-                        
                         topViewController.presentViewController(activityViewController, animated = true, completion = null)
                         onExported(if (isShare) "分享成功" else "導出成功")
                     } else {
@@ -116,7 +118,7 @@ actual fun rememberFavoriteShareFileActions(
                     @Suppress("DEPRECATION")
                     val picker = UIDocumentPickerViewController(
                         documentTypes = listOf("public.json"),
-                        inMode = 0L // UIDocumentPickerModeImport
+                        inMode = UIDocumentPickerMode.UIDocumentPickerModeImport
                     )
                     picker.delegate = delegate
                     val rootViewController = UIApplication.sharedApplication.keyWindow?.rootViewController

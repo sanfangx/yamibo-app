@@ -4,10 +4,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import platform.UIKit.UIDocumentPickerViewController
 import platform.UIKit.UIDocumentPickerDelegateProtocol
+import platform.UIKit.UIDocumentPickerMode
 import platform.UIKit.UIApplication
 import platform.Foundation.NSURL
 import platform.darwin.NSObject
 import platform.UIKit.UIViewController
+import kotlinx.cinterop.ExperimentalForeignApi
 
 private fun UIViewController.topMostViewController(): UIViewController {
     var current = this
@@ -37,6 +39,7 @@ class BackupDocumentPickerDelegate(
     }
 }
 
+@OptIn(ExperimentalForeignApi::class)
 @Composable
 actual fun rememberBackupFileActions(
     onFolderSelected: (String) -> Unit,
@@ -52,7 +55,7 @@ actual fun rememberBackupFileActions(
                     @Suppress("DEPRECATION")
                     val picker = UIDocumentPickerViewController(
                         documentTypes = listOf("public.folder"),
-                        inMode = 1L // UIDocumentPickerModeOpen
+                        inMode = UIDocumentPickerMode.UIDocumentPickerModeOpen
                     )
                     picker.delegate = folderDelegate
                     val rootViewController = UIApplication.sharedApplication.keyWindow?.rootViewController
@@ -69,7 +72,7 @@ actual fun rememberBackupFileActions(
                     @Suppress("DEPRECATION")
                     val picker = UIDocumentPickerViewController(
                         documentTypes = listOf("public.item"),
-                        inMode = 0L // UIDocumentPickerModeImport
+                        inMode = UIDocumentPickerMode.UIDocumentPickerModeImport
                     )
                     picker.delegate = fileDelegate
                     val rootViewController = UIApplication.sharedApplication.keyWindow?.rootViewController
