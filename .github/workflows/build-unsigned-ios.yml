@@ -126,16 +126,16 @@ jobs:
           </Scheme>
           XCS
 
-      - name: Build Xcode Archive (Unsigned)
+      - name: Build Unsigned iOS App Bundle
         env:
           OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED: "YES"
         run: |
-          xcodebuild archive \
+          xcodebuild build \
             -project iosApp/iosApp.xcodeproj \
             -scheme iosApp \
             -configuration Release \
-            -destination "generic/platform=iOS" \
-            -archivePath build/iosApp.xcarchive \
+            -sdk iphoneos \
+            -derivedDataPath build/DerivedData \
             ONLY_ACTIVE_ARCH=NO \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
@@ -147,8 +147,9 @@ jobs:
       - name: Package Unsigned IPA
         run: |
           mkdir -p Payload
-          cp -r build/iosApp.xcarchive/Products/Applications/yamibo_app.app Payload/
-          zip -r yamibo-app-unsigned.ipa Payload
+          APP_PATH=$(find build/DerivedData -name "yamibo_app.app" | grep "Release-iphoneos" | head -n 1)
+          cp -R "$APP_PATH" Payload/
+          zip -qr yamibo-app-unsigned.ipa Payload
 
       - name: Upload IPA Artifact
         uses: actions/upload-artifact@v4
