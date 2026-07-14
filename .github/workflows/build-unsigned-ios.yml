@@ -16,7 +16,7 @@ on:
 
 jobs:
   build-ios:
-    runs-on: macos-14
+    runs-on: macos-15
     permissions:
       contents: write
 
@@ -38,9 +38,14 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x gradlew
 
+      - name: Select Xcode 16
+        run: |
+          sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer || sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer || sudo xcode-select -s /Applications/Xcode_16.0.app/Contents/Developer || sudo xcode-select -s /Applications/Xcode_16.app/Contents/Developer || true
+          xcodebuild -version
+
       - name: Build Kotlin framework for iOS
         run: |
-          ./gradlew :composeApp:linkReleaseFrameworkIosArm64 --console=plain
+          ./gradlew :composeApp:linkReleaseFrameworkIosArm64 --console=plain --no-daemon -Pkotlin.native.jvmArgs='-Xmx6144M'
 
       - name: Create shared xcscheme for CI
         run: |
@@ -141,7 +146,7 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
             PROVISIONING_PROFILE_SPECIFIER="" \
-            FRAMEWORK_SEARCH_PATHS="\$(SRCROOT)/../composeApp/build/bin/iosArm64/releaseFramework" \
+            FRAMEWORK_SEARCH_PATHS="\$(pwd)/composeApp/build/bin/iosArm64/releaseFramework" \
             IPHONEOS_DEPLOYMENT_TARGET="16.0"
 
       - name: Package Unsigned IPA
