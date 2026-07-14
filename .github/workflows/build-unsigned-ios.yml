@@ -45,7 +45,15 @@ jobs:
 
       - name: Build Kotlin framework for iOS
         run: |
-          ./gradlew :composeApp:linkReleaseFrameworkIosArm64 --console=plain --no-daemon -Pkotlin.native.jvmArgs='-Xmx6144M'
+          set -o pipefail
+          ./gradlew :composeApp:linkReleaseFrameworkIosArm64 --console=plain --no-daemon -Pkotlin.native.jvmArgs='-Xmx6144M' 2>&1 | tee gradle.log || {
+            echo ""
+            echo "=========================================================="
+            echo "         GRADLE BUILD FAILED! EXACT ERRORS BELOW:"
+            echo "=========================================================="
+            grep -E -C 3 "FAILURE:|error:|Exception|e: |IrLinkageError" gradle.log || tail -n 50 gradle.log
+            exit 1
+          }
 
       - name: Create shared xcscheme for CI
         run: |
@@ -135,6 +143,7 @@ jobs:
         env:
           OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED: "YES"
         run: |
+          set -o pipefail
           xcodebuild build \
             -project iosApp/iosApp.xcodeproj \
             -scheme iosApp \
@@ -147,7 +156,14 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             PROVISIONING_PROFILE_SPECIFIER="" \
             FRAMEWORK_SEARCH_PATHS="\$(pwd)/composeApp/build/bin/iosArm64/releaseFramework" \
-            IPHONEOS_DEPLOYMENT_TARGET="16.0"
+            IPHONEOS_DEPLOYMENT_TARGET="16.0" 2>&1 | tee xcodebuild.log || {
+              echo ""
+              echo "=========================================================="
+              echo "        XCODEBUILD FAILED! EXACT ERRORS BELOW:"
+              echo "=========================================================="
+              grep -E -C 3 "error:|fatal error:|Reason:|FAILED|Error:" xcodebuild.log || tail -n 50 xcodebuild.log
+              exit 1
+            }
 
       - name: Package Unsigned IPA
         run: |
