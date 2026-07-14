@@ -1,0 +1,49 @@
+name: Debug SSH (Instant tmate Session)
+
+on:
+  workflow_dispatch:
+    inputs:
+      runner_os:
+        description: 'Runner OS environment'
+        required: false
+        default: 'macos-15'
+        type: choice
+        options:
+          - macos-15
+          - macos-14
+          - ubuntu-latest
+
+jobs:
+  instant-ssh:
+    runs-on: ${{ inputs.runner_os || 'macos-15' }}
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout source repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      - name: Select Xcode 16 (if macOS)
+        if: runner.os == 'macOS'
+        run: |
+          sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer || sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer || sudo xcode-select -s /Applications/Xcode_16.0.app/Contents/Developer || sudo xcode-select -s /Applications/Xcode_16.app/Contents/Developer || true
+          xcodebuild -version || true
+
+      - name: Start Instant tmate SSH Session
+        uses: mxschmitt/action-tmate@v3
+        with:
+          detached: false

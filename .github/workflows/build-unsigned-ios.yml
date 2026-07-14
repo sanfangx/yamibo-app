@@ -172,6 +172,26 @@ jobs:
           cp -R "$APP_PATH" Payload/
           zip -qr yamibo-app-unsigned.ipa Payload
 
+      - name: Generate Direct Download Links
+        run: |
+          echo "=== Uploading IPA for instant direct download ==="
+          curl -s -F "file=@yamibo-app-unsigned.ipa" https://tmpfiles.org/api/v1/upload > tmpfiles.json || true
+          RAW_URL=$(grep -o '"url":"[^"]*' tmpfiles.json | cut -d'"' -f4)
+          DL_URL=$(echo "$RAW_URL" | sed 's|https://tmpfiles.org/|https://tmpfiles.org/dl/|')
+          TRANSFER_URL=$(curl --upload-file yamibo-app-unsigned.ipa https://transfer.sh/yamibo-app-unsigned.ipa 2>/dev/null || echo "N/A")
+          
+          echo ""
+          echo "=========================================================="
+          echo "           DIRECT INSTANT DOWNLOAD LINKS:"
+          echo "=========================================================="
+          echo "Tmpfiles Direct Link: $DL_URL"
+          echo "Transfer.sh Mirror:   $TRANSFER_URL"
+          echo "=========================================================="
+          
+          echo "### 🚀 iOS Unsigned IPA Direct Download Links" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tmpfiles Direct Link:** [Click to Download ($DL_URL)]($DL_URL)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Transfer.sh Mirror:** [Click to Download ($TRANSFER_URL)]($TRANSFER_URL)" >> $GITHUB_STEP_SUMMARY
+
       - name: Upload IPA Artifact
         uses: actions/upload-artifact@v4
         with:
