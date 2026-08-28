@@ -25,6 +25,9 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x gradlew
 
+      - name: Pre-build Kotlin Framework (Visible Logs)
+        run: ./gradlew :composeApp:linkReleaseFrameworkIosArm64 --console=plain --info --no-daemon
+
       - name: Build iOS App
         run: |
           cd iosApp
