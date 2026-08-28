@@ -30,6 +30,12 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      - name: Configure CI Memory Limits
+        run: |
+          echo "org.gradle.jvmargs=-Xmx6g -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8" >> gradle.properties
+          echo "kotlin.daemon.jvmargs=-Xmx6g" >> gradle.properties
+          echo "kotlin.native.compiler.jvmArgs=-Xmx6g" >> gradle.properties
+
       - name: Make gradlew executable
         run: chmod +x gradlew
 
