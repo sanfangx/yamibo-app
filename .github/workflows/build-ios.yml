@@ -1,0 +1,53 @@
+name: Build Unsigned iOS IPA
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout source repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      - name: Build iOS App
+        run: |
+          cd iosApp
+          xcodebuild build \
+            -project iosApp.xcodeproj \
+            -target iosApp \
+            -configuration Release \
+            -sdk iphoneos \
+            SYMROOT=$PWD/build \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Package Unsigned IPA
+        run: |
+          cd iosApp
+          mkdir -p Payload
+          cp -r build/Release-iphoneos/yamibo_app.app Payload/
+          zip -r yamibo-app-unsigned.ipa Payload
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: yamibo-app-unsigned
+          path: iosApp/yamibo-app-unsigned.ipa
+          retention-days: 7
