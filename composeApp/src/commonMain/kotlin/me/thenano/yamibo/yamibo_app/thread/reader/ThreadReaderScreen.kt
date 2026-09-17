@@ -87,6 +87,7 @@ import me.thenano.yamibo.yamibo_app.thread.reader.components.post.PostRenderer
 import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.HtmlBlock
 import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.HtmlDefaultFontFamily
 import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.HtmlParser
+import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.htmlTextLineHeightSp
 import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.normalizeHtmlBlocks
 import me.thenano.yamibo.yamibo_app.thread.reader.components.tag.ITagListScreen
 import me.thenano.yamibo.yamibo_app.thread.reader.components.thread.*
@@ -1383,8 +1384,8 @@ internal fun ThreadReaderScreen(
         val fontSizeScale = (16f / readerFontSize.toFloat().coerceAtLeast(1f)).coerceIn(0.6f, 1.25f)
         val estimatedCharsPerLine = (26 * readerContentWidthFraction * fontSizeScale).toInt().coerceAtLeast(10)
         val pageVerticalPaddingPx = with(density) { 48.dp.roundToPx() }
-        val measuredTextWidthPx = (readerViewportWidthPx * readerContentWidthFraction)
-            .toInt()
+        val pageHorizontalPaddingPx = with(density) { 32.dp.roundToPx() }
+        val measuredTextWidthPx = ((readerViewportWidthPx * readerContentWidthFraction).toInt() - pageHorizontalPaddingPx)
             .coerceAtLeast(1)
         val measuredTextStyle = TextStyle(
             fontFamily = readerFontFamily,
@@ -1468,6 +1469,13 @@ internal fun ThreadReaderScreen(
                     .map { (key, height) -> key to height }
                     .sortedBy { it.first }
                     .toList()
+                val firstPageHeaderHeightPx = with(density) {
+                    if (entry.post.floor == 1) {
+                        112.dp.roundToPx()
+                    } else {
+                        48.dp.roundToPx()
+                    }
+                }
                 val plannedPages = singlePagePlanningCache.postPlan(
                     key = SinglePagePostPlanKey(
                         postId = postId,
@@ -1498,6 +1506,7 @@ internal fun ThreadReaderScreen(
                                 estimatedCharsPerLine = estimatedCharsPerLine,
                                 estimatedLineHeightPx = estimatedLineHeightPx,
                                 verticalPaddingPx = pageVerticalPaddingPx,
+                                firstPageHeaderHeightPx = firstPageHeaderHeightPx,
                                 contentWidthPx = measuredTextWidthPx,
                                 imageHeightFor = { null },
                                 imageHeightToWidthRatioFor = { block ->
@@ -1505,9 +1514,18 @@ internal fun ThreadReaderScreen(
                                 },
                                 textHeightFor = { block, start, end ->
                                     val text = block.annotatedString.subSequence(start, end)
+                                    val blockLineHeightSp = htmlTextLineHeightSp(
+                                        baseFontSizeSp = readerFontSize.toFloat(),
+                                        lineSpacing = readerLineSpacing,
+                                        text = text,
+                                        hasRuby = block.rubies.any { it.start >= start && it.end <= end },
+                                    )
                                     val measuredHeight = textMeasurer.measure(
                                         text = text,
-                                        style = measuredTextStyle.copy(textAlign = block.textAlign),
+                                        style = measuredTextStyle.copy(
+                                            textAlign = block.textAlign,
+                                            lineHeight = blockLineHeightSp.sp,
+                                        ),
                                         constraints = Constraints(maxWidth = measuredTextWidthPx),
                                     ).size.height
                                     measuredHeight

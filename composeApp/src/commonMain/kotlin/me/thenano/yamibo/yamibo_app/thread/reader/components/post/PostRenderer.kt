@@ -1,4 +1,4 @@
-﻿package me.thenano.yamibo.yamibo_app.thread.reader.components.post
+package me.thenano.yamibo.yamibo_app.thread.reader.components.post
 
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 
@@ -28,6 +28,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.Dp
@@ -44,6 +45,8 @@ import io.github.littlesurvival.dto.page.VotersPopoutScreen
 import io.github.littlesurvival.dto.value.PollOptionId
 import me.thenano.yamibo.yamibo_app.components.text.rememberConvertedText
 import me.thenano.yamibo.yamibo_app.LocalNovelReaderSettingsRepository
+import me.thenano.yamibo.yamibo_app.LocalFontRepository
+import me.thenano.yamibo.yamibo_app.components.font.getFontFamily
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.inapplinknavigation.InAppLinkContext
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
@@ -105,6 +108,7 @@ fun PostRenderer(
     footerSections: Set<PostFooterSection> = PostFooterSection.All,
     footerRenderOptions: PostFooterRenderOptions = PostFooterRenderOptions(),
     verticalPadding: Dp = 8.dp,
+    fontFamily: FontFamily = HtmlDefaultFontFamily,
     totalViews: Int? = null,
     totalReplies: Int? = null,
     linkContext: InAppLinkContext = InAppLinkContext(),
@@ -132,6 +136,15 @@ fun PostRenderer(
         )
     }
     val novelSettingsRepo = LocalNovelReaderSettingsRepository.current
+    val fontRepository = LocalFontRepository.current
+    val readerFontId = novelSettingsRepo.readerFontId.state()
+    val effectiveFontFamily = remember(fontFamily, readerFontId) {
+        if (fontFamily != HtmlDefaultFontFamily) {
+            fontFamily
+        } else {
+            fontRepository.getFontFamily(readerFontId) ?: HtmlDefaultFontFamily
+        }
+    }
     val contentWidthFraction = novelSettingsRepo.contentWidthFraction.state()
     val density = LocalDensity.current
     val cachedMinHeight = remember(cachedHeightPx, density) {
@@ -177,6 +190,7 @@ fun PostRenderer(
                     maxImageHeight = maxImageHeight,
                     onImageHeightChanged = onImageHeightChanged,
                     onImageAspectRatioChanged = onImageAspectRatioChanged,
+                    fontFamily = effectiveFontFamily,
                 )
             }
         }
@@ -312,6 +326,7 @@ fun PostRenderer(
                     maxImageHeight = maxImageHeight,
                     onImageHeightChanged = onImageHeightChanged,
                     onImageAspectRatioChanged = onImageAspectRatioChanged,
+                    fontFamily = effectiveFontFamily,
                 )
             } else {
                 HtmlRenderer(
@@ -328,6 +343,7 @@ fun PostRenderer(
                     maxImageHeight = maxImageHeight,
                     onImageHeightChanged = onImageHeightChanged,
                     onImageAspectRatioChanged = onImageAspectRatioChanged,
+                    fontFamily = effectiveFontFamily,
                 )
             }
 

@@ -277,6 +277,21 @@ object HtmlParser {
                                 appendLineBreak(maxConsecutive = 1)
                             }
                         }
+                        "h1", "h2", "h3", "h4", "h5", "h6" -> {
+                            commitText()
+                            val scale = when (tag) {
+                                "h1" -> 28f / HTML_BASE_FONT_SIZE_SP
+                                "h2" -> 24f / HTML_BASE_FONT_SIZE_SP
+                                "h3" -> 20f / HTML_BASE_FONT_SIZE_SP
+                                "h4" -> 18f / HTML_BASE_FONT_SIZE_SP
+                                else -> 16f / HTML_BASE_FONT_SIZE_SP
+                            }
+                            globalBuilder.withStyle(SpanStyle(fontSize = scale.em, fontWeight = FontWeight.Bold)) {
+                                node.childNodes().forEach { parseNode(it, parentAlign) }
+                            }
+                            appendLineBreak(maxConsecutive = 1)
+                            commitText()
+                        }
                         "p", "ol", "tbody", "tr", "td", "th" -> {
                             appendLineBreak(maxConsecutive = 1)
                             node.childNodes().forEach { parseNode(it, parentAlign) }
