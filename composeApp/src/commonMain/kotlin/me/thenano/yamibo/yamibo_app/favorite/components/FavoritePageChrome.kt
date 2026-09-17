@@ -1,4 +1,4 @@
-﻿package me.thenano.yamibo.yamibo_app.favorite.components
+package me.thenano.yamibo.yamibo_app.favorite.components
 
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.components.navigation.NavigationBackSymbol
@@ -22,6 +22,8 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -234,7 +236,16 @@ fun FavoriteSearchTopBar(
     onBack: () -> Unit,
 ) {
     val colors = YamiboTheme.colors
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
     var textFieldPlaced by remember { mutableStateOf(false) }
+
+    val handleSearch = {
+        focusManager.clearFocus()
+        keyboardController?.hide()
+        onSearch()
+    }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -257,7 +268,7 @@ fun FavoriteSearchTopBar(
             },
             singleLine = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            keyboardActions = KeyboardActions(onSearch = { onSearch() }),
+            keyboardActions = KeyboardActions(onSearch = { handleSearch() }),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedTextColor = colors.textDark,
                 unfocusedTextColor = colors.textDark,
@@ -271,7 +282,7 @@ fun FavoriteSearchTopBar(
             textStyle = TextStyle(fontSize = 15.sp),
         )
         Spacer(Modifier.width(6.dp))
-        Surface(onClick = onSearch, shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp), color = colors.brownDeep) {
+        Surface(onClick = handleSearch, shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp), color = colors.brownDeep) {
             Text(
                 text = i18n("搜尋"),
                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),

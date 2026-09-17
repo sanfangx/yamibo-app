@@ -6,6 +6,7 @@ import androidx.compose.ui.text.platform.SystemFont
 
 @OptIn(ExperimentalTextApi::class)
 internal actual val HtmlDefaultFontFamily: FontFamily = FontFamily(
-    SystemFont("Microsoft YaHei"),
+    SystemFont("PingFang SC"),
+    SystemFont("PingFang TC"),
     SystemFont(".AppleSystemUIFont"),
 )

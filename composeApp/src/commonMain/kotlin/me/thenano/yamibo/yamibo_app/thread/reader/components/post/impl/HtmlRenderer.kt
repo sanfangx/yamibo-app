@@ -34,6 +34,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextDecoration
@@ -518,6 +519,10 @@ private fun RubyTextBlock(
                 fontFamily = fontFamily,
                 fontSize = fontSizeSp.sp,
                 lineHeight = lineHeightSp.sp,
+                lineHeightStyle = LineHeightStyle(
+                    alignment = LineHeightStyle.Alignment.Proportional,
+                    trim = LineHeightStyle.Trim.Both,
+                ),
                 textAlign = textAlign,
             ),
             modifier = Modifier.fillMaxWidth(),
@@ -703,7 +708,7 @@ private fun HtmlBlockRenderer(
                 Spacer(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(with(density) { lineHeightSp.sp.toDp() })
+                        .height(with(density) { (lineHeightSp * 0.55f).sp.toDp() })
                 )
             } else if (block.rubies.isNotEmpty()) {
                 RubyTextBlock(
@@ -725,6 +730,10 @@ private fun HtmlBlockRenderer(
                         fontFamily = fontFamily,
                         fontSize = fontSize.sp,
                         lineHeight = lineHeightSp.sp,
+                        lineHeightStyle = LineHeightStyle(
+                            alignment = LineHeightStyle.Alignment.Proportional,
+                            trim = LineHeightStyle.Trim.Both,
+                        ),
                         textAlign = block.textAlign
                     ),
                     modifier = textModifier,

@@ -11,6 +11,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -24,6 +25,8 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -86,6 +89,8 @@ fun SearchScreen(fid: ForumId?) {
     val feedbackController = LocalAppFeedbackController.current
     val appSettingsRepository = LocalAppSettingsRepository.current
     val focusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
     var searchFieldPlaced by remember { mutableStateOf(false) }
 
     var query by remember { mutableStateOf("") }
@@ -104,6 +109,12 @@ fun SearchScreen(fid: ForumId?) {
     var favoriteDialogCollectionSelection by remember { mutableStateOf<Set<Long>>(emptySet()) }
     var favoritePostAddDownloadTarget by remember { mutableStateOf<FavoriteTargetPayload.RssSearch?>(null) }
     val favoriteAddDownloadPromptEnabled = appSettingsRepository.favoriteAddDownloadPromptEnabled.state()
+
+    fun executeSearch(page: Int = 1) {
+        keyboardController?.hide()
+        focusManager.clearFocus()
+        doSearch(page)
+    }
 
     fun navigateThread(thread: ThreadSummary) {
         val isNovelThread = fid?.let { YamiboForum.isNovelForum(it) }
@@ -263,7 +274,13 @@ fun SearchScreen(fid: ForumId?) {
             modifier = Modifier
                 .fillMaxSize()
                 .background(colors.creamBackground)
-                .systemBarsPadding(),
+                .systemBarsPadding()
+                .pointerInput(Unit) {
+                    detectTapGestures(onTap = {
+                        focusManager.clearFocus()
+                        keyboardController?.hide()
+                    })
+                },
         ) {
             Surface(color = colors.brownDeep, shadowElevation = 4.dp) {
                 Row(
@@ -290,7 +307,7 @@ fun SearchScreen(fid: ForumId?) {
                         },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                        keyboardActions = KeyboardActions(onSearch = { doSearch(1) }),
+                        keyboardActions = KeyboardActions(onSearch = { executeSearch(1) }),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedTextColor = Color.White,
                             unfocusedTextColor = Color.White,
@@ -305,7 +322,7 @@ fun SearchScreen(fid: ForumId?) {
                     )
                     Spacer(Modifier.width(6.dp))
                     Surface(
-                        onClick = { doSearch(1) },
+                        onClick = { executeSearch(1) },
                         shape = RoundedCornerShape(12.dp),
                         color = colors.orangeAccent,
                     ) {
@@ -465,7 +482,19 @@ private fun SearchResultContent(
 ) {
     val colors = YamiboTheme.colors
     val navigator = LocalNavigator.current
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val listState = rememberLazyListState()
+
+    LaunchedEffect(listState.isScrollInProgress) {
+        if (listState.isScrollInProgress) {
+            focusManager.clearFocus()
+            keyboardController?.hide()
+        }
+    }
+
     LazyColumn(
+        state = listState,
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(top = 8.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(0.dp),

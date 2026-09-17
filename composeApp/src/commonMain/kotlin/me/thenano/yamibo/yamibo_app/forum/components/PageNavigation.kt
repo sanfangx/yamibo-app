@@ -10,6 +10,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -114,6 +116,8 @@ private fun PagePickerDialog(
     onDismiss: () -> Unit
 ) {
     val colors = YamiboTheme.colors
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
     var pageInput by remember(currentPage, totalPages) { mutableStateOf(currentPage.toString()) }
     val nearbyPages = remember(currentPage, totalPages) {
         buildList {
@@ -127,6 +131,8 @@ private fun PagePickerDialog(
 
     fun submitInput() {
         val page = pageInput.toIntOrNull()?.coerceIn(1, totalPages) ?: return
+        focusManager.clearFocus()
+        keyboardController?.hide()
         onPageSelected(page)
     }
 

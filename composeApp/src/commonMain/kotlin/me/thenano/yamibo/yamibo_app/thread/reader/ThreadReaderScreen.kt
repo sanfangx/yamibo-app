@@ -27,6 +27,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -79,10 +80,12 @@ import me.thenano.yamibo.yamibo_app.thread.reader.components.ReaderCatalogPanel
 import me.thenano.yamibo.yamibo_app.thread.reader.components.ReaderOverlayMenu
 import me.thenano.yamibo.yamibo_app.thread.reader.components.novel.NovelReaderSettingsPanel
 import me.thenano.yamibo.yamibo_app.thread.reader.components.overlay.*
+import me.thenano.yamibo.yamibo_app.components.font.getFontFamily
 import me.thenano.yamibo.yamibo_app.thread.reader.components.post.PostFooterRenderOptions
 import me.thenano.yamibo.yamibo_app.thread.reader.components.post.PostFooterSection
 import me.thenano.yamibo.yamibo_app.thread.reader.components.post.PostRenderer
 import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.HtmlBlock
+import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.HtmlDefaultFontFamily
 import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.HtmlParser
 import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.normalizeHtmlBlocks
 import me.thenano.yamibo.yamibo_app.thread.reader.components.tag.ITagListScreen
@@ -622,10 +625,14 @@ internal fun ThreadReaderScreen(
     val listState = rememberLazyListState()
     val isNovelThread = threadType == ReadHistoryRepository.ThreadEntryType.Novel
     val keepSystemBarsBackground = novelSettingsRepository.keepSystemBarsBackground.state()
+    val fontRepository = LocalFontRepository.current
     val readerFontSize = novelSettingsRepository.fontSize.state()
     val favoriteAddDownloadPromptEnabled = appSettingsRepository.favoriteAddDownloadPromptEnabled.state()
     val readerLineSpacing = novelSettingsRepository.lineSpacing.state()
     val readerFontId = novelSettingsRepository.readerFontId.state()
+    val readerFontFamily = remember(readerFontId) {
+        fontRepository.getFontFamily(readerFontId) ?: HtmlDefaultFontFamily
+    }
     val readerContentWidthFraction = novelSettingsRepository.contentWidthFraction.state()
     val scrollButtonDisplayMode = novelSettingsRepository.scrollButtonDisplayMode.state()
     val scrollButtonDirectionThreshold = novelSettingsRepository.scrollButtonDirectionThreshold.state()
@@ -1350,6 +1357,7 @@ internal fun ThreadReaderScreen(
         readerFontSize,
         readerLineSpacing,
         readerFontId,
+        readerFontFamily,
         readerContentWidthFraction,
         convertedContentVersion,
         activeImageGeometrySnapshot,
@@ -1371,7 +1379,7 @@ internal fun ThreadReaderScreen(
 
         val viewportHeightPx = singlePageContentHeightPx.coerceAtLeast(1)
         val estimatedLineHeightPx =
-            (readerFontSize * readerLineSpacing * density.density * 1.52f).toInt().coerceAtLeast(28)
+            with(density) { (readerFontSize * readerLineSpacing).sp.roundToPx() }.coerceAtLeast(28)
         val fontSizeScale = (16f / readerFontSize.toFloat().coerceAtLeast(1f)).coerceIn(0.6f, 1.25f)
         val estimatedCharsPerLine = (26 * readerContentWidthFraction * fontSizeScale).toInt().coerceAtLeast(10)
         val pageVerticalPaddingPx = with(density) { 48.dp.roundToPx() }
@@ -1379,8 +1387,13 @@ internal fun ThreadReaderScreen(
             .toInt()
             .coerceAtLeast(1)
         val measuredTextStyle = TextStyle(
+            fontFamily = readerFontFamily,
             fontSize = readerFontSize.sp,
             lineHeight = (readerFontSize * readerLineSpacing).sp,
+            lineHeightStyle = LineHeightStyle(
+                alignment = LineHeightStyle.Alignment.Proportional,
+                trim = LineHeightStyle.Trim.Both,
+            ),
         )
         val planningStarted = if (singlePagePlanningMetrics != null) TimeSource.Monotonic.markNow() else null
         val generationReplaced = singlePagePlanningCache.ensureGeneration(
@@ -1497,7 +1510,7 @@ internal fun ThreadReaderScreen(
                                         style = measuredTextStyle.copy(textAlign = block.textAlign),
                                         constraints = Constraints(maxWidth = measuredTextWidthPx),
                                     ).size.height
-                                    (measuredHeight * 104 + 99) / 100 + with(density) { 8.dp.roundToPx() }
+                                    measuredHeight
                                 },
                             ),
                             strategy = if (referencePlanningEnabled) {
@@ -3555,18 +3568,28 @@ internal fun ThreadReaderScreen(
                         .pointerInput(isSinglePageMode, threadReaderMode, singlePageEntries, singlePageTurnAnimating) {
                             if (!isSinglePageMode) return@pointerInput
                             var dragDistance = 0f
+                            var isEdgeSwipe = false
+                            val edgeThresholdPx = with(density) { 24.dp.toPx() }
                             detectDragGestures(
-                                onDragStart = {
-                                    if (!singlePageTurnAnimating) {
+                                onDragStart = { offset ->
+                                    isEdgeSwipe = offset.x <= edgeThresholdPx
+                                    if (!singlePageTurnAnimating && !isEdgeSwipe) {
                                         dragDistance = 0f
                                         singlePageDragPreviewOffsetPx = 0f
                                     }
                                 },
                                 onDragCancel = {
-                                    dragDistance = 0f
-                                    animateSinglePageOffset(singlePageDragPreviewOffsetPx, 0f)
+                                    if (!isEdgeSwipe) {
+                                        dragDistance = 0f
+                                        animateSinglePageOffset(singlePageDragPreviewOffsetPx, 0f)
+                                    }
+                                    isEdgeSwipe = false
                                 },
                                 onDragEnd = {
+                                    if (isEdgeSwipe) {
+                                        isEdgeSwipe = false
+                                        return@detectDragGestures
+                                    }
                                     val axisSize = if (threadReaderMode == ThreadReaderMode.SINGLE_TTB) {
                                         size.height.toFloat()
                                     } else {
@@ -3588,6 +3611,9 @@ internal fun ThreadReaderScreen(
                                     dragDistance = 0f
                                 },
                                 onDrag = { change, dragAmount ->
+                                    if (isEdgeSwipe) {
+                                        return@detectDragGestures
+                                    }
                                     if (!singlePageTurnAnimating) {
                                         val axisSize = if (threadReaderMode == ThreadReaderMode.SINGLE_TTB) {
                                             size.height.toFloat()

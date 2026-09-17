@@ -15,6 +15,8 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -46,7 +48,16 @@ internal fun SearchTopBar(
     focusRequester: FocusRequester,
 ) {
     val colors = YamiboTheme.colors
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
     var textFieldPlaced by remember { mutableStateOf(false) }
+
+    val handleSearch = {
+        focusManager.clearFocus()
+        keyboardController?.hide()
+        onSearch()
+    }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -66,7 +77,7 @@ internal fun SearchTopBar(
             placeholder = { Text(i18n("搜尋標題..."), color = colors.textDark.copy(alpha = 0.4f), fontSize = 15.sp) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            keyboardActions = KeyboardActions(onSearch = { onSearch() }),
+            keyboardActions = KeyboardActions(onSearch = { handleSearch() }),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedTextColor = colors.textDark,
                 unfocusedTextColor = colors.textDark,
@@ -80,7 +91,7 @@ internal fun SearchTopBar(
             textStyle = LocalTextStyle.current.copy(fontSize = 15.sp),
         )
         Spacer(Modifier.width(6.dp))
-        Surface(onClick = onSearch, shape = RoundedCornerShape(12.dp), color = colors.brownDeep) {
+        Surface(onClick = handleSearch, shape = RoundedCornerShape(12.dp), color = colors.brownDeep) {
             Text(
                 text = i18n("搜尋"),
                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
