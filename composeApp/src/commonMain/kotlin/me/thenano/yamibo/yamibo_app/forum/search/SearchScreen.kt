@@ -110,12 +110,6 @@ fun SearchScreen(fid: ForumId?) {
     var favoritePostAddDownloadTarget by remember { mutableStateOf<FavoriteTargetPayload.RssSearch?>(null) }
     val favoriteAddDownloadPromptEnabled = appSettingsRepository.favoriteAddDownloadPromptEnabled.state()
 
-    fun executeSearch(page: Int = 1) {
-        keyboardController?.hide()
-        focusManager.clearFocus()
-        doSearch(page)
-    }
-
     fun navigateThread(thread: ThreadSummary) {
         val isNovelThread = fid?.let { YamiboForum.isNovelForum(it) }
             ?: YamiboForum.isNovelForum(thread.tag ?: "")
@@ -178,6 +172,12 @@ fun SearchScreen(fid: ForumId?) {
                 else -> SearchState.Error(i18n(result.message()))
             }
         }
+    }
+
+    fun executeSearch(page: Int = 1) {
+        keyboardController?.hide()
+        focusManager.clearFocus()
+        doSearch(page)
     }
 
     suspend fun saveRssFavorite(
