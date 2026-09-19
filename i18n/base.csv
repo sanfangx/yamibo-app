@@ -961,3 +961,7 @@ RSS 目錄進度,RSS catalog progress,RSS 目錄進度,RSS 目录进度
 安全清理中,Cleaning safely,安全清理中,安全清理中
 正在自動修復過大的舊同步資料；可稍後重試，進度不會遺失,Automatically repairing oversized legacy sync data; retry later without losing progress,正在自動修復過大的舊同步資料；可稍後重試，進度不會遺失,正在自动修复过大的旧同步数据；稍后重试不会丢失进度
 {} 的資料無法安全轉移，請保留本機資料並查看復原詳情,{} data cannot be transferred safely; keep local data and review recovery details,{} 的資料無法安全轉移，請保留本機資料並查看復原詳情,{} 的数据无法安全转移，请保留本地数据并查看恢复详情
+左間距,left spacing,左間距,左间距
+字間距,letter spacing,字間距,字间距
+段間距,paragraph spacing,段間距,段间距
+右間距,right spacing,右間距,右间距
