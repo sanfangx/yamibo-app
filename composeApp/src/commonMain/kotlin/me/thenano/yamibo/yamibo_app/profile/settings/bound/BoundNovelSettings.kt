@@ -1,4 +1,4 @@
-﻿package me.thenano.yamibo.yamibo_app.profile.settings.bound
+package me.thenano.yamibo.yamibo_app.profile.settings.bound
 
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 
@@ -47,6 +47,8 @@ fun NovelReaderPreviewSetting() {
     val colors = YamiboTheme.colors
     val novelSettingsRepo = LocalNovelReaderSettingsRepository.current
     val contentWidthFraction = novelSettingsRepo.contentWidthFraction.state()
+    val paddingLeft = novelSettingsRepo.readerPaddingLeft.state()
+    val paddingRight = novelSettingsRepo.readerPaddingRight.state()
 
     Box(
         modifier = Modifier
@@ -59,6 +61,7 @@ fun NovelReaderPreviewSetting() {
         Box(
             modifier = Modifier
                 .fillMaxWidth(contentWidthFraction)
+                .padding(start = paddingLeft.dp, end = paddingRight.dp)
         ) {
             HtmlRenderer(html = PREVIEW_TEXT)
         }
@@ -81,6 +84,21 @@ fun NovelFontSizeSetting() {
 }
 
 @Composable
+fun NovelLetterSpacingSetting() {
+    val novelSettingsRepo = LocalNovelReaderSettingsRepository.current
+    val letterSpacing = novelSettingsRepo.letterSpacing.state()
+
+    SettingsSlider(
+        label = i18n("字間距"),
+        value = letterSpacing,
+        valueRange = 0.0f..6.0f,
+        steps = 29,
+        valueDisplay = { "${(it * 10f).roundToInt() / 10f} sp" },
+        onValueChange = { novelSettingsRepo.letterSpacing.setValue((it * 10f).roundToInt() / 10f) }
+    )
+}
+
+@Composable
 fun NovelLineSpacingSetting() {
     val novelSettingsRepo = LocalNovelReaderSettingsRepository.current
     val lineSpacing = novelSettingsRepo.lineSpacing.state()
@@ -92,6 +110,51 @@ fun NovelLineSpacingSetting() {
         steps = 39,
         valueDisplay = { "${(it * 100f).roundToInt() / 100f}x" },
         onValueChange = { novelSettingsRepo.lineSpacing.setValue(it) }
+    )
+}
+
+@Composable
+fun NovelParagraphSpacingSetting() {
+    val novelSettingsRepo = LocalNovelReaderSettingsRepository.current
+    val paragraphSpacing = novelSettingsRepo.paragraphSpacing.state()
+
+    SettingsSlider(
+        label = i18n("段間距"),
+        value = paragraphSpacing.toFloat(),
+        valueRange = 0f..40f,
+        steps = 19,
+        valueDisplay = { "${it.toInt()} dp" },
+        onValueChange = { novelSettingsRepo.paragraphSpacing.setValue(it.toInt()) }
+    )
+}
+
+@Composable
+fun NovelPaddingLeftSetting() {
+    val novelSettingsRepo = LocalNovelReaderSettingsRepository.current
+    val paddingLeft = novelSettingsRepo.readerPaddingLeft.state()
+
+    SettingsSlider(
+        label = i18n("左間距"),
+        value = paddingLeft.toFloat(),
+        valueRange = 0f..64f,
+        steps = 31,
+        valueDisplay = { "${it.toInt()} dp" },
+        onValueChange = { novelSettingsRepo.readerPaddingLeft.setValue(it.toInt()) }
+    )
+}
+
+@Composable
+fun NovelPaddingRightSetting() {
+    val novelSettingsRepo = LocalNovelReaderSettingsRepository.current
+    val paddingRight = novelSettingsRepo.readerPaddingRight.state()
+
+    SettingsSlider(
+        label = i18n("右間距"),
+        value = paddingRight.toFloat(),
+        valueRange = 0f..64f,
+        steps = 31,
+        valueDisplay = { "${it.toInt()} dp" },
+        onValueChange = { novelSettingsRepo.readerPaddingRight.setValue(it.toInt()) }
     )
 }
 

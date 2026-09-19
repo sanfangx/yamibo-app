@@ -1,4 +1,4 @@
-﻿package me.thenano.yamibo.yamibo_app.repository.settings
+package me.thenano.yamibo.yamibo_app.repository.settings
 
 import me.thenano.yamibo.yamibo_app.repository.settings.core.SettingsRegistry
 import me.thenano.yamibo.yamibo_app.store.settings.SettingsStore
@@ -45,6 +45,42 @@ class NovelReaderSettingsRepository(store: SettingsStore) : SettingsRegistry(sto
         min = 1.0f,
         max = 3.0f,
         interval = 0.05f,
+    )
+
+    val letterSpacing by floatSetting(
+        name = "letter_spacing",
+        description = "novel_reader_letter_spacing",
+        default = 0.0f,
+        min = 0.0f,
+        max = 6.0f,
+        interval = 0.2f,
+    )
+
+    val paragraphSpacing by intSetting(
+        name = "paragraph_spacing",
+        description = "novel_reader_paragraph_spacing",
+        default = 8,
+        min = 0,
+        max = 40,
+        interval = 2,
+    )
+
+    val readerPaddingLeft by intSetting(
+        name = "reader_padding_left",
+        description = "novel_reader_padding_left",
+        default = 16,
+        min = 0,
+        max = 64,
+        interval = 2,
+    )
+
+    val readerPaddingRight by intSetting(
+        name = "reader_padding_right",
+        description = "novel_reader_padding_right",
+        default = 16,
+        min = 0,
+        max = 64,
+        interval = 2,
     )
 
     val readerFontId by stringSetting(

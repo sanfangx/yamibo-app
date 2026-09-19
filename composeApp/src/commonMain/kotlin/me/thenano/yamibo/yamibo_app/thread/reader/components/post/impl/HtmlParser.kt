@@ -228,6 +228,27 @@ object HtmlParser {
                                 }
                             }
                         }
+                        "p" -> {
+                            val alignAttr = node.attr("align").lowercase()
+                            val newAlign = when (alignAttr) {
+                                "center" -> TextAlign.Center
+                                "right" -> TextAlign.Right
+                                "left" -> TextAlign.Left
+                                else -> parentAlign
+                            }
+                            val prevAlign = currentAlign
+                            if (newAlign != prevAlign) {
+                                commitText()
+                                currentAlign = newAlign
+                            }
+                            appendLineBreak(maxConsecutive = 1)
+                            node.childNodes().forEach { parseNode(it, newAlign) }
+                            appendLineBreak(maxConsecutive = 1)
+                            if (newAlign != prevAlign) {
+                                commitText()
+                                currentAlign = prevAlign
+                            }
+                        }
                         "table" -> {
                             // Detect if this is a multi-cell table (data table) or single-cell wrapper
                             val trs = node.select("tr")

@@ -535,6 +535,7 @@ internal data class ThreadReaderPaginationInput(
     val estimatedLineHeightPx: Int,
     val verticalPaddingPx: Int = 0,
     val firstPageHeaderHeightPx: Int = 0,
+    val paragraphSpacingPx: Int = 0,
     val imageHeightFor: (HtmlBlock.Image) -> Int? = { null },
     val contentWidthPx: Int = 1,
     val imageHeightToWidthRatioFor: (HtmlBlock.Image) -> Float? = { null },
@@ -924,20 +925,26 @@ private fun planFixedHeightReaderPagesCore(
     fun appendSlice(slice: ThreadReaderPageSlice) {
         val height = slice.estimatedHeightPx.coerceAtLeast(1)
         val limit = currentPageMaxHeight()
-        if (current.isNotEmpty() && currentHeight + height > limit) flush()
+        val spacing = if (current.isNotEmpty()) input.paragraphSpacingPx else 0
+        if (current.isNotEmpty() && currentHeight + spacing + height > limit) flush()
+        val actualSpacing = if (current.isNotEmpty()) input.paragraphSpacingPx else 0
         current += slice
-        currentHeight += height
+        currentHeight += height + actualSpacing
         if (currentHeight >= currentPageMaxHeight()) flush()
     }
 
     fun appendTextSlice(pending: PendingTextSlice) {
         val height = pending.estimatedHeightPx.coerceAtLeast(1)
         val limit = currentPageMaxHeight()
-        if (current.isNotEmpty() && currentHeight + height > limit) {
+        val lastSlice = current.lastOrNull()
+        val isNewBlock = lastSlice == null || lastSlice.blockId != pending.block.anchorId
+        val spacing = if (current.isNotEmpty() && isNewBlock) input.paragraphSpacingPx else 0
+        if (current.isNotEmpty() && currentHeight + spacing + height > limit) {
             flush()
         }
+        val actualSpacing = if (current.isNotEmpty() && isNewBlock) input.paragraphSpacingPx else 0
         current += pending.toPageSlice()
-        currentHeight += height
+        currentHeight += height + actualSpacing
         if (currentHeight >= currentPageMaxHeight()) flush()
     }
 
@@ -1053,18 +1060,22 @@ private fun planFixedHeightReaderPagesCore(
                     startOffset = 0,
                     endOffset = block.annotatedString.text.trim().length.coerceAtMost(input.estimatedCharsPerLine),
                 )
+                val spacing = if (current.isNotEmpty()) input.paragraphSpacingPx else 0
                 if (
                     current.isNotEmpty() &&
                     block.shouldKeepWithNextTextBlock() &&
-                    currentHeight + firstSliceHeight + nextEstimatedHeight(input.blocks.getOrNull(blockIndex + 1)) > currentPageMaxHeight()
+                    currentHeight + spacing + firstSliceHeight + nextEstimatedHeight(input.blocks.getOrNull(blockIndex + 1)) > currentPageMaxHeight()
                 ) {
                     flush()
                 }
                 var start = 0
                 while (start < breakMap.textLength) {
                     val pageLimit = currentPageMaxHeight()
-                    val availableHeight = (pageLimit - currentHeight).takeIf { current.isNotEmpty() }
-                        ?: pageLimit
+                    val lastSlice = current.lastOrNull()
+                    val isNewBlock = lastSlice == null || lastSlice.blockId != block.anchorId
+                    val blockSpacing = if (current.isNotEmpty() && isNewBlock && start == 0) input.paragraphSpacingPx else 0
+                    val availableHeight = (pageLimit - currentHeight - blockSpacing).takeIf { current.isNotEmpty() }
+                        ?: (pageLimit - blockSpacing)
                     val measuredBreak = breakMap.furthestFittingBreak(
                         start = start,
                         availableHeightPx = availableHeight,
@@ -1140,7 +1151,7 @@ private fun planFixedHeightReaderPagesCore(
     }
     flush()
 
-    val repackedPages = pages.repackSparseTrailingPages(maxPageHeight, input.firstPageHeaderHeightPx)
+    val repackedPages = pages.repackSparseTrailingPages(maxPageHeight, input.firstPageHeaderHeightPx, input.paragraphSpacingPx)
     val total = repackedPages.size.coerceAtLeast(1)
     return repackedPages.mapIndexed { index, slices ->
         val first = slices.firstOrNull()
@@ -1335,6 +1346,7 @@ internal fun Int.avoidShortCjkTrailingRun(
 private fun MutableList<MutableList<ThreadReaderPageSlice>>.repackSparseTrailingPages(
     maxPageHeight: Int,
     firstPageHeaderHeightPx: Int = 0,
+    paragraphSpacingPx: Int = 0,
 ): List<List<ThreadReaderPageSlice>> {
     if (size < 2) return this
     val result = map { it.toMutableList() }.toMutableList()
@@ -1346,14 +1358,15 @@ private fun MutableList<MutableList<ThreadReaderPageSlice>>.repackSparseTrailing
         val current = result[index]
         val next = result[index + 1]
         val currentLimit = pageLimit(index)
-        var currentHeight = current.sumOf { it.estimatedHeightPx }
+        var currentHeight = current.sumOf { it.estimatedHeightPx } + (current.size - 1).coerceAtLeast(0) * paragraphSpacingPx
         while (next.isNotEmpty()) {
             val candidate = next.first()
             if (!candidate.canMoveAcrossPageBoundary()) break
             val candidateHeight = candidate.estimatedHeightPx.coerceAtLeast(1)
-            if (currentHeight + candidateHeight > currentLimit) break
+            val spacing = if (current.isNotEmpty()) paragraphSpacingPx else 0
+            if (currentHeight + spacing + candidateHeight > currentLimit) break
             current += next.removeAt(0)
-            currentHeight += candidateHeight
+            currentHeight += spacing + candidateHeight
         }
         if (next.isEmpty()) {
             result.removeAt(index + 1)

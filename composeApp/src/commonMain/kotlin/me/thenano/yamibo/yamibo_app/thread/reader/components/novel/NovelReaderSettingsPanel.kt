@@ -24,7 +24,11 @@ import me.thenano.yamibo.yamibo_app.repository.settings.AppSettingsRepository
 import me.thenano.yamibo.yamibo_app.profile.settings.components.ThemeSelectorContent
 import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelChineseConversionSetting
 import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelFontSizeSetting
+import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelLetterSpacingSetting
 import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelLineSpacingSetting
+import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelParagraphSpacingSetting
+import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelPaddingLeftSetting
+import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelPaddingRightSetting
 import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelPageProgressHintSetting
 import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelScrollButtonDisplayModeSetting
 import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelScrollButtonJumpTargetSetting
@@ -81,7 +85,19 @@ fun NovelReaderSettingsPanel(
                     NovelFontSizeSetting()
 
                     Spacer(Modifier.height(16.dp))
+                    NovelLetterSpacingSetting()
+
+                    Spacer(Modifier.height(16.dp))
                     NovelLineSpacingSetting()
+
+                    Spacer(Modifier.height(16.dp))
+                    NovelParagraphSpacingSetting()
+
+                    Spacer(Modifier.height(16.dp))
+                    NovelPaddingLeftSetting()
+
+                    Spacer(Modifier.height(16.dp))
+                    NovelPaddingRightSetting()
 
                     Spacer(Modifier.height(16.dp))
                     ReaderFontSelectorSetting()

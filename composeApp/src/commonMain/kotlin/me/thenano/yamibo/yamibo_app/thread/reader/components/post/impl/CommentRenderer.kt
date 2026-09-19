@@ -34,6 +34,7 @@ fun CommentRenderer(
     val novelSettingsRepo = LocalNovelReaderSettingsRepository.current
     val fontSize = novelSettingsRepo.fontSize.state()
     val lineSpacing = novelSettingsRepo.lineSpacing.state()
+    val letterSpacing = novelSettingsRepo.letterSpacing.state()
     if (comments.isEmpty()) return
 
     Card(
@@ -114,6 +115,7 @@ fun CommentRenderer(
                             color = colors.textDark,
                             fontSize = (fontSize - 2).coerceAtLeast(10).sp,
                             lineHeight = ((fontSize - 2).coerceAtLeast(10) * lineSpacing).sp,
+                            letterSpacing = letterSpacing.sp,
                         )
                     }
                 }

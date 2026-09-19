@@ -176,8 +176,24 @@ private fun NovelReaderContent() {
     NovelFontSizeSetting()
     Spacer(Modifier.height(24.dp))
 
+    SectionLabel(i18n("字間距"))
+    NovelLetterSpacingSetting()
+    Spacer(Modifier.height(24.dp))
+
     SectionLabel(i18n("行距"))
     NovelLineSpacingSetting()
+    Spacer(Modifier.height(24.dp))
+
+    SectionLabel(i18n("段間距"))
+    NovelParagraphSpacingSetting()
+    Spacer(Modifier.height(24.dp))
+
+    SectionLabel(i18n("左間距"))
+    NovelPaddingLeftSetting()
+    Spacer(Modifier.height(24.dp))
+
+    SectionLabel(i18n("右間距"))
+    NovelPaddingRightSetting()
     Spacer(Modifier.height(24.dp))
 
     SectionLabel(i18n("字體"))

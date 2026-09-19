@@ -1,4 +1,4 @@
-﻿package me.thenano.yamibo.yamibo_app.thread.reader.components.post
+package me.thenano.yamibo.yamibo_app.thread.reader.components.post
 
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 
@@ -133,6 +133,8 @@ fun PostRenderer(
     }
     val novelSettingsRepo = LocalNovelReaderSettingsRepository.current
     val contentWidthFraction = novelSettingsRepo.contentWidthFraction.state()
+    val paddingLeft = novelSettingsRepo.readerPaddingLeft.state()
+    val paddingRight = novelSettingsRepo.readerPaddingRight.state()
     val density = LocalDensity.current
     val cachedMinHeight = remember(cachedHeightPx, density) {
         cachedHeightPx?.let { with(density) { it.toDp() } } ?: 0.dp
@@ -161,7 +163,7 @@ fun PostRenderer(
             Column(
                 modifier = Modifier
                     .fillMaxWidth(contentWidthFraction)
-                    .padding(horizontal = 16.dp, vertical = verticalPadding)
+                    .padding(start = paddingLeft.dp, end = paddingRight.dp, top = verticalPadding, bottom = verticalPadding)
             ) {
                 HtmlBlocksRenderer(
                     blocks = bodyBlocks,
@@ -189,7 +191,7 @@ fun PostRenderer(
             .then(heightTrackingModifier),
         contentAlignment = Alignment.TopCenter
     ) {
-        Column(modifier = Modifier.fillMaxWidth(contentWidthFraction).padding(horizontal = 16.dp, vertical = verticalPadding)) {
+        Column(modifier = Modifier.fillMaxWidth(contentWidthFraction).padding(start = paddingLeft.dp, end = paddingRight.dp, top = verticalPadding, bottom = verticalPadding)) {
             if (showHeader) {
                 // Title
                 if (post.floor == 1 && !convertedThreadTitle.isNullOrEmpty()) {

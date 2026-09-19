@@ -104,51 +104,19 @@ internal fun normalizeHtmlBlocks(rawBlocks: List<HtmlBlock>): List<HtmlBlock> {
         pendingRubies.clear()
     }
 
-    fun splitTextByFontSizeAndNewlines(block: HtmlBlock.Text): List<HtmlBlock.Text> {
+    fun splitTextByParagraphs(block: HtmlBlock.Text): List<HtmlBlock.Text> {
         val text = block.annotatedString.text
-        if (text.isEmpty() || block.annotatedString.spanStyles.none { it.item.fontSize != null }) {
-            return listOf(block)
-        }
-
-        val customRanges = block.annotatedString.spanStyles
-            .filter { it.item.fontSize != null }
-            .map { it.start until it.end }
-
-        fun isCustomAt(offset: Int): Boolean = customRanges.any { offset in it }
-
-        val splits = mutableListOf<Int>()
-        var currentIsCustom = isCustomAt(0)
-
-        var i = 0
-        while (i < text.length) {
-            if (text[i] == '\n') {
-                var nextNonNewline = i
-                while (nextNonNewline < text.length && text[nextNonNewline] == '\n') {
-                    nextNonNewline++
-                }
-                if (nextNonNewline < text.length) {
-                    val nextIsCustom = isCustomAt(nextNonNewline)
-                    if (nextIsCustom != currentIsCustom) {
-                        splits.add(nextNonNewline)
-                        currentIsCustom = nextIsCustom
-                    }
-                }
-                i = nextNonNewline
-            } else {
-                i++
-            }
-        }
-
-        if (splits.isEmpty()) return listOf(block)
+        if (!text.contains('\n')) return listOf(block)
 
         val result = mutableListOf<HtmlBlock.Text>()
         var start = 0
-        splits.distinct().sorted().forEach { split ->
-            if (split > start) {
-                val chunk = block.annotatedString.subSequence(start, split)
-                if (chunk.isNotEmpty()) {
+        var i = 0
+        while (i < text.length) {
+            if (text[i] == '\n') {
+                if (i > start) {
+                    val chunk = block.annotatedString.subSequence(start, i)
                     val chunkRubies = block.rubies
-                        .filter { it.start >= start && it.end <= split }
+                        .filter { it.start >= start && it.end <= i }
                         .map { ruby ->
                             ruby.copy(
                                 start = ruby.start - start,
@@ -161,7 +129,23 @@ internal fun normalizeHtmlBlocks(rawBlocks: List<HtmlBlock>): List<HtmlBlock> {
                         anchorId = if (start == 0) block.anchorId else "${block.anchorId}-$start",
                     )
                 }
-                start = split
+                var newlineCount = 1
+                var j = i + 1
+                while (j < text.length && text[j] == '\n') {
+                    newlineCount++
+                    j++
+                }
+                for (b in 1 until newlineCount) {
+                    result += block.copy(
+                        annotatedString = AnnotatedString("\n"),
+                        rubies = emptyList(),
+                        anchorId = "${block.anchorId}-br-$i-$b",
+                    )
+                }
+                start = j
+                i = j
+            } else {
+                i++
             }
         }
         if (start < text.length) {
@@ -185,83 +169,12 @@ internal fun normalizeHtmlBlocks(rawBlocks: List<HtmlBlock>): List<HtmlBlock> {
         return result
     }
 
-    fun appendTextBlock(block: HtmlBlock.Text) {
-        val hasCustomFont = block.annotatedString.spanStyles.any { it.item.fontSize != null }
-        if (hasCustomFont) {
-            flushPendingText()
-            mergedBlocks += block
-            return
-        }
-
-        val builder = pendingTextBuilder
-        val pendingLength = builder?.length ?: 0
-        var appendOffset = pendingLength
-        val shouldSplitLongText = builder != null &&
-            pendingLength > 0 &&
-            pendingLength + block.annotatedString.length > maxMergedTextLength
-        if (builder == null || pendingTextAlign != block.textAlign || shouldSplitLongText) {
-            flushPendingText()
-            pendingTextBuilder = AnnotatedString.Builder()
-            pendingTextAlign = block.textAlign
-            pendingTextAnchorId = block.anchorId
-            appendOffset = 0
-        } else {
-            val currentText = builder.toAnnotatedString().text
-            val nextText = block.annotatedString.text
-            if (currentText.isNotEmpty() && currentText.last() != '\n' && nextText.firstOrNull() != '\n') {
-                builder.append("\n")
-                appendOffset += 1
-            }
-        }
-        pendingTextBuilder?.append(block.annotatedString)
-        pendingRubies += block.rubies.map { ruby ->
-            ruby.copy(
-                start = ruby.start + appendOffset,
-                end = ruby.end + appendOffset,
-            )
-        }
-    }
-
-    fun splitLongTextBlock(block: HtmlBlock.Text): List<HtmlBlock.Text> {
-        if (block.annotatedString.length <= maxMergedTextLength) return listOf(block)
-
-        val chunks = mutableListOf<HtmlBlock.Text>()
-        val text = block.annotatedString.text
-        var start = 0
-        while (start < text.length) {
-            val preferredEnd = (start + maxMergedTextLength).coerceAtMost(text.length)
-            val end = if (preferredEnd < text.length) {
-                val newline = text.lastIndexOf('\n', preferredEnd)
-                if (newline > start + maxMergedTextLength / 3) newline + 1 else preferredEnd
-            } else {
-                preferredEnd
-            }
-            val chunk = block.annotatedString.subSequence(start, end)
-            if (chunk.isNotEmpty()) {
-                val chunkRubies = block.rubies
-                    .filter { it.start >= start && it.end <= end }
-                    .map { ruby ->
-                        ruby.copy(
-                            start = ruby.start - start,
-                            end = ruby.end - start,
-                        )
-                    }
-                chunks += block.copy(
-                    annotatedString = chunk,
-                    rubies = chunkRubies,
-                    anchorId = if (start == 0) block.anchorId else "${block.anchorId}-$start",
-                )
-            }
-            start = end
-        }
-        return chunks
-    }
-
     filteredBlocks.forEach { block ->
         if (block is HtmlBlock.Text) {
-            splitTextByFontSizeAndNewlines(block)
-                .flatMap(::splitLongTextBlock)
-                .forEach(::appendTextBlock)
+            splitTextByParagraphs(block).forEach { pBlock ->
+                flushPendingText()
+                mergedBlocks += pBlock
+            }
         } else {
             flushPendingText()
             mergedBlocks += block
@@ -463,6 +376,7 @@ fun HtmlBlocksRenderer(
     val novelSettingsRepo = LocalNovelReaderSettingsRepository.current
     val fontRepository = LocalFontRepository.current
     val readerFontId = novelSettingsRepo.readerFontId.state()
+    val paragraphSpacing = novelSettingsRepo.paragraphSpacing.state()
     val readerFontFamily = remember(readerFontId) {
         fontRepository.getFontFamily(readerFontId) ?: HtmlDefaultFontFamily
     }
@@ -470,7 +384,7 @@ fun HtmlBlocksRenderer(
         blocks.any { it is HtmlBlock.Text }
     }
     val content: @Composable () -> Unit = {
-        Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(0.dp)) {
+        Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(paragraphSpacing.dp)) {
             blocks.forEach { block ->
                 HtmlBlockRenderer(
                     block = block,
@@ -509,6 +423,7 @@ private fun RubyTextBlock(
     fontFamily: FontFamily,
     fontSizeSp: Float,
     lineHeightSp: Float,
+    letterSpacingSp: Float,
     textColor: Color,
     modifier: Modifier = Modifier,
     onTextLayout: (TextLayoutResult) -> Unit,
@@ -519,20 +434,22 @@ private fun RubyTextBlock(
     val textMeasurer = rememberTextMeasurer()
     val density = LocalDensity.current
     val rubyFontSizeSp = fontSizeSp * 0.72f
-    val baseStyle = remember(fontFamily, fontSizeSp, textColor) {
+    val baseStyle = remember(fontFamily, fontSizeSp, textColor, letterSpacingSp) {
         TextStyle(
             color = textColor,
             fontFamily = fontFamily,
             fontSize = fontSizeSp.sp,
             lineHeight = fontSizeSp.sp,
+            letterSpacing = letterSpacingSp.sp,
         )
     }
-    val rubyStyle = remember(fontFamily, rubyFontSizeSp, textColor) {
+    val rubyStyle = remember(fontFamily, rubyFontSizeSp, textColor, letterSpacingSp) {
         TextStyle(
             color = textColor,
             fontFamily = fontFamily,
             fontSize = rubyFontSizeSp.sp,
             lineHeight = rubyFontSizeSp.sp,
+            letterSpacing = (letterSpacingSp * 0.72f).sp,
         )
     }
 
@@ -609,6 +526,7 @@ private fun RubyTextBlock(
                 fontFamily = fontFamily,
                 fontSize = fontSizeSp.sp,
                 lineHeight = lineHeightSp.sp,
+                letterSpacing = letterSpacingSp.sp,
                 lineHeightStyle = LineHeightStyle(
                     alignment = LineHeightStyle.Alignment.Proportional,
                     trim = LineHeightStyle.Trim.Both,
@@ -648,6 +566,7 @@ private fun HtmlBlockRenderer(
     val novelSettingsRepo = LocalNovelReaderSettingsRepository.current
     val fontSize = novelSettingsRepo.fontSize.state()
     val lineSpacing = novelSettingsRepo.lineSpacing.state()
+    val letterSpacing = novelSettingsRepo.letterSpacing.state()
     @Suppress("DEPRECATION") val clipboardManager = LocalClipboardManager.current
     val isDarkTheme = (colors.creamBackground.red + colors.creamBackground.green + colors.creamBackground.blue) < 1.5f
 
@@ -808,6 +727,7 @@ private fun HtmlBlockRenderer(
                     fontFamily = fontFamily,
                     fontSizeSp = fontSize.toFloat(),
                     lineHeightSp = lineHeightSp,
+                    letterSpacingSp = letterSpacing,
                     textColor = colors.htmlTextDark,
                     modifier = textModifier,
                     onTextLayout = { layoutResult.value = it },
@@ -820,6 +740,7 @@ private fun HtmlBlockRenderer(
                         fontFamily = fontFamily,
                         fontSize = fontSize.sp,
                         lineHeight = lineHeightSp.sp,
+                        letterSpacing = letterSpacing.sp,
                         lineHeightStyle = LineHeightStyle(
                             alignment = LineHeightStyle.Alignment.Proportional,
                             trim = LineHeightStyle.Trim.Both,

@@ -630,6 +630,10 @@ internal fun ThreadReaderScreen(
     val readerFontSize = novelSettingsRepository.fontSize.state()
     val favoriteAddDownloadPromptEnabled = appSettingsRepository.favoriteAddDownloadPromptEnabled.state()
     val readerLineSpacing = novelSettingsRepository.lineSpacing.state()
+    val readerLetterSpacing = novelSettingsRepository.letterSpacing.state()
+    val readerParagraphSpacing = novelSettingsRepository.paragraphSpacing.state()
+    val readerPaddingLeft = novelSettingsRepository.readerPaddingLeft.state()
+    val readerPaddingRight = novelSettingsRepository.readerPaddingRight.state()
     val readerFontId = novelSettingsRepository.readerFontId.state()
     val readerFontFamily = remember(readerFontId) {
         fontRepository.getFontFamily(readerFontId) ?: HtmlDefaultFontFamily
@@ -1384,13 +1388,14 @@ internal fun ThreadReaderScreen(
         val fontSizeScale = (16f / readerFontSize.toFloat().coerceAtLeast(1f)).coerceIn(0.6f, 1.25f)
         val estimatedCharsPerLine = (26 * readerContentWidthFraction * fontSizeScale).toInt().coerceAtLeast(10)
         val pageVerticalPaddingPx = with(density) { 48.dp.roundToPx() }
-        val pageHorizontalPaddingPx = with(density) { 32.dp.roundToPx() }
+        val pageHorizontalPaddingPx = with(density) { (readerPaddingLeft + readerPaddingRight).dp.roundToPx() }
         val measuredTextWidthPx = ((readerViewportWidthPx * readerContentWidthFraction).toInt() - pageHorizontalPaddingPx)
             .coerceAtLeast(1)
         val measuredTextStyle = TextStyle(
             fontFamily = readerFontFamily,
             fontSize = readerFontSize.sp,
             lineHeight = (readerFontSize * readerLineSpacing).sp,
+            letterSpacing = readerLetterSpacing.sp,
             lineHeightStyle = LineHeightStyle(
                 alignment = LineHeightStyle.Alignment.Proportional,
                 trim = LineHeightStyle.Trim.Both,
@@ -1408,6 +1413,10 @@ internal fun ThreadReaderScreen(
                 contentWidthFraction = readerContentWidthFraction,
                 fontSize = readerFontSize,
                 lineSpacing = readerLineSpacing,
+                letterSpacing = readerLetterSpacing,
+                paragraphSpacing = readerParagraphSpacing,
+                paddingLeft = readerPaddingLeft,
+                paddingRight = readerPaddingRight,
                 readerFontId = readerFontId,
                 textMeasurerIdentity = textMeasurer.hashCode(),
                 localeEngineId = "platform-default-v1",
@@ -1507,6 +1516,7 @@ internal fun ThreadReaderScreen(
                                 estimatedLineHeightPx = estimatedLineHeightPx,
                                 verticalPaddingPx = pageVerticalPaddingPx,
                                 firstPageHeaderHeightPx = firstPageHeaderHeightPx,
+                                paragraphSpacingPx = with(density) { readerParagraphSpacing.dp.roundToPx() },
                                 contentWidthPx = measuredTextWidthPx,
                                 imageHeightFor = { null },
                                 imageHeightToWidthRatioFor = { block ->
