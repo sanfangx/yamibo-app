@@ -1,4 +1,13 @@
 source,en,zh-tw,zh-cn
+搜尋目錄或輸入樓層#,Search catalog or floor#,搜尋目錄或輸入樓層#,搜索目录或输入楼层#
+清除搜尋,Clear search,清除搜尋,清除搜索
+跳至頁碼,Go to page,跳至頁碼,跳至页码
+已載入的目錄中沒有符合項目,No matches in loaded catalog entries,已載入的目錄中沒有符合項目,已加载的目录中没有符合项目
+找不到此樓層,Floor not found,找不到此樓層,找不到此楼层
+此頁找不到此樓層,Floor not found on this page,此頁找不到此樓層,此页找不到此楼层
+載入失敗，點擊重試,Loading failed. Tap to retry.,載入失敗，點擊重試,加载失败，点击重试
+載入此頁,Load this page,載入此頁,加载此页
+首頁資料不完整，請重試；若持續發生，請回報下方診斷代碼。,Homepage data is incomplete. Retry; if it persists please report the diagnostic code below.,首頁資料不完整，請重試；若持續發生，請回報下方診斷代碼。,首页数据不完整，请重试；若持续发生，请反馈下方诊断代码。
 Login,Login,登入,登录
 Save,Save,儲存,保存
 Cancel,Cancel,取消,取消
@@ -876,3 +885,13 @@ App 啟動時同步,Sync on app start,App 啟動時同步,App 启动时同步
 字間距,letter spacing,字間距,字间距
 段間距,paragraph spacing,段間距,段间距
 右間距,right spacing,右間距,右间距
+字體樣式,Font style,字體樣式,字体样式
+預設粗體,Default bold,預設粗體,默认粗体
+將閱讀器正文預設顯示為粗體,Show reader body text in bold by default,將閱讀器正文預設顯示為粗體,将阅读器正文默认显示为粗体
+預設斜體,Default italic,預設斜體,默认斜体
+將閱讀器正文預設顯示為斜體,Show reader body text in italic by default,將閱讀器正文預設顯示為斜體,将阅读器正文默认显示为斜体
+首行縮排,First-line indent,首行縮排,首行缩进
+統一段首縮排，取代原文的段首空白,Replace original leading whitespace with a consistent paragraph indent,統一段首縮排，取代原文的段首空白,统一段首缩进，取代原文的段首空白
+縮排字元寬度,Indent width in characters,縮排字元寬度,缩进字符宽度
+字,characters,字,字
+<p>這是小說閱讀器的段落排版預覽。</p><p>調整設定後，可以在這裡立即查看顯示效果。</p>,<p>This is a paragraph layout preview for the novel reader.</p><p>Changes to the settings are shown here immediately.</p>,<p>這是小說閱讀器的段落排版預覽。</p><p>調整設定後，可以在這裡立即查看顯示效果。</p>,<p>这是小说阅读器的段落排版预览。</p><p>调整设置后，可以在这里立即查看显示效果。</p>

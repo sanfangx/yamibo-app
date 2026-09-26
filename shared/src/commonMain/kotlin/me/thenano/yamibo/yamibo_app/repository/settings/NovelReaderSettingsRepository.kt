@@ -89,6 +89,32 @@ class NovelReaderSettingsRepository(store: SettingsStore) : SettingsRegistry(sto
         default = "",
     )
 
+    val defaultBold by boolSetting(
+        name = "default_bold",
+        description = "novel_reader_default_bold",
+        default = false,
+    )
+
+    val defaultItalic by boolSetting(
+        name = "default_italic",
+        description = "novel_reader_default_italic",
+        default = false,
+    )
+
+    val firstLineIndent by boolSetting(
+        name = "first_line_indent",
+        description = "novel_reader_first_line_indent",
+        default = false,
+    )
+
+    val firstLineIndentChars by floatSetting(
+        name = "first_line_indent_chars",
+        default = 2f,
+        min = 0f,
+        max = 8f,
+        interval = 0.5f,
+    )
+
     val contentWidthFraction by floatSetting(
         name = "content_width",
         description = "novel_reader_content_width",

@@ -89,6 +89,9 @@ import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.HtmlDefau
 import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.HtmlParser
 import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.htmlTextLineHeightSp
 import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.normalizeHtmlBlocks
+import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.sliceParagraphStartOffsets
+import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.applyFirstLineIndent
+import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.firstLineIndentPlaceholders
 import me.thenano.yamibo.yamibo_app.thread.reader.components.tag.ITagListScreen
 import me.thenano.yamibo.yamibo_app.thread.reader.components.thread.*
 import me.thenano.yamibo.yamibo_app.thread.reader.debug.DebugRecomposeProbe
@@ -420,6 +423,7 @@ internal fun splitLongReaderTextBlock(block: HtmlBlock.Text): List<HtmlBlock.Tex
             add(
                 block.copy(
                     annotatedString = block.annotatedString.subSequence(start, end),
+                    paragraphStartOffsets = block.paragraphStartOffsets.sliceParagraphStartOffsets(start, end),
                     anchorId = "${block.anchorId}-$chunkIndex",
                 )
             )
@@ -634,6 +638,8 @@ internal fun ThreadReaderScreen(
     val readerParagraphSpacing = novelSettingsRepository.paragraphSpacing.state()
     val readerPaddingLeft = novelSettingsRepository.readerPaddingLeft.state()
     val readerPaddingRight = novelSettingsRepository.readerPaddingRight.state()
+    val readerFirstLineIndent = novelSettingsRepository.firstLineIndent.state()
+    val readerFirstLineIndentChars = novelSettingsRepository.firstLineIndentChars.state()
     val readerFontId = novelSettingsRepository.readerFontId.state()
     val readerFontFamily = remember(readerFontId) {
         fontRepository.getFontFamily(readerFontId) ?: HtmlDefaultFontFamily
@@ -685,6 +691,8 @@ internal fun ThreadReaderScreen(
     var isLoadingNextPage by remember { mutableStateOf(false) }
 
     val loadedPostsByPage = remember { mutableStateMapOf<Int, List<Post>>() }
+    // Catalog browsing must not insert pages into the reader or move its anchor.
+    val catalogPostsByPage = remember(tid, authorId) { mutableStateMapOf<Int, List<Post>>() }
     val postHeightCache = remember(tid) { mutableStateMapOf<Long, Int>() }
     val imageHeightCache = remember(tid) { mutableStateMapOf<String, Int>() }
     val imageAspectRatioCache = remember(tid) { mutableStateMapOf<String, Float>() }
@@ -724,13 +732,13 @@ internal fun ThreadReaderScreen(
     val confirmationController = LocalAppConfirmationController.current
     val appTaskManager = LocalAppTaskManager.current
 
-    val readerUsesBrownSystemBar = showMenu || showSettingsPanel || drawerState.isOpen
+    // isOpen changes only after the animation; cover the status bar from its start.
+    val catalogVisible = drawerState.isOpen || drawerState.targetValue == DrawerValue.Open
+    val readerUsesBrownSystemBar = showMenu || showSettingsPanel || catalogVisible
     SystemBarsEffect(
         statusBarColor = if (readerUsesBrownSystemBar) colors.brownDeep else colors.creamBackground,
         navigationBarColor = colors.creamBackground,
         priority = 20,
-        darkStatusBarIcons = !readerUsesBrownSystemBar,
-        darkNavigationBarIcons = true,
     )
 
     var hasRestoredPosition by remember { mutableStateOf(false) }
@@ -1361,6 +1369,8 @@ internal fun ThreadReaderScreen(
         singlePageContentHeightPx,
         readerFontSize,
         readerLineSpacing,
+        readerFirstLineIndent,
+        readerFirstLineIndentChars,
         readerFontId,
         readerFontFamily,
         readerContentWidthFraction,
@@ -1417,6 +1427,8 @@ internal fun ThreadReaderScreen(
                 paragraphSpacing = readerParagraphSpacing,
                 paddingLeft = readerPaddingLeft,
                 paddingRight = readerPaddingRight,
+                firstLineIndent = readerFirstLineIndent,
+                firstLineIndentChars = readerFirstLineIndentChars,
                 readerFontId = readerFontId,
                 textMeasurerIdentity = textMeasurer.hashCode(),
                 localeEngineId = "platform-default-v1",
@@ -1523,7 +1535,16 @@ internal fun ThreadReaderScreen(
                                     activeImageGeometrySnapshot[normalizeImageUrl(block.url)]
                                 },
                                 textHeightFor = { block, start, end ->
-                                    val text = block.annotatedString.subSequence(start, end)
+                                    val indentedBlock = applyFirstLineIndent(
+                                        block.copy(
+                                            annotatedString = block.annotatedString.subSequence(start, end),
+                                            paragraphStartOffsets = block.paragraphStartOffsets.sliceParagraphStartOffsets(start, end),
+                                            rubies = emptyList(),
+                                        ),
+                                        readerFirstLineIndent,
+                                        readerFirstLineIndentChars,
+                                    )
+                                    val text = indentedBlock.annotatedString
                                     val blockLineHeightSp = htmlTextLineHeightSp(
                                         baseFontSizeSp = readerFontSize.toFloat(),
                                         lineSpacing = readerLineSpacing,
@@ -1532,6 +1553,7 @@ internal fun ThreadReaderScreen(
                                     )
                                     val measuredHeight = textMeasurer.measure(
                                         text = text,
+                                        placeholders = firstLineIndentPlaceholders(text),
                                         style = measuredTextStyle.copy(
                                             textAlign = block.textAlign,
                                             lineHeight = blockLineHeightSp.sp,
@@ -3414,67 +3436,82 @@ internal fun ThreadReaderScreen(
                     drawerContainerColor = colors.creamBackground,
                     modifier = Modifier.fillMaxWidth(0.7f)
                 ) {
-                    ReaderCatalogPanelWithPosition(
-                        listState = listState,
-                        readerEntries = readerEntries,
-                        pageByPid = pageByPid,
-                        initialPage = initialPage,
-                        singlePageCurrentPosition = currentSinglePageState?.let { state ->
-                            ReaderCatalogCurrentPosition(
-                                page = state.forumPage,
-                                pid = singlePageEntries.getOrNull(singlePageModelIndex)?.sourceEntry?.post?.pid,
-                            )
-                        },
-                        totalPages = totalPages,
-                        loadedPostsByPage = loadedPostsByPage,
-                        bookmarkedPostIds = postBookMarkEntries.values
-                            .filter { it.bookmarked }
-                            .mapTo(mutableSetOf()) { it.targetId },
-                        readPostIds = emptySet(),
-                        chapterStates = progressCoordinator.chapterStates,
-                        onPageOrPostClick = { page, post ->
-                            scope.launch {
-                                val activeGeneration = readerScrollSession.activeGeneration()
-                                if (activeGeneration != null) {
-                                    latestFinishScrollSession.value(activeGeneration)
-                                    persistenceCoordinator.flush()
+                    key(tid, authorId) {
+                        ReaderCatalogPanelWithPosition(
+                            listState = listState,
+                            readerEntries = readerEntries,
+                            pageByPid = pageByPid,
+                            initialPage = initialPage,
+                            singlePageCurrentPosition = currentSinglePageState?.let { state ->
+                                ReaderCatalogCurrentPosition(
+                                    page = state.forumPage,
+                                    pid = singlePageEntries.getOrNull(singlePageModelIndex)?.sourceEntry?.post?.pid,
+                                )
+                            },
+                            totalPages = totalPages,
+                            loadedPostsByPage = catalogPostsByPage + loadedPostsByPage,
+                            onLoadPage = { page ->
+                                if (page in loadedPostsByPage || page in catalogPostsByPage) {
+                                    true
                                 } else {
-                                    persistCurrentReadingState(flush = true)
+                                    val downloaded = downloadRepository.getDownloadedPage(
+                                        ThreadPageDownloadKey(tid.value, page, authorId?.value),
+                                    )
+                                    val cached = downloaded ?: threadRepository.getCachedThread(tid, authorId, page)
+                                    val result = cached ?: (threadRepository.fetchThread(tid, authorId, page) as? YamiboResult.Success)?.value
+                                    if (result != null) catalogPostsByPage[page] = result.posts
+                                    result != null
                                 }
-                                if (post != null) {
+                            },
+                            bookmarkedPostIds = postBookMarkEntries.values
+                                .filter { it.bookmarked }
+                                .mapTo(mutableSetOf()) { it.targetId },
+                            readPostIds = emptySet(),
+                            chapterStates = progressCoordinator.chapterStates,
+                            onPageOrPostClick = { page, post ->
+                                scope.launch {
+                                    val activeGeneration = readerScrollSession.activeGeneration()
+                                    if (activeGeneration != null) {
+                                        latestFinishScrollSession.value(activeGeneration)
+                                        persistenceCoordinator.flush()
+                                    } else {
+                                        persistCurrentReadingState(flush = true)
+                                    }
+                                    if (post != null) {
+                                        drawerState.close()
+                                        if (page !in loadedPages) {
+                                            loadPage(page)
+                                            delay(50.milliseconds) // Wait briefly for Compose to layout the new items
+                                        }
+                                        val targetIndex = entryIndexByPid[post.pid.value.toLong()] ?: -1
+                                        if (targetIndex >= 0) scrollToChapterTarget(targetIndex, post.pid.value.toLong())
+                                    } else {
+                                        // User just clicked the page header to expand catalog, load the page, don't close drawer
+                                        if (page !in loadedPages) {
+                                            loadPage(page)
+                                        }
+                                    }
+                                }
+                            },
+                            onDownload = {
+                                scope.launch {
+                                    downloadSheetPage = currentVisiblePageForAction()
                                     drawerState.close()
-                                    if (page !in loadedPages) {
-                                        loadPage(page)
-                                        delay(50.milliseconds) // Wait briefly for Compose to layout the new items
-                                    }
-                                    val targetIndex = entryIndexByPid[post.pid.value.toLong()] ?: -1
-                                    if (targetIndex >= 0) scrollToChapterTarget(targetIndex, post.pid.value.toLong())
-                                } else {
-                                    // User just clicked the page header to expand catalog, load the page, don't close drawer
-                                    if (page !in loadedPages) {
-                                        loadPage(page)
-                                    }
+                                    withFrameNanos { }
+                                    downloadSheetOpenedAfterFavorite = false
+                                    showDownloadSheet = true
                                 }
-                            }
-                        },
-                        onDownload = {
-                            scope.launch {
-                                downloadSheetPage = currentVisiblePageForAction()
-                                drawerState.close()
-                                withFrameNanos { }
-                                downloadSheetOpenedAfterFavorite = false
-                                showDownloadSheet = true
-                            }
-                        },
-                        downloadEntriesByPage = downloadQueue
-                            .mapNotNull {
-                                val key = it.key as? ThreadPageDownloadKey ?: return@mapNotNull null
-                                if (key.tid == tid.value && key.authorId == authorId?.value) key.page to it else null
-                            }
-                            .toMap(),
-                        onPostLongPress = { post -> catalogActionPost = post },
-                        drawerOpen = drawerState.isOpen,
-                    )
+                            },
+                            downloadEntriesByPage = downloadQueue
+                                .mapNotNull {
+                                    val key = it.key as? ThreadPageDownloadKey ?: return@mapNotNull null
+                                    if (key.tid == tid.value && key.authorId == authorId?.value) key.page to it else null
+                                }
+                                .toMap(),
+                            onPostLongPress = { post -> catalogActionPost = post },
+                            drawerOpen = drawerState.isOpen,
+                        )
+                    }
                 }
             }
         ) {
@@ -4834,7 +4871,7 @@ internal fun ThreadReaderScreen(
                 }
             }
         }
-        if (drawerState.isOpen) {
+        if (catalogVisible) {
             Spacer(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -5297,6 +5334,7 @@ private fun ReaderCatalogPanelWithPosition(
     downloadEntriesByPage: Map<Int, me.thenano.yamibo.yamibo_app.repository.download.DownloadQueueEntry>,
     onPostLongPress: (Post) -> Unit,
     drawerOpen: Boolean,
+    onLoadPage: suspend (Int) -> Boolean,
 ) {
     val currentChapterStates by chapterStates.collectAsState()
     val currentPosition by remember(listState, readerEntries, pageByPid, initialPage, singlePageCurrentPosition) {
@@ -5323,6 +5361,7 @@ private fun ReaderCatalogPanelWithPosition(
         onDownload = onDownload,
         onPostLongPress = onPostLongPress,
         drawerOpen = drawerOpen,
+        onLoadPage = onLoadPage,
     )
 }
 

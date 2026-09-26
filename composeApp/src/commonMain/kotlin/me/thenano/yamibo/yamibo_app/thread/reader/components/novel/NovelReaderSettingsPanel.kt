@@ -23,6 +23,9 @@ import androidx.compose.ui.unit.sp
 import me.thenano.yamibo.yamibo_app.repository.settings.AppSettingsRepository
 import me.thenano.yamibo.yamibo_app.profile.settings.components.ThemeSelectorContent
 import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelChineseConversionSetting
+import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelDefaultBoldSetting
+import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelDefaultItalicSetting
+import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelFirstLineIndentSetting
 import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelFontSizeSetting
 import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelLetterSpacingSetting
 import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelLineSpacingSetting
@@ -101,6 +104,13 @@ fun NovelReaderSettingsPanel(
 
                     Spacer(Modifier.height(16.dp))
                     ReaderFontSelectorSetting()
+
+                    Spacer(Modifier.height(8.dp))
+                    NovelDefaultBoldSetting()
+
+                    NovelDefaultItalicSetting()
+
+                    NovelFirstLineIndentSetting()
 
                     Spacer(Modifier.height(16.dp))
                     NovelSystemBarsBackgroundSetting()

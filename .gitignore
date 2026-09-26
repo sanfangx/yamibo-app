@@ -16,6 +16,7 @@ captures
 !*.xcodeproj/project.xcworkspace/
 !*.xcworkspace/contents.xcworkspacedata
 **/xcshareddata/WorkspaceSettings.xcsettings
+iosApp/Configuration/Config.local.xcconfig
 node_modules/
 /.agents
 .vscode/settings.json
@@ -31,3 +32,4 @@ node_modules/
 /.codex
 /data/
 /openspec
+/.gradle-temp
