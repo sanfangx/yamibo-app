@@ -1,6 +1,9 @@
 package me.thenano.yamibo.yamibo_app.thread.reader
 
-import YamiboIcons
+import me.thenano.yamibo.yamibo_app.repository.thread.fetchReaderStartPage
+import me.thenano.yamibo.yamibo_app.repository.thread.isValidThreadPage
+import me.thenano.yamibo.yamibo_app.repository.thread.validatedThreadPage
+
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -12,8 +15,6 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -39,6 +40,7 @@ import coil3.SingletonImageLoader
 import coil3.compose.LocalPlatformContext
 import coil3.request.CachePolicy
 import coil3.request.SuccessResult
+import coil3.size.Dimension
 import io.github.littlesurvival.YamiboForum
 import io.github.littlesurvival.YamiboRoute
 import io.github.littlesurvival.core.YamiboResult
@@ -48,7 +50,9 @@ import io.github.littlesurvival.dto.page.ThreadPage
 import io.github.littlesurvival.dto.value.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import me.thenano.yamibo.yamibo_app.*
@@ -84,25 +88,14 @@ import me.thenano.yamibo.yamibo_app.components.font.getFontFamily
 import me.thenano.yamibo.yamibo_app.thread.reader.components.post.PostFooterRenderOptions
 import me.thenano.yamibo.yamibo_app.thread.reader.components.post.PostFooterSection
 import me.thenano.yamibo.yamibo_app.thread.reader.components.post.PostRenderer
-import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.HtmlBlock
-import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.HtmlDefaultFontFamily
-import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.HtmlParser
-import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.htmlTextLineHeightSp
-import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.normalizeHtmlBlocks
-import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.sliceParagraphStartOffsets
-import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.applyFirstLineIndent
-import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.firstLineIndentPlaceholders
+import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.*
 import me.thenano.yamibo.yamibo_app.thread.reader.components.tag.ITagListScreen
 import me.thenano.yamibo.yamibo_app.thread.reader.components.thread.*
 import me.thenano.yamibo.yamibo_app.thread.reader.debug.DebugRecomposeProbe
 import me.thenano.yamibo.yamibo_app.thread.reader.debug.debugPerfLog
 import me.thenano.yamibo.yamibo_app.thread.reader.debug.isThreadReaderPerfDebugEnabled
 import me.thenano.yamibo.yamibo_app.thread.reader.debug.isThreadReaderReferencePlanningEnabled
-import me.thenano.yamibo.yamibo_app.util.buildImageRequest
-import me.thenano.yamibo.yamibo_app.util.imageSourceForDiagnostics
-import me.thenano.yamibo.yamibo_app.util.normalizeImageUrl
-import me.thenano.yamibo.yamibo_app.util.shareText
-import me.thenano.yamibo.yamibo_app.util.state
+import me.thenano.yamibo.yamibo_app.util.*
 import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
 import me.thenano.yamibo.yamibo_app.util.time.epochMillisOrNull
 import me.thenano.yamibo.yamibo_app.webview.action.IActionWebView
@@ -394,7 +387,7 @@ private fun Post.hasSinglePageTagNavigation(
 
 private fun hasSinglePageCommentNavigation(isNovelThread: Boolean): Boolean = isNovelThread
 
-private data class VisiblePostRange(
+private data class VisibleEntryRange(
     val firstIndex: Int?,
     val lastIndex: Int?,
 )
@@ -474,6 +467,30 @@ private fun HtmlBlock.singlePageImageUrls(): Sequence<String> = when (this) {
         .flatMap(HtmlBlock::singlePageImageUrls)
 
     else -> emptySequence()
+}
+
+private fun readerImagePositions(entries: List<ReaderListEntry>): List<Pair<Int, String>> =
+    entries.flatMapIndexed { index, entry ->
+        val urls = if (entry.kind == ReaderEntryKind.WholePost) {
+            entry.post.images.asSequence().map { it.url }
+        } else {
+            entry.bodyBlocks.asSequence().flatMap(HtmlBlock::singlePageImageUrls)
+        }
+        urls.map { index to normalizeImageUrl(it) }.toList()
+    }
+
+private fun nearbyReaderImages(
+    images: List<Pair<Int, String>>,
+    firstVisibleEntry: Int,
+    lastVisibleEntry: Int,
+): List<String> {
+    val first = images.indexOfFirst { it.first >= firstVisibleEntry }.let { if (it < 0) images.size else it }
+    val after = images.indexOfFirst { it.first > lastVisibleEntry }.let { if (it < 0) images.size else it }
+    return buildList {
+        addAll(images.subList(first, after))
+        addAll(images.subList(after, (after + 3).coerceAtMost(images.size)))
+        addAll(images.subList((first - 2).coerceAtLeast(0), first).asReversed())
+    }.map { it.second }.distinct()
 }
 
 private fun groupReaderBlocks(blocks: List<HtmlBlock>): List<List<HtmlBlock>> {
@@ -594,6 +611,7 @@ internal fun ThreadReaderScreen(
     catalogRssQuery: String? = null,
     catalogRssPage: Int? = null,
 ) {
+    val errorMessages = LocalForumErrorMessageResolver.current
     DebugRecomposeProbe("ThreadReaderScreen", tid.value.toString())
     val colors = YamiboTheme.colors
     val appSettingsRepository = LocalAppSettingsRepository.current
@@ -628,7 +646,7 @@ internal fun ThreadReaderScreen(
         )
     }
     val listState = rememberLazyListState()
-    val isNovelThread = threadType == ReadHistoryRepository.ThreadEntryType.Novel
+    val isNovelThread = threadType == ReadHistoryRepository.ThreadEntryType.Novel && authorId != null
     val keepSystemBarsBackground = novelSettingsRepository.keepSystemBarsBackground.state()
     val fontRepository = LocalFontRepository.current
     val readerFontSize = novelSettingsRepository.fontSize.state()
@@ -702,7 +720,7 @@ internal fun ThreadReaderScreen(
     var imageGeometryPreflightReady by remember(tid, targetPid) { mutableStateOf(false) }
     val pendingPostHeights = remember(tid) { mutableStateMapOf<Long, Int>() }
     val loadedImageUrlsByPost = remember(tid) { mutableStateMapOf<Long, Set<String>>() }
-    val prefetchedImageUrls = remember(tid) { hashSetOf<String>() }
+    val imagePrefetchSemaphore = remember(tid) { Semaphore(permits = 2) }
     val failedAutoLoadPages = remember(tid) { mutableStateMapOf<Int, String>() }
     val failedImageMessages = remember(tid) { mutableStateMapOf<String, String>() }
     val imageRetryKeys = remember(tid) { mutableStateMapOf<String, Int>() }
@@ -716,6 +734,7 @@ internal fun ThreadReaderScreen(
     var showDownloadedLastPageWarning by remember { mutableStateOf(false) }
     var dismissedUpdateWarningPages by remember(tid, authorId) { mutableStateOf(emptySet<Int>()) }
     var scrollJumpButtonPointsDown by remember { mutableStateOf(false) }
+    var isJumpingToEdge by remember { mutableStateOf(false) }
     var showScrollJumpButtonAfterSlide by remember { mutableStateOf(false) }
     var singlePageSession by remember(tid, targetPid) {
         mutableStateOf<ThreadReaderSinglePageSession?>(null)
@@ -751,6 +770,7 @@ internal fun ThreadReaderScreen(
     var canPersistReadingState by remember(tid, targetPid) { mutableStateOf(false) }
     var hasPresentedInitialSinglePage by remember(tid, targetPid) { mutableStateOf(false) }
     var pendingTargetPid by remember(tid, targetPid) { mutableStateOf(targetPid?.value?.toLong()) }
+    var pendingCatalogTargetPid by remember(tid) { mutableStateOf<Long?>(null) }
     var lastReadingSnapshot by remember(tid) {
         mutableStateOf<ReaderPersistenceSnapshot?>(null)
     }
@@ -1014,7 +1034,7 @@ internal fun ThreadReaderScreen(
                 }
 
                 else -> {
-                    feedbackController.post(i18n("投票失敗: {}", i18n(res.message())))
+                    feedbackController.post(i18n("投票失敗: {}", i18n(errorMessages.resolve(res))))
                     false
                 }
             }
@@ -1029,7 +1049,7 @@ internal fun ThreadReaderScreen(
             scope.launch {
                 when (val res = threadRepository.ratePost(tid, pid, score, reason, formHash, noticeAuthor)) {
                     is YamiboResult.Success -> feedbackController.post(i18n("評分成功，刷新後更新評分/點評狀態"))
-                    else -> feedbackController.post(i18n("評分失敗: {}", i18n(res.message())))
+                    else -> feedbackController.post(i18n("評分失敗: {}", i18n(errorMessages.resolve(res))))
                 }
             }
         }
@@ -1043,7 +1063,7 @@ internal fun ThreadReaderScreen(
             scope.launch {
                 when (val res = threadRepository.commentPost(tid, pid, message, formHash)) {
                     is YamiboResult.Success -> feedbackController.post(i18n("點評成功，刷新後更新評分/點評狀態"))
-                    else -> feedbackController.post(i18n("點評失敗: {}", i18n(res.message())))
+                    else -> feedbackController.post(i18n("點評失敗: {}", i18n(errorMessages.resolve(res))))
                 }
             }
         }
@@ -1239,6 +1259,7 @@ internal fun ThreadReaderScreen(
             }
         }
     }
+    val scrollImagePositions = remember(readerEntries) { readerImagePositions(readerEntries) }
     LaunchedEffect(
         tid,
         isSinglePageMode,
@@ -1273,20 +1294,13 @@ internal fun ThreadReaderScreen(
             ?: activePostId
             ?: targetPid?.value?.toLong()
             ?: posts.firstOrNull()?.pid?.value?.toLong()
-        val priorityIndex = posts.indexOfFirst { it.pid.value.toLong() == priorityPostId }
-        val prioritizedPosts = if (priorityIndex >= 0) {
-            buildList {
-                add(posts[priorityIndex])
-                posts.getOrNull(priorityIndex - 1)?.let(::add)
-                posts.getOrNull(priorityIndex + 1)?.let(::add)
-            }
-        } else {
-            posts.take(2)
-        }
-        val urls = prioritizedPosts.asSequence()
-            .flatMap { post -> expectedImageUrlsByPost[post.pid.value.toLong()].orEmpty().asSequence() }
-            .distinct()
-            .toList()
+        val anchorBlockId = pendingSavedPosition?.anchorBlockId ?: singlePageSession?.anchor?.blockId
+        val anchorEntry = readerEntries.indexOfFirst {
+            it.post.pid.value.toLong() == priorityPostId && it.anchorBlockId == anchorBlockId
+        }.takeIf { it >= 0 } ?: readerEntries.indexOfFirst {
+            it.post.pid.value.toLong() == priorityPostId
+        }.coerceAtLeast(0)
+        val urls = nearbyReaderImages(scrollImagePositions, anchorEntry, anchorEntry)
         if (urls.isEmpty()) {
             activeImageGeometrySnapshot = imageAspectRatioCache.toMap()
             imageGeometryPreflightReady = true
@@ -1296,27 +1310,35 @@ internal fun ThreadReaderScreen(
         val imageLoader = SingletonImageLoader.get(platformContext)
         val cookie = authRepo.cookieStore.load().orEmpty()
         val measuredRatios = mutableMapOf<String, Float>()
-        val semaphore = Semaphore(permits = 4)
         withTimeoutOrNull(500.milliseconds) {
             coroutineScope {
                 urls.map { imageUrl ->
                     async {
-                        semaphore.withPermit {
-                            val request = buildImageRequest(
-                                context = platformContext,
-                                url = imageUrl,
-                                cookie = cookie,
-                                enableCrossfade = false,
-                            )
-                            val cachedResult = imageLoader.execute(
-                                request.newBuilder()
-                                    .networkCachePolicy(CachePolicy.DISABLED)
+                        imagePrefetchSemaphore.withPermit {
+                            try {
+                                val request = buildImageRequest(
+                                    context = platformContext,
+                                    url = imageUrl,
+                                    cookie = cookie,
+                                    enableCrossfade = false,
+                                ).newBuilder()
+                                    .size(128, 128)
+                                    .memoryCachePolicy(CachePolicy.DISABLED)
                                     .build()
-                            )
-                            val result = cachedResult as? SuccessResult ?: imageLoader.execute(request)
-                            if (result is SuccessResult && result.image.width > 0 && result.image.height > 0) {
-                                measuredRatios[imageUrl] =
-                                    result.image.height.toFloat() / result.image.width.toFloat()
+                                val cachedResult = imageLoader.execute(
+                                    request.newBuilder()
+                                        .networkCachePolicy(CachePolicy.DISABLED)
+                                        .build()
+                                )
+                                val result = cachedResult as? SuccessResult ?: imageLoader.execute(request)
+                                if (result is SuccessResult && result.image.width > 0 && result.image.height > 0) {
+                                    measuredRatios[imageUrl] =
+                                        result.image.height.toFloat() / result.image.width.toFloat()
+                                }
+                            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                                throw cancelled
+                            } catch (error: Exception) {
+                                Logger.w("ThreadReaderScreen", "Image geometry unavailable", error)
                             }
                         }
                     }
@@ -2688,7 +2710,12 @@ internal fun ThreadReaderScreen(
         }
     }
 
-    suspend fun loadPage(page: Int, forceRefresh: Boolean = false, autoTriggered: Boolean = false): Boolean {
+    suspend fun loadPage(
+        page: Int,
+        forceRefresh: Boolean = false,
+        autoTriggered: Boolean = false,
+        initialSnapshot: ThreadPage? = null,
+    ): Boolean {
         if (!forceRefresh && page in loadedPages) return true
         isLoadingNextPage = true
         var loadSucceeded = false
@@ -2702,6 +2729,7 @@ internal fun ThreadReaderScreen(
         suspend fun loadFromDownload(): Boolean {
             val downloadKey = ThreadPageDownloadKey(tid.value, page, authorId?.value)
             val downloaded = downloadRepository.getDownloadedPage(downloadKey)
+                ?.takeIf { it.isValidThreadPage(tid, page = page, authorId = authorId) }
                 ?: return false
             loadedPostsByPage[page] = downloaded.posts
             rebuildPosts()
@@ -2715,6 +2743,7 @@ internal fun ThreadReaderScreen(
 
         fun loadFromCache(): Boolean {
             val cached = threadRepository.getCachedThread(tid, authorId, page)
+                ?.takeIf { it.isValidThreadPage(tid, page = page, authorId = authorId) }
             if (cached != null) {
                 loadedPostsByPage[page] = cached.posts
                 rebuildPosts()
@@ -2738,50 +2767,59 @@ internal fun ThreadReaderScreen(
             markPageLoadSucceeded()
         }
 
-        if (forceRefresh) {
-            when (val result = threadRepository.fetchThread(tid, authorId, page)) {
-                is YamiboResult.Success -> {
-                    updatePage(result)
-                    loadSucceeded = true
-                }
-
-                else -> {
-                    feedbackController.post(i18n("刷新失敗: {}，嘗試讀取緩存", i18n(result.message())))
-                    if (loadFromCache()) {
+        try {
+            if (forceRefresh) {
+                when (val result = threadRepository.fetchThread(tid, authorId, page)
+                    .validatedThreadPage(tid, page = page, authorId = authorId)) {
+                    is YamiboResult.Success -> {
+                        updatePage(result)
                         loadSucceeded = true
-                    } else if (page == initialPage || page == 1) {
-                        state = ReaderState.Error(i18n(result.message()))
+                    }
+
+                    else -> {
+                        feedbackController.post(i18n("刷新失敗: {}，嘗試讀取緩存", i18n(errorMessages.resolve(result))))
+                        if (loadFromCache()) {
+                            loadSucceeded = true
+                        } else if (page == initialPage || page == 1) {
+                            state = ReaderState.Error(i18n(errorMessages.resolve(result)))
+                        }
+                    }
+                }
+            } else {
+                if (initialSnapshot?.isValidThreadPage(tid, page = page, authorId = authorId) == true) {
+                    updatePage(YamiboResult.Success(initialSnapshot))
+                    return true
+                }
+                if (loadFromDownload()) return true
+                if (loadFromCache()) return true
+
+                when (val result = threadRepository.fetchThread(tid, authorId, page)
+                    .validatedThreadPage(tid, page = page, authorId = authorId)) {
+                    is YamiboResult.Success -> {
+                        updatePage(result)
+                        loadSucceeded = true
+                    }
+
+                    else -> {
+                        if (autoTriggered && page != initialPage && page != 1) {
+                            failedAutoLoadPages[page] = i18n(errorMessages.resolve(result))
+                        }
+                        if (page == initialPage || page == 1) state = ReaderState.Error(i18n(errorMessages.resolve(result)))
+                        else feedbackController.post(i18n("載入失敗: {}", i18n(errorMessages.resolve(result))))
                     }
                 }
             }
-        } else {
-            if (loadFromDownload()) {
-                isLoadingNextPage = false
-                return true
-            }
-
-            if (loadFromCache()) {
-                isLoadingNextPage = false
-                return true
-            }
-
-            when (val result = threadRepository.fetchThread(tid, authorId, page)) {
-                is YamiboResult.Success -> {
-                    updatePage(result)
-                    loadSucceeded = true
-                }
-
-                else -> {
-                    if (autoTriggered && page != initialPage && page != 1) {
-                        failedAutoLoadPages[page] = i18n(result.message())
-                    }
-                    if (page == initialPage || page == 1) state = ReaderState.Error(i18n(result.message()))
-                    else feedbackController.post(i18n("載入失敗: {}", i18n(result.message())))
-                }
-            }
+            return loadSucceeded
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            Logger.w("ThreadReaderScreen", "Failed to load reader page", error)
+            if (posts.isEmpty()) state = ReaderState.Error(i18n("載入失敗，請重試"))
+            else feedbackController.post(i18n("載入失敗，請重試"))
+            return false
+        } finally {
+            isLoadingNextPage = false
         }
-        isLoadingNextPage = false
-        return loadSucceeded
     }
 
     refreshThreadAfterVote = {
@@ -2950,9 +2988,44 @@ internal fun ThreadReaderScreen(
         )
     }
 
+    val latestSeekEntries by rememberUpdatedState(readerEntries)
+    val latestSeekPages by rememberUpdatedState(pageByPid)
+    suspend fun seekReader(fraction: Float) {
+        val position = fraction.coerceIn(0f, 1f) * totalPages.coerceAtLeast(1)
+        val page = (position.toInt() + 1).coerceIn(1, totalPages.coerceAtLeast(1))
+        if (!loadPage(page)) return
+        val entries = kotlinx.coroutines.withTimeoutOrNull(5_000) {
+            snapshotFlow {
+                latestSeekEntries.indices.filter {
+                    latestSeekPages[latestSeekEntries[it].post.pid.value.toLong()] == page
+                }
+            }.first { it.isNotEmpty() }
+        } ?: return
+        val withinPage = if (fraction >= 1f) 1f else position % 1f
+        val index = entries[(withinPage * entries.size).toInt().coerceIn(entries.indices)]
+        if (isSinglePageMode) setSinglePageEntryIndex(index)
+        listState.scrollToItem(if (isSinglePageMode) 0 else index)
+    }
+    me.thenano.yamibo.yamibo_app.navigation.StatusBarScrollToTop { seekReader(0f) }
+
     // Initial load + position restore
     LaunchedEffect(tid, initialPage, targetPid) {
-        loadPage(initialPage)
+        val located = targetPid?.let { pid ->
+            try {
+                val result = threadRepository.fetchReaderStartPage(tid, pid, authorId, initialPage, downloadRepository)
+                (result as? YamiboResult.Success)?.value
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                Logger.w("ThreadReaderScreen", "Could not locate target post", error)
+                null
+            }
+        }
+        val locatedPage = located?.let { it.pageNav?.currentPage ?: 1 }
+        if (located != null && locatedPage != null) {
+            threadRepository.setCachedThread(tid, authorId, locatedPage, located)
+        }
+        loadPage(locatedPage ?: initialPage, initialSnapshot = located)
 
         /** Restore position from history if no explicit targetPid */
         if (!hasRestoredPosition && targetPid != null && threadHistoryOrigin != ReadHistoryRepository.ThreadHistoryOrigin.Direct) {
@@ -3095,6 +3168,14 @@ internal fun ThreadReaderScreen(
         delay(150.milliseconds)
         withFrameNanos { }
         hasPresentedInitialSinglePage = true
+    }
+
+    LaunchedEffect(readerEntries, pendingCatalogTargetPid) {
+        val pid = pendingCatalogTargetPid ?: return@LaunchedEffect
+        val index = entryIndexByPid[pid] ?: return@LaunchedEffect
+        // Resolve against the composition that contains the newly loaded page.
+        scrollToChapterTarget(index, pid)
+        pendingCatalogTargetPid = null
     }
 
     LaunchedEffect(state, posts, readerEntries, pendingTargetPid) {
@@ -3274,6 +3355,64 @@ internal fun ThreadReaderScreen(
             }
     }
 
+    val singlePageImagePositions = remember(singlePageEntries) {
+        readerImagePositions(singlePageEntries.map { it.renderEntry })
+    }
+    LaunchedEffect(
+        state, scrollImagePositions, singlePageImagePositions, isSinglePageMode,
+        readerViewportWidthPx, readerContentWidthFraction, imageGeometryPreflightReady,
+        hasRestoredPosition,
+    ) {
+        if (state != ReaderState.Success || readerViewportWidthPx <= 0) return@LaunchedEffect
+        if (!hasRestoredPosition) return@LaunchedEffect
+        if (isSinglePageMode && !imageGeometryPreflightReady) return@LaunchedEffect
+        val images = if (isSinglePageMode) singlePageImagePositions else scrollImagePositions
+        val imageLoader = SingletonImageLoader.get(platformContext)
+        val cookie = authRepo.cookieStore.load().orEmpty()
+        val widthPx = (readerViewportWidthPx * readerContentWidthFraction).toInt().coerceAtLeast(1)
+        snapshotFlow {
+            if (isJumpingToEdge) {
+                emptyList()
+            } else if (isSinglePageMode) {
+                val index = singlePageSession?.currentPageIndex ?: 0
+                nearbyReaderImages(images, index, index)
+            } else {
+                val visible = listState.layoutInfo.visibleItemsInfo
+                val first = visible.firstOrNull()?.index
+                val last = visible.lastOrNull()?.index
+                if (first == null || last == null) emptyList() else nearbyReaderImages(images, first, last)
+            }
+        }.distinctUntilChanged().collectLatest { urls ->
+            debugPerfLog("image_prefetch_window|count=${urls.size}|ahead=3|behind=2")
+            // A new window cancels outstanding work; completed images stay in Coil's bounded cache.
+            urls.filterNot { it in failedImageMessages }.chunked(2).forEach { batch ->
+                coroutineScope {
+                    batch.forEach { imageUrl ->
+                        launch {
+                            imagePrefetchSemaphore.withPermit {
+                                debugPerfLog("image_prefetch_start|url=${imageSourceForDiagnostics(imageUrl)}")
+                                try {
+                                    imageLoader.execute(
+                                        buildImageRequest(
+                                            context = platformContext,
+                                            url = imageUrl,
+                                            cookie = cookie,
+                                            enableCrossfade = false,
+                                        ).newBuilder()
+                                            .size(Dimension.Pixels(widthPx), Dimension.Undefined)
+                                            .build()
+                                    )
+                                } finally {
+                                    debugPerfLog("image_prefetch_end|cancelled=${!isActive}|url=${imageSourceForDiagnostics(imageUrl)}")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     LaunchedEffect(
         listState,
         state,
@@ -3288,47 +3427,20 @@ internal fun ThreadReaderScreen(
     ) {
         if (state != ReaderState.Success || posts.isEmpty() || readerEntries.isEmpty()) return@LaunchedEffect
 
-        val imageLoader = SingletonImageLoader.get(platformContext)
-        val cookie = authRepo.cookieStore.load().orEmpty()
-        val preloadBehindCount = 2
-        val preloadAheadCount = 2
         val pagePreloadThreshold = 5
 
-        fun handleVisiblePostRange(range: VisiblePostRange) {
+        fun handleVisibleEntryRange(range: VisibleEntryRange) {
             val firstVisibleItemIndex = range.firstIndex ?: return
             val lastVisibleItemIndex = range.lastIndex ?: return
-            val startIndex = (firstVisibleItemIndex - preloadBehindCount).coerceAtLeast(0)
-            val endIndex = (lastVisibleItemIndex + preloadAheadCount).coerceAtMost(posts.lastIndex)
-
-            if (startIndex <= endIndex) {
-                debugPerfLog("image_prefetch_window|first=$firstVisibleItemIndex|last=$lastVisibleItemIndex|start=$startIndex|end=$endIndex")
-                for (index in startIndex..endIndex) {
-                    val post = posts[index]
-                    expectedImageUrlsByPost[post.pid.value.toLong()].orEmpty().forEach { imageUrl ->
-                        if (imageUrl in failedImageMessages) return@forEach
-                        if (!prefetchedImageUrls.add(imageUrl)) return@forEach
-                        debugPerfLog(
-                            "image_prefetch_enqueue|post=${post.pid.value}|url=${imageSourceForDiagnostics(imageUrl)}"
-                        )
-                        imageLoader.enqueue(
-                            buildImageRequest(
-                                context = platformContext,
-                                url = imageUrl,
-                                cookie = cookie,
-                                enableCrossfade = false,
-                            )
-                        )
-                    }
-                }
-            }
 
             if (isLoadingNextPage) return
 
-            val firstPost = posts.getOrNull(firstVisibleItemIndex)
+            val firstEntry = readerEntries.getOrNull(firstVisibleItemIndex)
+            val firstPost = firstEntry?.post
             if (firstPost != null) {
                 val page = pageByPid[firstPost.pid.value.toLong()] ?: 1
                 val bounds = pageIndexBounds[page]
-                if (bounds != null && firstVisibleItemIndex - bounds.first <= pagePreloadThreshold) {
+                if (bounds != null && firstEntry.postIndex - bounds.first <= pagePreloadThreshold) {
                     val prevPage = page - 1
                     if (prevPage >= 1 && prevPage !in loadedPages && prevPage !in failedAutoLoadPages) {
                         currentPageFetching = prevPage
@@ -3339,11 +3451,12 @@ internal fun ThreadReaderScreen(
                 }
             }
 
-            val lastPost = posts.getOrNull(lastVisibleItemIndex)
+            val lastEntry = readerEntries.getOrNull(lastVisibleItemIndex)
+            val lastPost = lastEntry?.post
             if (lastPost != null) {
                 val page = pageByPid[lastPost.pid.value.toLong()] ?: 1
                 val bounds = pageIndexBounds[page]
-                if (bounds != null && bounds.last - lastVisibleItemIndex <= pagePreloadThreshold) {
+                if (bounds != null && bounds.last - lastEntry.postIndex <= pagePreloadThreshold) {
                     val nextPage = page + 1
                     if (nextPage <= totalPages && nextPage !in loadedPages && nextPage !in failedAutoLoadPages) {
                         currentPageFetching = nextPage
@@ -3356,27 +3469,26 @@ internal fun ThreadReaderScreen(
         }
 
         if (isSinglePageMode) {
-            val currentEntry = singlePageEntries.getOrNull(singlePageModelIndex)?.sourceEntry ?: return@LaunchedEffect
-            handleVisiblePostRange(
-                VisiblePostRange(
-                    firstIndex = currentEntry.postIndex,
-                    lastIndex = currentEntry.postIndex,
+            val currentEntry = singlePageEntries.getOrNull(singlePageModelIndex) ?: return@LaunchedEffect
+            handleVisibleEntryRange(
+                VisibleEntryRange(
+                    firstIndex = currentEntry.sourceEntryIndex,
+                    lastIndex = currentEntry.sourceEntryIndex,
                 )
             )
             return@LaunchedEffect
         }
 
         snapshotFlow {
-            val visiblePostIndices = listState.layoutInfo.visibleItemsInfo
-                .mapNotNull { item -> readerEntries.getOrNull(item.index)?.postIndex }
-                .distinct()
-            VisiblePostRange(
-                firstIndex = visiblePostIndices.minOrNull(),
-                lastIndex = visiblePostIndices.maxOrNull(),
+            val visibleEntryIndices = listState.layoutInfo.visibleItemsInfo
+                .map { it.index }
+            VisibleEntryRange(
+                firstIndex = visibleEntryIndices.minOrNull(),
+                lastIndex = visibleEntryIndices.maxOrNull(),
             )
         }
             .distinctUntilChanged()
-            .collect { range -> handleVisiblePostRange(range) }
+            .collect { range -> handleVisibleEntryRange(range) }
     }
 
     /** Save on back before popping so the previous detail screen reads fresh progress. */
@@ -3479,12 +3591,8 @@ internal fun ThreadReaderScreen(
                                     }
                                     if (post != null) {
                                         drawerState.close()
-                                        if (page !in loadedPages) {
-                                            loadPage(page)
-                                            delay(50.milliseconds) // Wait briefly for Compose to layout the new items
-                                        }
-                                        val targetIndex = entryIndexByPid[post.pid.value.toLong()] ?: -1
-                                        if (targetIndex >= 0) scrollToChapterTarget(targetIndex, post.pid.value.toLong())
+                                        if (page !in loadedPages && !loadPage(page)) return@launch
+                                        pendingCatalogTargetPid = post.pid.value.toLong()
                                     } else {
                                         // User just clicked the page header to expand catalog, load the page, don't close drawer
                                         if (page !in loadedPages) {
@@ -3516,13 +3624,14 @@ internal fun ThreadReaderScreen(
             }
         ) {
             val handleImageDoubleTap: (String) -> Unit = { url ->
-                val post = posts.firstOrNull { p -> p.images.any { it.url.endsWith(url) || url.endsWith(it.url) } }
-                if (post != null) {
-                    val imageList = post.images.map { img ->
-                        if (img.url.startsWith("http")) img.url else "${YamiboRoute.Domain.build()}${img.url}"
-                    }
-                    val cleanUrl = if (url.startsWith("http")) url else "${YamiboRoute.Domain.build()}$url"
-                    val initialIndex = imageList.indexOfFirst { it == cleanUrl }.coerceAtLeast(0)
+                val cleanUrl = normalizeImageUrl(url)
+                val target = posts.firstNotNullOfOrNull { post ->
+                    val images = post.readerImageUrls()
+                    val index = images.indexOf(cleanUrl)
+                    if (index >= 0) Triple(post, images, index) else null
+                }
+                if (target != null) {
+                    val (post, imageList, initialIndex) = target
 
                     navigator.navigate(
                         IImageReaderScreen(
@@ -3733,7 +3842,7 @@ internal fun ThreadReaderScreen(
                                             }
                                         }
                                     }
-                                } else if (position.x in (size.width / 3f)..(size.width * 2f / 3f)) {
+                                } else {
                                     showMenu = !showMenu
                                     debugPerfLog("toggle_overlay|showMenu=$showMenu")
                                 }
@@ -4670,16 +4779,6 @@ internal fun ThreadReaderScreen(
                         )
                     }
 
-                    val progressOverlayTopPadding = if (keepSystemBarsBackground) {
-                        WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-                    } else {
-                        0.dp
-                    }
-                    val progressOverlayBottomPadding = if (keepSystemBarsBackground) {
-                        WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 48.dp
-                    } else {
-                        48.dp
-                    }
                     val progressHintBottomPadding = if (keepSystemBarsBackground) {
                         WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
                     } else {
@@ -4693,11 +4792,11 @@ internal fun ThreadReaderScreen(
                         pageByPid = pageByPid,
                         totalPages = totalPages,
                         initialPage = initialPage,
+                        onSeek = { fraction -> seekReader(fraction) },
                         slideBarModifier = Modifier
                             .align(Alignment.CenterEnd)
                             .padding(
-                                top = progressOverlayTopPadding,
-                                bottom = progressOverlayBottomPadding,
+                                bottom = 48.dp,
                                 end = 0.dp,
                             ),
                         hintModifier = Modifier
@@ -4748,7 +4847,12 @@ internal fun ThreadReaderScreen(
                                 scope.launch {
                                     val targetIndex = scrollJumpTargetIndex()
                                     if (targetIndex != null) {
-                                        listState.animateScrollToItem(targetIndex)
+                                        isJumpingToEdge = true
+                                        try {
+                                            listState.animateScrollToItem(targetIndex)
+                                        } finally {
+                                            isJumpingToEdge = false
+                                        }
                                     } else {
                                         feedbackController.post(i18n("目前無法定位跳轉位置"))
                                     }
@@ -5088,7 +5192,7 @@ internal fun ThreadReaderScreen(
 
                                 else -> {
                                     state = ReaderState.Success
-                                    feedbackController.post(i18n("刷新失敗: {}", i18n(result.message())))
+                                    feedbackController.post(i18n("刷新失敗: {}", i18n(errorMessages.resolve(result))))
                                 }
                             }
                         }
@@ -5478,6 +5582,7 @@ private fun ThreadReaderProgressOverlay(
     pageByPid: Map<Long, Int>,
     totalPages: Int,
     initialPage: Int,
+    onSeek: suspend (Float) -> Unit,
     @Suppress("ModifierParameter") slideBarModifier: Modifier,
     hintModifier: Modifier,
 ) {
@@ -5530,6 +5635,7 @@ private fun ThreadReaderProgressOverlay(
     ReaderPageProgressSlideBar(
         progress = progress,
         modifier = slideBarModifier,
+        onSeek = onSeek,
     )
     ReaderPageProgressHint(
         progress = progress,

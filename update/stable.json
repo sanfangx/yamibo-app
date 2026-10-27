@@ -1,8 +1,8 @@
 {
   "channel": "stable",
-  "versionName": "0.0.8",
-  "versionCode": 9,
+  "versionName": "0.0.10",
+  "versionCode": 11,
   "isReady": false,
-  "releaseNotes": "新增閱讀器預設粗體／斜體、自訂首行縮排與目錄搜尋跳頁，修復帖子跳轉、小說分頁、首頁載入、圖片翻頁動畫及系統欄對比問題",
+  "releaseNotes": "改善下載內容與閱讀器圖片載入，修復離線閱讀入口、快取清除與目錄跨頁跳轉，新增可滑動關閉的提示訊息及論壇服務狀態公告",
   "assets": []
 }

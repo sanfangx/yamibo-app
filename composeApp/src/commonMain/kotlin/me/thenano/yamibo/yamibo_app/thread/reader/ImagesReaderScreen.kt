@@ -19,6 +19,7 @@ import androidx.compose.material3.ButtonDefaults.outlinedButtonColors
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -62,6 +63,7 @@ import me.thenano.yamibo.yamibo_app.repository.download.DownloadStatus
 import me.thenano.yamibo.yamibo_app.repository.download.DownloadTaskKey
 import me.thenano.yamibo.yamibo_app.repository.download.RssMangaChapterDownloadKey
 import me.thenano.yamibo.yamibo_app.repository.download.TagMangaChapterDownloadKey
+import me.thenano.yamibo.yamibo_app.repository.thread.getDownloadedImagePage
 import me.thenano.yamibo.yamibo_app.repository.settings.EffectiveReadingModeSource
 import me.thenano.yamibo.yamibo_app.repository.settings.ReadingMode
 import me.thenano.yamibo.yamibo_app.repository.settings.TouchZoneLayout
@@ -76,6 +78,7 @@ import me.thenano.yamibo.yamibo_app.util.buildImageRequest
 import me.thenano.yamibo.yamibo_app.util.shareText
 import me.thenano.yamibo.yamibo_app.util.state
 import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
+import kotlin.math.roundToInt
 import kotlin.math.abs
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -112,6 +115,7 @@ fun ImagesReaderScreen(
     rssTotalPages: Int? = null,
     rssThreads: List<ThreadSummary>? = null,
 ) {
+    val errorMessages = LocalForumErrorMessageResolver.current
     SystemBarsEffect(
         statusBarColor = Color.Black,
         navigationBarColor = Color.Black,
@@ -456,7 +460,7 @@ fun ImagesReaderScreen(
                         actualPostId = p.pid
                         val targetAuthorId = activeAuthorId ?: p.author.uid
                         val authorPosts = threadPage.posts.filter { it.author.uid == targetAuthorId }.take(2)
-                        actualImageList = authorPosts.flatMap { it.images }.map { it.url }
+                        actualImageList = authorPosts.flatMap { it.readerImageUrls() }
                         isDownloadedTagChapter = false
                         
                         // Coerce the initial page against the actual loaded bounds now
@@ -544,7 +548,10 @@ fun ImagesReaderScreen(
                 }
             }
 
-            val cachedPage = if (forceNetworkLoadTrigger == 0) threadRepository.getCachedThread(activeTid, null, 1) else null
+            val downloadedPage = if (forceNetworkLoadTrigger == 0) {
+                downloadRepository.getDownloadedImagePage(activeTid, activeAuthorId)
+            } else null
+            val cachedPage = downloadedPage ?: if (forceNetworkLoadTrigger == 0) threadRepository.getCachedThread(activeTid, null, 1) else null
             if (cachedPage != null) {
                 processThreadResult(cached = cachedPage)
             } else {
@@ -999,6 +1006,12 @@ fun ImagesReaderScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .then(
+                    if (isScrollMode) Modifier
+                        .windowInsetsPadding(WindowInsets.safeDrawing)
+                        .clipToBounds()
+                    else Modifier
+                )
                 .onSizeChanged {
                     if (containerSize != it) cancelPageDrag()
                     containerSize = it
@@ -1284,11 +1297,7 @@ fun ImagesReaderScreen(
                     state = scrollListState,
                     modifier = Modifier.fillMaxSize()
                         .nestedScroll(nestedScrollConnection),
-                    verticalArrangement = if (!isCatalogMode && actualImageList.size == 1) {
-                        Arrangement.Center
-                    } else {
-                        Arrangement.Top
-                    },
+                    verticalArrangement = Arrangement.Top,
                 ) {
                     if (isCatalogMode) {
                         item {
@@ -1333,7 +1342,7 @@ fun ImagesReaderScreen(
                             }
                         }
                     } else {
-                        itemsIndexed(actualImageList) { index, url ->
+                        itemsIndexed(actualImageList, key = { index, url -> "${activeTid.value}:$index:$url" }) { index, url ->
                             ImageViewer(
                                 url = url,
                                 contentDescription = i18n("第{}頁", index + 1),
@@ -1341,7 +1350,7 @@ fun ImagesReaderScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 enableContextMenu = false,
                                 isDarkTheme = true,
-                                imageVerticalPadding = if (readingMode == ReadingMode.SCROLL_CONTINUOUS) 0.dp else 1.dp,
+                                imageVerticalPadding = 0.dp,
                                 enableCrossfade = false
                             )
                             if (readingMode == ReadingMode.SCROLL_GAP && index < actualImageList.lastIndex) {
@@ -1527,7 +1536,34 @@ fun ImagesReaderScreen(
             }
         }
 
+        me.thenano.yamibo.yamibo_app.navigation.StatusBarScrollToTop {
+            if (actualImageList.isNotEmpty()) {
+                setReaderPage(0)
+                resetZoom()
+                if (isScrollMode) scrollListState.scrollToItem(if (isCatalogMode) 1 else 0)
+            }
+        }
+
         /** Overlays (Not affected by graphicsLayer zoom) */
+
+        if (!showSettings && !showCatalog && actualImageList.isNotEmpty()) {
+            me.thenano.yamibo.yamibo_app.thread.reader.components.overlay.ReaderPageProgressSlideBar(
+                progress = me.thenano.yamibo.yamibo_app.thread.reader.components.overlay.ReaderPageProgress(
+                    currentPage + 1, actualImageList.size,
+                    currentPage.toFloat() / actualImageList.lastIndex.coerceAtLeast(1),
+                ),
+                modifier = Modifier.align(Alignment.CenterEnd).systemBarsPadding().padding(bottom = 48.dp),
+                thumbColor = Color.White.copy(alpha = 0.65f),
+                onSeek = { fraction ->
+                    if (actualImageList.isNotEmpty()) {
+                        val page = (fraction * actualImageList.lastIndex).roundToInt().coerceIn(actualImageList.indices)
+                        setReaderPage(page)
+                        if (isScrollMode) scrollListState.scrollToItem(page + if (isCatalogMode) 1 else 0)
+                        resetZoom()
+                    }
+                },
+            )
+        }
 
         // Page Indicator
         if (!showOverlay && actualImageList.isNotEmpty()) {
@@ -1634,7 +1670,7 @@ fun ImagesReaderScreen(
                                             feedbackController.post(i18n("已重新整理下載"))
                                         }
                                         else -> {
-                                            feedbackController.post(i18n("重新整理下載失敗：{}", i18n(result.message())))
+                                            feedbackController.post(i18n("重新整理下載失敗：{}", i18n(errorMessages.resolve(result))))
                                         }
                                     }
                                     isLoadingImages = false

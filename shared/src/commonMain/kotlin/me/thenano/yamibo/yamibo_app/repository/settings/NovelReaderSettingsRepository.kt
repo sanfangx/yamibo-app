@@ -29,6 +29,11 @@ enum class ThreadReaderMode(val label: String) {
 
 class NovelReaderSettingsRepository(store: SettingsStore) : SettingsRegistry(store, prefix = "novelreadersettings") {
 
+    init {
+        val removedModeKey = "novelreadersettings.forumreadingmode"
+        if (store.hasKey(removedModeKey)) store.remove(removedModeKey)
+    }
+
     val fontSize by intSetting(
         name = "font_size",
         description = "novel_reader_font_size",
